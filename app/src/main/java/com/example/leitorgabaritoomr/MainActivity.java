@@ -25,8 +25,15 @@ import org.opencv.objdetect.Objdetect;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.opencv.imgproc.Imgproc;
+
 public class MainActivity extends AppCompatActivity
         implements CameraBridgeViewBase.CvCameraViewListener2 {
+
+    private static final boolean DEBUG_ATIVAR_CAMERA = true;
+    private volatile boolean cameraHabilitada = false;
+
+    private long ultimoLogDeteccao = 0;
 
     private static final String TAG = "OMR_Camera";
     private static final int CAMERA_PERMISSION_CODE = 100;
@@ -35,6 +42,9 @@ public class MainActivity extends AppCompatActivity
     private ArucoDetector arucoDetector;
 
     private boolean openCvCarregado = false;
+
+    private long contadorFrames = 0;
+    private boolean primeiroFrameRegistrado = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,31 +56,73 @@ public class MainActivity extends AppCompatActivity
 
         setContentView(R.layout.activity_main);
 
-        cameraBridgeView = findViewById(R.id.cameraViewLeitor);
-        cameraBridgeView.setVisibility(SurfaceView.VISIBLE);
+        cameraBridgeView =
+                findViewById(R.id.cameraViewLeitor);
+
+        cameraBridgeView.setMaxFrameSize(
+                1920,
+                1440
+        );
+
+        cameraBridgeView.setVisibility(
+                SurfaceView.VISIBLE
+        );
+
         cameraBridgeView.setCvCameraViewListener(this);
 
         inicializarOpenCV();
-        checarPermissaoCamera();
+
+        if (DEBUG_ATIVAR_CAMERA) {
+            checarPermissaoCamera();
+        }
     }
 
     private void inicializarOpenCV() {
 
-        openCvCarregado = OpenCVLoader.initDebug();
+        try {
 
-        if (openCvCarregado) {
+            openCvCarregado = OpenCVLoader.initDebug();
 
-            Log.d(TAG, "OpenCV carregado com sucesso!");
+            Log.d(
+                    TAG,
+                    "OPEN_CV_ETAPA_3: initDebug() terminou. Resultado = "
+                            + openCvCarregado
+            );
+
+            if (!openCvCarregado) {
+
+                Log.e(TAG, "OPEN_CV_ERRO: initDebug() retornou false.");
+
+                Toast.makeText(
+                        this,
+                        "Não foi possível inicializar o OpenCV.",
+                        Toast.LENGTH_LONG
+                ).show();
+
+                return;
+            }
+
+            Log.d(TAG, "OPEN_CV_ETAPA_4: OpenCV carregado.");
 
             configurarDetectorAruco();
 
-        } else {
+            Log.d(TAG, "OPEN_CV_ETAPA_5: inicialização concluída.");
 
-            Log.e(TAG, "Não foi possível carregar o OpenCV.");
+        } catch (Throwable throwable) {
+
+            openCvCarregado = false;
+            arucoDetector = null;
+
+            Log.e(
+                    TAG,
+                    "OPEN_CV_ERRO_FATAL: falha durante a inicialização.",
+                    throwable
+            );
 
             Toast.makeText(
                     this,
-                    "Não foi possível inicializar o OpenCV.",
+                    "Erro durante a inicialização do OpenCV: "
+                            + throwable.getClass().getSimpleName(),
                     Toast.LENGTH_LONG
             ).show();
         }
@@ -78,16 +130,23 @@ public class MainActivity extends AppCompatActivity
 
     private void configurarDetectorAruco() {
 
+        Log.d(TAG, "ARUCO_ETAPA_1: iniciando configuração.");
+
         try {
 
-            // Família de marcadores ArUco utilizada pelo leitor.
+            Log.d(TAG, "ARUCO_ETAPA_2: obtendo dicionário.");
+
             Dictionary dictionary =
                     Objdetect.getPredefinedDictionary(
                             Objdetect.DICT_4X4_50
                     );
 
+            Log.d(TAG, "ARUCO_ETAPA_3: criando parâmetros.");
+
             DetectorParameters parameters =
                     new DetectorParameters();
+
+            Log.d(TAG, "ARUCO_ETAPA_4: criando detector.");
 
             arucoDetector =
                     new ArucoDetector(
@@ -95,21 +154,22 @@ public class MainActivity extends AppCompatActivity
                             parameters
                     );
 
-            Log.d(TAG, "Detector ArUco configurado com sucesso.");
+            Log.d(TAG, "ARUCO_ETAPA_5: detector criado.");
 
-        } catch (Exception exception) {
+        } catch (Throwable throwable) {
 
             arucoDetector = null;
 
             Log.e(
                     TAG,
-                    "Erro ao configurar o detector ArUco.",
-                    exception
+                    "ARUCO_ERRO: falha ao configurar o detector.",
+                    throwable
             );
 
             Toast.makeText(
                     this,
-                    "Erro ao configurar o detector ArUco.",
+                    "Erro ao configurar ArUco: "
+                            + throwable.getClass().getSimpleName(),
                     Toast.LENGTH_LONG
             ).show();
         }
@@ -121,8 +181,32 @@ public class MainActivity extends AppCompatActivity
     ) {
 
         Mat rgbaFrame = inputFrame.rgba();
+        Mat grayFrame = inputFrame.gray();
+
+        contadorFrames++;
+
+        if (!primeiroFrameRegistrado) {
+
+            primeiroFrameRegistrado = true;
+
+            Log.d(
+                    TAG,
+                    "Primeiro frame recebido"
+                            + " | RGBA=" + rgbaFrame.cols()
+                            + "x" + rgbaFrame.rows()
+                            + " canais=" + rgbaFrame.channels()
+                            + " | GRAY=" + grayFrame.cols()
+                            + "x" + grayFrame.rows()
+                            + " canais=" + grayFrame.channels()
+            );
+        }
 
         if (arucoDetector == null) {
+
+            if (contadorFrames % 60 == 0) {
+                Log.e(TAG, "Detector ArUco está nulo.");
+            }
+
             return rgbaFrame;
         }
 
@@ -133,8 +217,12 @@ public class MainActivity extends AppCompatActivity
 
         try {
 
+            /*
+             * A detecção é feita na imagem em escala de cinza.
+             * O desenho continua sendo feito no frame colorido.
+             */
             arucoDetector.detectMarkers(
-                    rgbaFrame,
+                    grayFrame,
                     corners,
                     ids,
                     rejectedCandidates
@@ -142,43 +230,93 @@ public class MainActivity extends AppCompatActivity
 
             if (!ids.empty()) {
 
-                /*
-                 * Como o frame é RGBA:
-                 * R = 0
-                 * G = 255
-                 * B = 0
-                 * A = 255
-                 */
-                Scalar corVerde =
-                        new Scalar(0, 255, 0, 255);
+                Mat rgbFrame = new Mat();
 
-                Objdetect.drawDetectedMarkers(
-                        rgbaFrame,
-                        corners,
-                        ids,
-                        corVerde
-                );
+                try {
 
-                Log.d(
-                        TAG,
-                        "Marcadores detectados: " + ids.dump()
-                );
+                    /*
+                     * drawDetectedMarkers aceita imagens de 1 ou 3 canais.
+                     * O frame da câmera possui 4 canais (RGBA).
+                     */
+                    Imgproc.cvtColor(
+                            rgbaFrame,
+                            rgbFrame,
+                            Imgproc.COLOR_RGBA2RGB
+                    );
+
+                    Scalar corVerde =
+                            new Scalar(0, 255, 0);
+
+                    Objdetect.drawDetectedMarkers(
+                            rgbFrame,
+                            corners,
+                            ids,
+                            corVerde
+                    );
+
+                    /*
+                     * Converte novamente para RGBA, formato esperado
+                     * pelo JavaCameraView.
+                     */
+                    Imgproc.cvtColor(
+                            rgbFrame,
+                            rgbaFrame,
+                            Imgproc.COLOR_RGB2RGBA
+                    );
+
+                    long agora = System.currentTimeMillis();
+
+                    if (agora - ultimoLogDeteccao >= 1000) {
+
+                        ultimoLogDeteccao = agora;
+
+                        Log.d(
+                                TAG,
+                                "Marcadores detectados: "
+                                        + ids.dump()
+                                        + " | rejeitados="
+                                        + rejectedCandidates.size()
+                        );
+                    }
+
+                } finally {
+
+                    rgbFrame.release();
+                }
+
+            } else {
+
+                long agora = System.currentTimeMillis();
+
+                if (agora - ultimoLogDeteccao >= 1000) {
+
+                    ultimoLogDeteccao = agora;
+
+                    Log.d(
+                            TAG,
+                            "Nenhum marcador validado"
+                                    + " | candidatos rejeitados="
+                                    + rejectedCandidates.size()
+                    );
+                }
             }
 
-        } catch (Exception exception) {
+        } catch (Throwable throwable) {
 
-            Log.e(
-                    TAG,
-                    "Erro durante a detecção dos marcadores.",
-                    exception
-            );
+            long agora = System.currentTimeMillis();
 
+            if (agora - ultimoLogDeteccao >= 1000) {
+
+                ultimoLogDeteccao = agora;
+
+                Log.e(
+                        TAG,
+                        "Erro durante a detecção ArUco.",
+                        throwable
+                );
+            }
         } finally {
 
-            /*
-             * Os objetos Mat usam memória nativa.
-             * Como são criados a cada frame, precisam ser liberados.
-             */
             ids.release();
 
             liberarMats(corners);
@@ -203,14 +341,21 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onCameraViewStarted(int width, int height) {
 
+        cameraHabilitada = true;
+
         Log.d(
                 TAG,
-                "Câmera iniciada: " + width + "x" + height
+                "Câmera iniciada"
+                        + " | frame=" + width + "x" + height
+                        + " | view=" + cameraBridgeView.getWidth()
+                        + "x" + cameraBridgeView.getHeight()
         );
     }
 
     @Override
     public void onCameraViewStopped() {
+
+        cameraHabilitada = false;
 
         Log.d(TAG, "Câmera interrompida.");
     }
@@ -243,6 +388,10 @@ public class MainActivity extends AppCompatActivity
 
     private void iniciarCamera() {
 
+        if (cameraHabilitada) {
+            return;
+        }
+
         if (!openCvCarregado) {
 
             Log.e(
@@ -265,12 +414,10 @@ public class MainActivity extends AppCompatActivity
 
         if (cameraBridgeView != null) {
 
-            /*
-             * Informa ao componente do OpenCV que a permissão
-             * da câmera já foi concedida.
-             */
             cameraBridgeView.setCameraPermissionGranted();
             cameraBridgeView.enableView();
+
+            cameraHabilitada = true;
 
             Log.d(TAG, "Visualização da câmera habilitada.");
         }
@@ -313,11 +460,10 @@ public class MainActivity extends AppCompatActivity
     protected void onResume() {
         super.onResume();
 
-        /*
-         * Quando o usuário volta para a Activity, a câmera precisa
-         * ser habilitada novamente.
-         */
-        if (openCvCarregado && possuiPermissaoCamera()) {
+        if (DEBUG_ATIVAR_CAMERA
+                && openCvCarregado
+                && possuiPermissaoCamera()) {
+
             iniciarCamera();
         }
     }
@@ -325,8 +471,9 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onPause() {
 
-        if (cameraBridgeView != null) {
+        if (cameraBridgeView != null && cameraHabilitada) {
             cameraBridgeView.disableView();
+            cameraHabilitada = false;
         }
 
         super.onPause();
@@ -335,85 +482,14 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onDestroy() {
 
-        if (cameraBridgeView != null) {
+        if (cameraBridgeView != null && cameraHabilitada) {
             cameraBridgeView.disableView();
+            cameraHabilitada = false;
         }
 
         arucoDetector = null;
 
         super.onDestroy();
     }
+
 }
-//package com.example.leitorgabaritoomr;
-//
-//import android.os.Bundle;
-//import android.util.Log;
-//import android.view.View;
-//import android.widget.Button;
-//import android.widget.TextView;
-//
-//import androidx.activity.EdgeToEdge;
-//import androidx.appcompat.app.AppCompatActivity;
-//import androidx.core.content.ContextCompat;
-//
-//import org.opencv.android.OpenCVLoader;
-//
-//public class MainActivity extends AppCompatActivity {
-//
-//    private static final String TAG = "OpenCVTest";
-//
-//    private TextView tvStatusOpenCV;
-//    private Button btnTestarOpenCV;
-//
-//    @Override
-//    protected void onCreate(Bundle savedInstanceState) {
-//        super.onCreate(savedInstanceState);
-//
-//        EdgeToEdge.enable(this);
-//        setContentView(R.layout.activity_main);
-//
-//        tvStatusOpenCV = findViewById(R.id.tvStatusOpenCV);
-//        btnTestarOpenCV = findViewById(R.id.btnTestarOpenCV);
-//
-//        btnTestarOpenCV.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                verificarOpenCV();
-//            }
-//        });
-//    }
-//
-//    private void verificarOpenCV() {
-//
-//        if (OpenCVLoader.initDebug()) {
-//
-//            Log.d(TAG, "OpenCV carregado com sucesso!");
-//
-//            tvStatusOpenCV.setText(
-//                    "✅ OpenCV inicializado com sucesso!"
-//            );
-//
-//            tvStatusOpenCV.setTextColor(
-//                    ContextCompat.getColor(
-//                            this,
-//                            android.R.color.holo_green_dark
-//                    )
-//            );
-//
-//        } else {
-//
-//            Log.e(TAG, "Falha ao carregar o OpenCV.");
-//
-//            tvStatusOpenCV.setText(
-//                    "❌ Erro ao carregar o OpenCV."
-//            );
-//
-//            tvStatusOpenCV.setTextColor(
-//                    ContextCompat.getColor(
-//                            this,
-//                            android.R.color.holo_red_dark
-//                    )
-//            );
-//        }
-//    }
-//}

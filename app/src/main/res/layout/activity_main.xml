@@ -5,30 +5,13 @@
     android:layout_height="match_parent"
     xmlns:opencv="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
-    android:gravity="center"
-    android:padding="24dp">
+    android:gravity="center">
 
-    <TextView
-        android:id="@+id/tvStatusOpenCV"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
-        android:text="Aguardando teste..."
-        android:textSize="20sp"
-        android:textStyle="bold" />
-
-    <Button
-        android:id="@+id/btnTestarOpenCV"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Testar Inicialização do OpenCV" />
-
-    <!-- Visualizador de Câmera Nativo do OpenCV -->
     <org.opencv.android.JavaCameraView
         android:id="@+id/cameraViewLeitor"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        opencv:camera_id="any"
+        opencv:camera_id="back"
         opencv:show_fps="true" />
 
 </LinearLayout>
