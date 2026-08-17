@@ -29,7 +29,8 @@ public final class SolidSquareDetectorConfig {
      * Quanto do retângulo delimitador precisa estar
      * preenchido na imagem binária.
      */
-    private final double minimumFillRatio;
+    private final double minimumDarknessRatio;
+//    private final double minimumFillRatio;
 
     /*
      * Precisão usada pelo approxPolyDP.
@@ -57,7 +58,8 @@ public final class SolidSquareDetectorConfig {
             double maximumAreaRatio,
             int minimumSizePixels,
             double minimumSideRatio,
-            double minimumFillRatio,
+            double minimumDarknessRatio,
+//            double minimumFillRatio,
             double polygonApproximationFactor
     ) {
 
@@ -65,7 +67,9 @@ public final class SolidSquareDetectorConfig {
         this.maximumAreaRatio = maximumAreaRatio;
         this.minimumSizePixels = minimumSizePixels;
         this.minimumSideRatio = minimumSideRatio;
-        this.minimumFillRatio = minimumFillRatio;
+        this.minimumDarknessRatio =
+                minimumDarknessRatio;
+//        this.minimumFillRatio = minimumFillRatio;
         this.polygonApproximationFactor =
                 polygonApproximationFactor;
     }
@@ -86,9 +90,12 @@ public final class SolidSquareDetectorConfig {
         return minimumSideRatio;
     }
 
-    public double getMinimumFillRatio() {
-        return minimumFillRatio;
+    public double getMinimumDarknessRatio() {
+        return minimumDarknessRatio;
     }
+//    public double getMinimumFillRatio() {
+//        return minimumFillRatio;
+//    }
 
     public double getPolygonApproximationFactor() {
         return polygonApproximationFactor;

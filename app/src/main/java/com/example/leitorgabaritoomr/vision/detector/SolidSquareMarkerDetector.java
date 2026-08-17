@@ -20,6 +20,10 @@ import java.util.List;
 import com.example.leitorgabaritoomr.vision.debug.VisionDebugSink;
 import com.example.leitorgabaritoomr.vision.debug.VisionStage;
 
+import org.opencv.core.CvType;
+import org.opencv.core.Scalar;
+
+import java.util.Collections;
 public final class SolidSquareMarkerDetector
         implements OmrMarkerDetector {
 
@@ -159,9 +163,15 @@ public final class SolidSquareMarkerDetector
                 DetectedMarker marker =
                         analisarContorno(
                                 contour,
-                                binary,
+                                grayFrame,
                                 frameArea
                         );
+//                DetectedMarker marker =
+//                        analisarContorno(
+//                                contour,
+//                                binary,
+//                                frameArea
+//                        );
 
                 if (marker == null) {
 
@@ -200,9 +210,14 @@ public final class SolidSquareMarkerDetector
 
     private DetectedMarker analisarContorno(
             MatOfPoint contour,
-            Mat binary,
+            Mat grayFrame,
             double frameArea
     ) {
+//    private DetectedMarker analisarContorno(
+//            MatOfPoint contour,
+//            Mat binary,
+//            double frameArea
+//    ) {
 
         double contourArea =
                 Math.abs(
@@ -317,17 +332,29 @@ public final class SolidSquareMarkerDetector
                 return null;
             }
 
-            double fillRatio =
-                    calcularPreenchimento(
-                            binary,
+            double darknessRatio =
+                    calcularEscuridaoInterna(
+                            grayFrame,
+                            approximationInt,
                             boundingRect
                     );
 
-            if (fillRatio
-                    < config.getMinimumFillRatio()) {
+            if (darknessRatio
+                    < config.getMinimumDarknessRatio()) {
 
                 return null;
             }
+//            double fillRatio =
+//                    calcularPreenchimento(
+//                            binary,
+//                            boundingRect
+//                    );
+//
+//            if (fillRatio
+//                    < config.getMinimumFillRatio()) {
+//
+//                return null;
+//            }
 
             double rotatedArea =
                     width * height;
@@ -342,10 +369,16 @@ public final class SolidSquareMarkerDetector
 
             double confidence =
                     limitarEntreZeroEUm(
-                            sideRatio * 0.40
-                                    + rectangularity * 0.35
-                                    + fillRatio * 0.25
+                            sideRatio * 0.35
+                                    + rectangularity * 0.30
+                                    + darknessRatio * 0.35
                     );
+//            double confidence =
+//                    limitarEntreZeroEUm(
+//                            sideRatio * 0.40
+//                                    + rectangularity * 0.35
+//                                    + fillRatio * 0.25
+//                    );
 
             return new DetectedMarker(
                     MarkerType.SOLID_SQUARE,
@@ -365,16 +398,17 @@ public final class SolidSquareMarkerDetector
         }
     }
 
-    private double calcularPreenchimento(
-            Mat binary,
+    private double calcularEscuridaoInterna(
+            Mat grayFrame,
+            MatOfPoint polygon,
             Rect boundingRect
     ) {
 
         Rect safeRect =
                 limitarRetangulo(
                         boundingRect,
-                        binary.cols(),
-                        binary.rows()
+                        grayFrame.cols(),
+                        grayFrame.rows()
                 );
 
         if (safeRect.width <= 0
@@ -383,29 +417,114 @@ public final class SolidSquareMarkerDetector
             return 0;
         }
 
-        Mat region =
-                binary.submat(safeRect);
+        Point[] globalPoints =
+                polygon.toArray();
+
+        Point[] localPoints =
+                new Point[globalPoints.length];
+
+        for (int index = 0;
+             index < globalPoints.length;
+             index++) {
+
+            localPoints[index] =
+                    new Point(
+                            globalPoints[index].x
+                                    - safeRect.x,
+                            globalPoints[index].y
+                                    - safeRect.y
+                    );
+        }
+
+        Mat grayRegion =
+                grayFrame.submat(safeRect);
+
+        Mat mask =
+                Mat.zeros(
+                        safeRect.height,
+                        safeRect.width,
+                        CvType.CV_8UC1
+                );
+
+        MatOfPoint localPolygon =
+                new MatOfPoint(localPoints);
 
         try {
 
-            double whitePixels =
-                    Core.countNonZero(region);
+            Imgproc.fillPoly(
+                    mask,
+                    Collections.singletonList(
+                            localPolygon
+                    ),
+                    new Scalar(255)
+            );
 
-            double regionArea =
-                    safeRect.width
-                            * (double) safeRect.height;
+            Scalar mean =
+                    Core.mean(
+                            grayRegion,
+                            mask
+                    );
 
-            if (regionArea <= 0) {
-                return 0;
-            }
-
-            return whitePixels / regionArea;
+            /*
+             * Cinza 255 representa branco:
+             * escuridão = 0.
+             *
+             * Cinza 0 representa preto:
+             * escuridão = 1.
+             */
+            return limitarEntreZeroEUm(
+                    1.0 - mean.val[0] / 255.0
+            );
 
         } finally {
 
-            region.release();
+            grayRegion.release();
+            mask.release();
+            localPolygon.release();
         }
     }
+
+//    private double calcularPreenchimento(
+//            Mat binary,
+//            Rect boundingRect
+//    ) {
+//
+//        Rect safeRect =
+//                limitarRetangulo(
+//                        boundingRect,
+//                        binary.cols(),
+//                        binary.rows()
+//                );
+//
+//        if (safeRect.width <= 0
+//                || safeRect.height <= 0) {
+//
+//            return 0;
+//        }
+//
+//        Mat region =
+//                binary.submat(safeRect);
+//
+//        try {
+//
+//            double whitePixels =
+//                    Core.countNonZero(region);
+//
+//            double regionArea =
+//                    safeRect.width
+//                            * (double) safeRect.height;
+//
+//            if (regionArea <= 0) {
+//                return 0;
+//            }
+//
+//            return whitePixels / regionArea;
+//
+//        } finally {
+//
+//            region.release();
+//        }
+//    }
 
     private Rect limitarRetangulo(
             Rect rect,

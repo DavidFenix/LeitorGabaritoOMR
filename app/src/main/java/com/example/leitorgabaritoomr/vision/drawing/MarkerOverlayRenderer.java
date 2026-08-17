@@ -63,26 +63,49 @@ public final class MarkerOverlayRenderer {
                     -1
             );
 
-            String label =
-                    marker.getCode() == null
-                            ? marker.getType().name()
-                            : "ID " + marker.getCode();
+            /*
+             * Apenas marcadores que possuem código, como ArUco,
+             * exibem texto. Quadrados simples continuam com
+             * contorno e centro, mas sem a inscrição SOLID_SQUARE.
+             */
+            if (marker.getCode() != null) {
 
-            Imgproc.putText(
-                    rgbaFrame,
-                    label,
-                    new Point(
-                            corners[0].x,
-                            Math.max(
-                                    20,
-                                    corners[0].y - 10
-                            )
-                    ),
-                    Imgproc.FONT_HERSHEY_SIMPLEX,
-                    0.7,
-                    COLOR_GREEN,
-                    2
-            );
+                Imgproc.putText(
+                        rgbaFrame,
+                        "ID " + marker.getCode(),
+                        new Point(
+                                corners[0].x,
+                                Math.max(
+                                        20,
+                                        corners[0].y - 10
+                                )
+                        ),
+                        Imgproc.FONT_HERSHEY_SIMPLEX,
+                        0.7,
+                        COLOR_GREEN,
+                        2
+                );
+            }
+//            String label =
+//                    marker.getCode() == null
+//                            ? marker.getType().name()
+//                            : "ID " + marker.getCode();
+//
+//            Imgproc.putText(
+//                    rgbaFrame,
+//                    label,
+//                    new Point(
+//                            corners[0].x,
+//                            Math.max(
+//                                    20,
+//                                    corners[0].y - 10
+//                            )
+//                    ),
+//                    Imgproc.FONT_HERSHEY_SIMPLEX,
+//                    0.7,
+//                    COLOR_GREEN,
+//                    2
+//            );
         }
     }
 }
