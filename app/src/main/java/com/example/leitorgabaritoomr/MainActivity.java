@@ -33,6 +33,14 @@ import android.view.KeyEvent;
 import com.example.leitorgabaritoomr.vision.debug.VisionDebugController;
 import com.example.leitorgabaritoomr.vision.debug.VisionStage;
 
+import com.example.leitorgabaritoomr.vision.drawing.ResolvedMarkerOverlayRenderer;
+import com.example.leitorgabaritoomr.vision.geometry.MarkerSetResolutionResult;
+import com.example.leitorgabaritoomr.vision.geometry.MarkerSetResolver;
+
+import com.example.leitorgabaritoomr.vision.drawing.StableMarkerOverlayRenderer;
+import com.example.leitorgabaritoomr.vision.stability.MarkerSetStabilizer;
+import com.example.leitorgabaritoomr.vision.stability.MarkerStabilityResult;
+
 public class MainActivity extends AppCompatActivity
         implements CameraBridgeViewBase.CvCameraViewListener2 {
 
@@ -119,11 +127,19 @@ public class MainActivity extends AppCompatActivity
         cameraBridgeView.setOnLongClickListener(
                 view -> {
 
-                    selecionarEtapaAnterior();
+                    alternarPausaLaboratorio();
 
                     return true;
                 }
         );
+//        cameraBridgeView.setOnLongClickListener(
+//                view -> {
+//
+//                    selecionarEtapaAnterior();
+//
+//                    return true;
+//                }
+//        );
     }
 
     /*
@@ -251,6 +267,14 @@ public class MainActivity extends AppCompatActivity
             KeyEvent event
     ) {
 
+        if (keyCode == KeyEvent.KEYCODE_F
+                || keyCode == KeyEvent.KEYCODE_SPACE) {
+
+            alternarPausaLaboratorio();
+
+            return true;
+        }
+
         if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
                 || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
 
@@ -297,18 +321,60 @@ public class MainActivity extends AppCompatActivity
 //            OmrMarkerDetector detector =
 //                    new ArucoMarkerDetector();
 
-            MarkerOverlayRenderer renderer =
+            MarkerOverlayRenderer markerRenderer =
                     new MarkerOverlayRenderer();
+
+            MarkerSetResolver markerSetResolver =
+                    new MarkerSetResolver();
+
+            ResolvedMarkerOverlayRenderer
+                    resolvedMarkerRenderer =
+                    new ResolvedMarkerOverlayRenderer();
+
+            MarkerSetStabilizer markerSetStabilizer =
+                    new MarkerSetStabilizer();
+
+            StableMarkerOverlayRenderer
+                    stableMarkerRenderer =
+                    new StableMarkerOverlayRenderer();
 
             visionDebugController =
                     new VisionDebugController();
 
+            //nao entendi: testar a estabilidade continuamente
+//            visionDebugController
+//                    .setAutoFreezeOnStableEnabled(false);
+
             markerFrameProcessor =
                     new MarkerFrameProcessor(
                             detector,
-                            renderer,
+                            markerRenderer,
+                            markerSetResolver,
+                            resolvedMarkerRenderer,
+                            markerSetStabilizer,
+                            stableMarkerRenderer,
                             visionDebugController
                     );
+//            markerFrameProcessor =
+//                    new MarkerFrameProcessor(
+//                            detector,
+//                            markerRenderer,
+//                            markerSetResolver,
+//                            resolvedMarkerRenderer,
+//                            visionDebugController
+//                    );
+//            MarkerOverlayRenderer renderer =
+//                    new MarkerOverlayRenderer();
+//
+//            visionDebugController =
+//                    new VisionDebugController();
+//
+//            markerFrameProcessor =
+//                    new MarkerFrameProcessor(
+//                            detector,
+//                            renderer,
+//                            visionDebugController
+//                    );
 //            MarkerOverlayRenderer renderer =
 //                    new MarkerOverlayRenderer();
 //
@@ -534,6 +600,100 @@ public class MainActivity extends AppCompatActivity
                             + tempoFormatado
             );
         }
+
+        MarkerSetResolutionResult resolutionResult =
+                markerFrameProcessor == null
+                        ? null
+                        : markerFrameProcessor
+                        .getLastResolutionResult();
+
+        if (resolutionResult == null) {
+            return;
+        }
+
+        if (resolutionResult.isAccepted()) {
+
+            Log.d(
+                    TAG,
+                    "Conjunto geométrico ACEITO"
+                            + " | score="
+                            + String.format(
+                            Locale.US,
+                            "%.3f",
+                            resolutionResult.getBestScore()
+                    )
+                            + " | diferença="
+                            + String.format(
+                            Locale.US,
+                            "%.3f",
+                            resolutionResult.getScoreDifference()
+                    )
+                            + " | combinações="
+                            + resolutionResult
+                            .getEvaluatedCombinations()
+            );
+
+        } else {
+
+            Log.d(
+                    TAG,
+                    "Conjunto geométrico REJEITADO"
+                            + " | motivo="
+                            + resolutionResult.getReason()
+                            + " | score="
+                            + String.format(
+                            Locale.US,
+                            "%.3f",
+                            resolutionResult.getBestScore()
+                    )
+                            + " | diferença="
+                            + String.format(
+                            Locale.US,
+                            "%.3f",
+                            resolutionResult.getScoreDifference()
+                    )
+                            + " | combinações="
+                            + resolutionResult
+                            .getEvaluatedCombinations()
+            );
+        }
+
+        MarkerStabilityResult stabilityResult =
+                markerFrameProcessor == null
+                        ? null
+                        : markerFrameProcessor
+                        .getLastStabilityResult();
+
+        if (stabilityResult != null) {
+
+            Log.d(
+                    TAG,
+                    "Estabilidade temporal"
+                            + " | estado="
+                            + stabilityResult.getState()
+                            + " | confirmações="
+                            + stabilityResult.getConsistentFrames()
+                            + "/"
+                            + stabilityResult.getRequiredFrames()
+                            + " | falhas="
+                            + stabilityResult.getMissedFrames()
+                            + " | forma="
+                            + String.format(
+                            Locale.US,
+                            "%.3f",
+                            stabilityResult
+                                    .getNormalizedShapeDistance()
+                    )
+                            + " | variaçãoÁrea="
+                            + String.format(
+                            Locale.US,
+                            "%.3f",
+                            stabilityResult
+                                    .getRegionAreaChangeRatio()
+                    )
+            );
+        }
+
     }
 
     private void registrarErroDeteccao(
@@ -812,6 +972,24 @@ public class MainActivity extends AppCompatActivity
         cameraBridgeView.disableView();
         cameraHabilitada = false;
     }
+
+    private void alternarPausaLaboratorio() {
+
+        if (visionDebugController == null) {
+            return;
+        }
+
+        boolean pausado =
+                visionDebugController.toggleFreeze();
+
+        Log.d(
+                TAG,
+                pausado
+                        ? "Laboratório OMR pausado."
+                        : "Laboratório OMR retomado."
+        );
+    }
+
 }
 
 //package com.example.leitorgabaritoomr;

@@ -8,6 +8,14 @@ import org.opencv.imgproc.Imgproc;
 public final class VisionDebugController
         implements VisionDebugSink {
 
+    /*
+     * Opção exclusiva do Laboratório OMR.
+     *
+     * Não representa captura definitiva nem regra
+     * do motor de leitura.
+     */
+    private volatile boolean autoFreezeOnStableEnabled = true;
+
     private static final Scalar LABEL_BACKGROUND =
             new Scalar(0, 0, 0, 210);
 
@@ -17,24 +25,61 @@ public final class VisionDebugController
     private volatile VisionStage selectedStage =
             VisionStage.ORIGINAL;
 
+    private volatile boolean frozen = false;
+
     /*
-     * Contém somente a etapa selecionada do frame atual.
-     * Não guardamos todas as etapas durante o vídeo.
+     * Guarda somente a etapa selecionada.
+     *
+     * Quando frozen=true, esse Mat permanece intacto
+     * até o usuário continuar o processamento.
      */
     private final Mat selectedFrame =
             new Mat();
 
     private boolean selectedFrameAvailable = false;
 
-    public void beginFrame() {
+    public synchronized boolean freeze() {
+
+        if (!selectedFrameAvailable
+                || selectedFrame.empty()) {
+
+            return false;
+        }
+
+        frozen = true;
+
+        return true;
+    }
+
+    public boolean isAutoFreezeOnStableEnabled() {
+        return autoFreezeOnStableEnabled;
+    }
+
+    public void setAutoFreezeOnStableEnabled(
+            boolean enabled
+    ) {
+
+        autoFreezeOnStableEnabled = enabled;
+    }
+
+    public synchronized void beginFrame() {
+
+        if (frozen) {
+            return;
+        }
+
         selectedFrameAvailable = false;
     }
 
     @Override
-    public void publish(
+    public synchronized void publish(
             VisionStage stage,
             Mat image
     ) {
+
+        if (frozen) {
+            return;
+        }
 
         if (stage == null
                 || image == null
@@ -48,8 +93,7 @@ public final class VisionDebugController
         }
 
         /*
-         * Convertemos todas as visualizações para RGBA,
-         * que é o formato usado pelo JavaCameraView.
+         * Padroniza a imagem exibida em RGBA.
          */
         if (image.channels() == 4) {
 
@@ -74,13 +118,14 @@ public final class VisionDebugController
         } else {
 
             selectedFrameAvailable = false;
+
             return;
         }
 
         selectedFrameAvailable = true;
     }
 
-    public boolean renderSelectedStage(
+    public synchronized boolean renderSelectedStage(
             Mat rgbaOutput
     ) {
 
@@ -99,7 +144,38 @@ public final class VisionDebugController
         return true;
     }
 
-    public VisionStage selectNext() {
+    public synchronized boolean toggleFreeze() {
+
+        /*
+         * Não é possível pausar antes de existir
+         * uma imagem válida para ser conservada.
+         */
+        if (!selectedFrameAvailable
+                || selectedFrame.empty()) {
+
+            frozen = false;
+
+            return false;
+        }
+
+        frozen = !frozen;
+
+        return frozen;
+    }
+
+    public boolean isFrozen() {
+        return frozen;
+    }
+
+    public synchronized VisionStage selectNext() {
+
+        /*
+         * Como guardamos somente uma etapa, não permitimos
+         * mudar de etapa enquanto a imagem está congelada.
+         */
+        if (frozen) {
+            return selectedStage;
+        }
 
         VisionStage[] stages =
                 VisionStage.values();
@@ -114,7 +190,11 @@ public final class VisionDebugController
         return selectedStage;
     }
 
-    public VisionStage selectPrevious() {
+    public synchronized VisionStage selectPrevious() {
+
+        if (frozen) {
+            return selectedStage;
+        }
 
         VisionStage[] stages =
                 VisionStage.values();
@@ -136,10 +216,12 @@ public final class VisionDebugController
         return selectedStage;
     }
 
-    public void release() {
+    public synchronized void release() {
+
+        frozen = false;
+        selectedFrameAvailable = false;
 
         selectedFrame.release();
-        selectedFrameAvailable = false;
     }
 
     private void drawStageLabel(
@@ -149,12 +231,17 @@ public final class VisionDebugController
         String label =
                 selectedStage.getDisplayName();
 
+        if (frozen) {
+            label += " [PAUSED]";
+        }
+
         int left = 18;
         int top = 18;
+
         int right =
                 Math.min(
                         rgbaOutput.cols() - 18,
-                        430
+                        frozen ? 560 : 430
                 );
 
         int bottom = 68;
