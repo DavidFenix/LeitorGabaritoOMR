@@ -2,40 +2,44 @@ package com.example.leitorgabaritoomr.vision.debug;
 
 public enum VisionStage {
 
-    ORIGINAL("1/11 - Original"),
+    ORIGINAL("1/12 - Original"),
 
-    GRAYSCALE("2/11 - Escala de cinza"),
+    GRAYSCALE("2/12 - Escala de cinza"),
 
-    BLURRED("3/11 - Suavizacao"),
+    BLURRED("3/12 - Suavizacao"),
 
-    BINARY("4/11 - Imagem binaria"),
+    BINARY("4/12 - Imagem binaria"),
 
     ACCEPTED_CANDIDATES(
-            "5/11 - Candidatos aceitos"
+            "5/12 - Candidatos aceitos"
     ),
 
     RESOLVED_MARKERS(
-            "6/11 - Quatro marcadores"
+            "6/12 - Quatro marcadores"
     ),
 
     STABLE_MARKERS(
-            "7/11 - Estabilidade temporal"
+            "7/12 - Estabilidade temporal"
     ),
 
     NORMALIZED_REGION(
-            "8/11 - Regiao normalizada"
+            "8/12 - Regiao normalizada"
     ),
 
     LAYOUT_MAP(
-            "9/11 - Mapa esperado das bolhas"
+            "9/12 - Mapa esperado das bolhas"
     ),
 
     BUBBLE_MEASUREMENTS(
-            "10/11 - Medicao das bolhas"
+            "10/12 - Medicao das bolhas"
     ),
 
     QUESTION_COMPARISON(
-            "11/11 - Comparacao por questao"
+            "11/12 - Comparacao por questao"
+    ),
+
+    TEMPORAL_CONSENSUS(
+            "12/12 - Consenso temporal"
     );
 
     private final String displayName;
@@ -48,6 +52,56 @@ public enum VisionStage {
         return displayName;
     }
 }
+//package com.example.leitorgabaritoomr.vision.debug;
+//
+//public enum VisionStage {
+//
+//    ORIGINAL("1/11 - Original"),
+//
+//    GRAYSCALE("2/11 - Escala de cinza"),
+//
+//    BLURRED("3/11 - Suavizacao"),
+//
+//    BINARY("4/11 - Imagem binaria"),
+//
+//    ACCEPTED_CANDIDATES(
+//            "5/11 - Candidatos aceitos"
+//    ),
+//
+//    RESOLVED_MARKERS(
+//            "6/11 - Quatro marcadores"
+//    ),
+//
+//    STABLE_MARKERS(
+//            "7/11 - Estabilidade temporal"
+//    ),
+//
+//    NORMALIZED_REGION(
+//            "8/11 - Regiao normalizada"
+//    ),
+//
+//    LAYOUT_MAP(
+//            "9/11 - Mapa esperado das bolhas"
+//    ),
+//
+//    BUBBLE_MEASUREMENTS(
+//            "10/11 - Medicao das bolhas"
+//    ),
+//
+//    QUESTION_COMPARISON(
+//            "11/11 - Comparacao por questao"
+//    );
+//
+//    private final String displayName;
+//
+//    VisionStage(String displayName) {
+//        this.displayName = displayName;
+//    }
+//
+//    public String getDisplayName() {
+//        return displayName;
+//    }
+//}
 //package com.example.leitorgabaritoomr.vision.debug;
 //
 //public enum VisionStage {

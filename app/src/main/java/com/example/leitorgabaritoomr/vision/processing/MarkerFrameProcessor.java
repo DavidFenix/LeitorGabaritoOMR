@@ -2,6 +2,7 @@ package com.example.leitorgabaritoomr.vision.processing;
 
 import com.example.leitorgabaritoomr.vision.debug.VisionDebugController;
 import com.example.leitorgabaritoomr.vision.debug.VisionStage;
+import com.example.leitorgabaritoomr.vision.debug.BubbleMeasurementDiagnosticLogger;
 import com.example.leitorgabaritoomr.vision.detector.OmrMarkerDetector;
 import com.example.leitorgabaritoomr.vision.drawing.MarkerOverlayRenderer;
 import com.example.leitorgabaritoomr.vision.drawing.NormalizedRegionPreviewRenderer;
@@ -41,7 +42,16 @@ import com.example.leitorgabaritoomr.vision.scoring.BubbleEvidenceScorerConfig;
 
 import java.util.List;
 
+import com.example.leitorgabaritoomr.vision.aggregation.QuestionEvidenceAccumulator;
+import com.example.leitorgabaritoomr.vision.aggregation.QuestionEvidenceAccumulatorConfig;
+import com.example.leitorgabaritoomr.vision.aggregation.SheetEvidenceAggregate;
+import com.example.leitorgabaritoomr.vision.drawing.TemporalConsensusOverlayRenderer;
+
 public final class MarkerFrameProcessor {
+
+    private final BubbleMeasurementDiagnosticLogger
+            bubbleMeasurementDiagnosticLogger =
+            new BubbleMeasurementDiagnosticLogger();
 
     /*
      * Registra em qual etapa ocorreu a última pausa automática.
@@ -87,6 +97,15 @@ public final class MarkerFrameProcessor {
 
     private final QuestionComparisonOverlayRenderer
             questionComparisonOverlayRenderer;
+
+    private final QuestionEvidenceAccumulator
+            questionEvidenceAccumulator;
+
+    private final TemporalConsensusOverlayRenderer
+            temporalConsensusOverlayRenderer;
+
+    private volatile SheetEvidenceAggregate
+            lastSheetEvidenceAggregate;
 
     private volatile List<QuestionMeasurement>
             lastQuestionMeasurements;
@@ -141,7 +160,13 @@ public final class MarkerFrameProcessor {
                                         .developmentDefaults()
                         )
                 ),
-                new QuestionComparisonOverlayRenderer()
+                new QuestionComparisonOverlayRenderer(),
+                new QuestionEvidenceAccumulator(
+                        QuestionEvidenceAccumulatorConfig
+                                .developmentDefaults(),
+                        AvalieCeDevelopmentLayoutFactory.create()
+                ),
+                new TemporalConsensusOverlayRenderer()
         );
     }
 
@@ -167,7 +192,9 @@ public final class MarkerFrameProcessor {
             OmrLayoutMeasurer layoutMeasurer,
             BubbleMeasurementOverlayRenderer bubbleMeasurementOverlayRenderer,
             OmrQuestionMeasurer questionMeasurer,
-            QuestionComparisonOverlayRenderer questionComparisonOverlayRenderer
+            QuestionComparisonOverlayRenderer questionComparisonOverlayRenderer,
+            QuestionEvidenceAccumulator questionEvidenceAccumulator,
+            TemporalConsensusOverlayRenderer temporalConsensusOverlayRenderer
     ) {
         if (detector == null
                 || markerRenderer == null
@@ -183,7 +210,9 @@ public final class MarkerFrameProcessor {
                 || layoutMeasurer == null
                 || bubbleMeasurementOverlayRenderer == null
                 || questionMeasurer == null
-                || questionComparisonOverlayRenderer == null) {
+                || questionComparisonOverlayRenderer == null
+                || questionEvidenceAccumulator == null
+                || temporalConsensusOverlayRenderer == null) {
 
             throw new IllegalArgumentException(
                     "Todos os componentes do processamento são obrigatórios."
@@ -229,12 +258,23 @@ public final class MarkerFrameProcessor {
 
         this.questionComparisonOverlayRenderer =
                 questionComparisonOverlayRenderer;
+
+        this.questionEvidenceAccumulator =
+                questionEvidenceAccumulator;
+
+        this.temporalConsensusOverlayRenderer =
+                temporalConsensusOverlayRenderer;
+
+        this.lastSheetEvidenceAggregate =
+                questionEvidenceAccumulator
+                        .getCurrentSnapshot();
     }
 
     private void applyAutomaticFreezeIfEligible(
             boolean normalizedRegionAvailable,
             boolean measurementsAvailable,
-            boolean questionComparisonAvailable
+            boolean questionComparisonAvailable,
+            boolean temporalConsensusAvailable
     ) {
         if (lastStabilityResult == null) {
             return;
@@ -282,17 +322,12 @@ public final class MarkerFrameProcessor {
                 && selectedStage
                 != VisionStage.BUBBLE_MEASUREMENTS
                 && selectedStage
-                != VisionStage.QUESTION_COMPARISON) {
+                != VisionStage.QUESTION_COMPARISON
+                && selectedStage
+                != VisionStage.TEMPORAL_CONSENSUS) {
 
             return;
         }
-//        if (selectedStage
-//                != VisionStage.STABLE_MARKERS
-//                && selectedStage
-//                != VisionStage.NORMALIZED_REGION) {
-//
-//            return;
-//        }
 
         /*
          * Na etapa 8, o estado STABLE não é suficiente.
@@ -304,38 +339,35 @@ public final class MarkerFrameProcessor {
                 || selectedStage == VisionStage.LAYOUT_MAP
                 || selectedStage == VisionStage.BUBBLE_MEASUREMENTS
                 || selectedStage == VisionStage.QUESTION_COMPARISON)
+                || selectedStage == VisionStage.TEMPORAL_CONSENSUS
                 && !normalizedRegionAvailable) {
 
             return;
         }
-//        if ((selectedStage == VisionStage.NORMALIZED_REGION
-//                || selectedStage == VisionStage.LAYOUT_MAP
-//                || selectedStage == VisionStage.BUBBLE_MEASUREMENTS)
-//                && !normalizedRegionAvailable) {
-////        if (selectedStage == VisionStage.NORMALIZED_REGION
-////                && !normalizedRegionAvailable) {
-//
-//            return;
-//        }
 
         if ((selectedStage
                 == VisionStage.BUBBLE_MEASUREMENTS
                 || selectedStage
-                == VisionStage.QUESTION_COMPARISON)
+                == VisionStage.QUESTION_COMPARISON
+                || selectedStage
+                == VisionStage.TEMPORAL_CONSENSUS)
                 && !measurementsAvailable) {
 
             return;
         }
-//        if (selectedStage
-//                == VisionStage.BUBBLE_MEASUREMENTS
-//                && !measurementsAvailable) {
-//
-//            return;
-//        }
+
+        if ((selectedStage
+                == VisionStage.QUESTION_COMPARISON
+                || selectedStage
+                == VisionStage.TEMPORAL_CONSENSUS)
+                && !questionComparisonAvailable) {
+
+            return;
+        }
 
         if (selectedStage
-                == VisionStage.QUESTION_COMPARISON
-                && !questionComparisonAvailable) {
+                == VisionStage.TEMPORAL_CONSENSUS
+                && !temporalConsensusAvailable) {
 
             return;
         }
@@ -406,22 +438,15 @@ public final class MarkerFrameProcessor {
 
         if (selectedStage == VisionStage.NORMALIZED_REGION
                 || selectedStage == VisionStage.LAYOUT_MAP
-                || selectedStage
-                == VisionStage.BUBBLE_MEASUREMENTS
-                || selectedStage
-                == VisionStage.QUESTION_COMPARISON) {
-//        if (selectedStage == VisionStage.NORMALIZED_REGION
-//                || selectedStage == VisionStage.LAYOUT_MAP
-//                || selectedStage
-//                == VisionStage.BUBBLE_MEASUREMENTS) {
-//        if (selectedStage == VisionStage.NORMALIZED_REGION
-//                || selectedStage == VisionStage.LAYOUT_MAP) {
+                || selectedStage == VisionStage.BUBBLE_MEASUREMENTS
+                || selectedStage == VisionStage.QUESTION_COMPARISON
+                || selectedStage == VisionStage.TEMPORAL_CONSENSUS) {
 
             cleanNormalizationFrame =
                     rgbaFrame.clone();
         }
         /*
-         * A normalização precisa utilizar o frame original,
+         * A normalização precisa utilizar o frame original(limpo),
          * antes que candidatos, textos e quadriláteros sejam
          * desenhados sobre ele.
          */
@@ -471,6 +496,8 @@ public final class MarkerFrameProcessor {
                             lastResolutionResult
                     );
 
+            resetTemporalConsensusIfGeometryChanged();
+
             if (cleanStabilityFrame != null) {
                 stableMarkerRenderer.draw(
                         cleanStabilityFrame,
@@ -485,10 +512,9 @@ public final class MarkerFrameProcessor {
 
             if (selectedStage == VisionStage.NORMALIZED_REGION
                     || selectedStage == VisionStage.LAYOUT_MAP
-                    || selectedStage
-                    == VisionStage.BUBBLE_MEASUREMENTS
-                    || selectedStage
-                    == VisionStage.QUESTION_COMPARISON) {
+                    || selectedStage == VisionStage.BUBBLE_MEASUREMENTS
+                    || selectedStage == VisionStage.QUESTION_COMPARISON
+                    || selectedStage == VisionStage.TEMPORAL_CONSENSUS) {
 
                 normalizationResult =
                         normalizeStableRegion(
@@ -507,10 +533,13 @@ public final class MarkerFrameProcessor {
                         );
                     }
 
+                    //etapa 12
                     if (selectedStage
                             == VisionStage.BUBBLE_MEASUREMENTS
                             || selectedStage
-                            == VisionStage.QUESTION_COMPARISON) {
+                            == VisionStage.QUESTION_COMPARISON
+                            || selectedStage
+                            == VisionStage.TEMPORAL_CONSENSUS) {
 
                         lastMeasurementResult =
                                 layoutMeasurer.measure(
@@ -548,23 +577,47 @@ public final class MarkerFrameProcessor {
                                     lastQuestionMeasurements
                             );
                         }
+
+                        if (selectedStage
+                                == VisionStage.TEMPORAL_CONSENSUS
+                                && lastQuestionMeasurements != null) {
+
+                            /*
+                             * Somente confirmações STABLE reais entram no consenso.
+                             * HELD_STABLE conserva o resultado, mas não conta frame.
+                             */
+                            if (lastStabilityResult != null
+                                    && lastStabilityResult.getState()
+                                    == MarkerStabilityState.STABLE) {
+
+                                lastSheetEvidenceAggregate =
+                                        questionEvidenceAccumulator.update(
+                                                lastQuestionMeasurements
+                                        );
+
+                            } else {
+                                lastSheetEvidenceAggregate =
+                                        questionEvidenceAccumulator
+                                                .getCurrentSnapshot();
+                            }
+
+                            temporalConsensusOverlayRenderer.draw(
+                                    normalizationResult
+                                            .getNormalizedRegion(),
+                                    lastSheetEvidenceAggregate
+                            );
+
+                            if (lastSheetEvidenceAggregate != null
+                                    && lastSheetEvidenceAggregate.isReady()) {
+
+                                bubbleMeasurementDiagnosticLogger.logOnce(
+                                        lastQuestionMeasurements
+                                );
+                            }
+
+                        }
                     }
-//                    if (selectedStage
-//                            == VisionStage.BUBBLE_MEASUREMENTS) {
-//
-//                        lastMeasurementResult =
-//                                layoutMeasurer.measure(
-//                                        normalizationResult
-//                                                .getNormalizedRegion(),
-//                                        layoutDefinition
-//                                );
-//
-//                        bubbleMeasurementOverlayRenderer.draw(
-//                                normalizationResult
-//                                        .getNormalizedRegion(),
-//                                lastMeasurementResult
-//                        );
-//                    }
+
                 }
 
                 normalizedPreviewFrame =
@@ -580,66 +633,6 @@ public final class MarkerFrameProcessor {
                         normalizedPreviewFrame
                 );
             }
-//            if (selectedStage == VisionStage.NORMALIZED_REGION
-//                    || selectedStage == VisionStage.LAYOUT_MAP
-//                    || selectedStage
-//                    == VisionStage.BUBBLE_MEASUREMENTS) {
-////            if (selectedStage == VisionStage.NORMALIZED_REGION
-////                    || selectedStage == VisionStage.LAYOUT_MAP) {
-//
-//                normalizationResult =
-//                        normalizeStableRegion(
-//                                cleanNormalizationFrame
-//                        );
-//
-//                /*
-//                 * Na etapa 9 desenhamos o mapa diretamente sobre a
-//                 * região normalizada, antes de montar a pré-visualização.
-//                 */
-//                if (selectedStage == VisionStage.LAYOUT_MAP
-//                        && normalizationResult.isSuccess()) {
-//
-//                    layoutOverlayRenderer.draw(
-//                            normalizationResult
-//                                    .getNormalizedRegion(),
-//                            layoutDefinition
-//                    );
-//                }
-//
-//                normalizedPreviewFrame =
-//                        normalizedRegionPreviewRenderer
-//                                .render(
-//                                        normalizationResult,
-//                                        rgbaFrame.cols(),
-//                                        rgbaFrame.rows()
-//                                );
-//
-//                debugController.publish(
-//                        selectedStage,
-//                        normalizedPreviewFrame
-//                );
-//            }
-//            if (debugController.getSelectedStage()
-//                    == VisionStage.NORMALIZED_REGION) {
-//
-//                normalizationResult =
-//                        normalizeStableRegion(
-//                                cleanNormalizationFrame
-//                        );
-//
-//                normalizedPreviewFrame =
-//                        normalizedRegionPreviewRenderer
-//                                .render(
-//                                        normalizationResult,
-//                                        rgbaFrame.cols(),
-//                                        rgbaFrame.rows()
-//                                );
-//
-//                debugController.publish(
-//                        VisionStage.NORMALIZED_REGION,
-//                        normalizedPreviewFrame
-//                );
-//            }
 
             /*
              * A pausa automática ocorre somente depois que a
@@ -662,18 +655,17 @@ public final class MarkerFrameProcessor {
                             && lastQuestionMeasurements.size()
                             == layoutDefinition.getQuestionCount();
 
+            boolean temporalConsensusAvailable =
+                    lastSheetEvidenceAggregate != null
+                            && lastSheetEvidenceAggregate.isReady();
+
+            //chamada da pausa
             applyAutomaticFreezeIfEligible(
                     normalizedRegionAvailable,
                     measurementsAvailable,
-                    questionComparisonAvailable
+                    questionComparisonAvailable,
+                    temporalConsensusAvailable
             );
-//            applyAutomaticFreezeIfEligible(
-//                    normalizedRegionAvailable,
-//                    measurementsAvailable
-//            );
-//            applyAutomaticFreezeIfEligible(
-//                    normalizedRegionAvailable
-//            );
 
             debugController.renderSelectedStage(
                     rgbaFrame
@@ -697,6 +689,38 @@ public final class MarkerFrameProcessor {
             if (cleanStabilityFrame != null) {
                 cleanStabilityFrame.release();
             }
+        }
+    }
+
+    private void resetTemporalConsensusIfGeometryChanged() {
+        if (lastStabilityResult == null) {
+            return;
+        }
+
+        MarkerStabilityState state =
+                lastStabilityResult.getState();
+
+        /*
+         * HELD_STABLE representa uma falha breve e conserva
+         * o consenso já acumulado.
+         *
+         * ACCUMULATING representa uma nova sequência geométrica,
+         * portanto não deve ser misturada com a anterior.
+         */
+        if (state == MarkerStabilityState.SEARCHING
+                || state == MarkerStabilityState.LOST
+                || state == MarkerStabilityState.ACCUMULATING) {
+
+            if (questionEvidenceAccumulator
+                    .getAccumulatedFrames() > 0) {
+
+                questionEvidenceAccumulator.reset();
+                bubbleMeasurementDiagnosticLogger.reset();
+            }
+
+            lastSheetEvidenceAggregate =
+                    questionEvidenceAccumulator
+                            .getCurrentSnapshot();
         }
     }
 
@@ -767,16 +791,29 @@ public final class MarkerFrameProcessor {
         return lastQuestionMeasurements;
     }
 
+    public SheetEvidenceAggregate
+    getLastSheetEvidenceAggregate() {
+
+        return lastSheetEvidenceAggregate;
+    }
+
     public void resetStability() {
         markerSetStabilizer.reset();
 
         lastStabilityResult = null;
-
         lastMeasurementResult = null;
+        lastQuestionMeasurements = null;
+
+        questionEvidenceAccumulator.reset();
+
+        bubbleMeasurementDiagnosticLogger.reset();
+
+        lastSheetEvidenceAggregate =
+                questionEvidenceAccumulator
+                        .getCurrentSnapshot();
 
         autoFreezeConsumedStage = null;
 
-        lastQuestionMeasurements = null;
     }
 
 }

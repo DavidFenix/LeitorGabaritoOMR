@@ -1,5 +1,6 @@
 package com.example.leitorgabaritoomr.vision.measurement;
 
+import com.example.leitorgabaritoomr.vision.geometry.PixelRectangle;
 import com.example.leitorgabaritoomr.vision.layout.OmrOptionDefinition;
 
 import org.opencv.core.Core;
@@ -11,6 +12,9 @@ import org.opencv.core.Scalar;
  * Mede núcleo, borda e fundo local de uma alternativa.
  *
  * A imagem recebida deve estar em escala de cinza.
+ *
+ * A geometria e a máscara produzidas aqui são armazenadas
+ * no BubbleMeasurement e reutilizadas pelo Laboratório OMR.
  */
 public final class BubbleMeasurer {
 
@@ -37,24 +41,32 @@ public final class BubbleMeasurer {
                 option
         );
 
-        Rect regionRect =
-                calculateRegionRect(
+        Rect bubbleRect =
+                calculateBubbleRect(
                         normalizedGray,
                         option
                 );
 
-        validateRegionSize(regionRect);
+        validateRegionSize(bubbleRect);
 
         Rect coreRect =
-                calculateCoreRect(regionRect);
+                calculateCoreRect(bubbleRect);
 
         Rect backgroundRect =
                 calculateBackgroundRect(
                         normalizedGray,
-                        regionRect
+                        bubbleRect
                 );
 
-        Mat region = null;
+        BubbleMeasurementGeometry geometry =
+                createGeometry(
+                        option,
+                        bubbleRect,
+                        coreRect,
+                        backgroundRect
+                );
+
+        Mat bubble = null;
         Mat core = null;
         Mat backgroundArea = null;
 
@@ -63,11 +75,15 @@ public final class BubbleMeasurer {
         Mat locallyDarkCoreMask = new Mat();
 
         try {
-            region =
-                    normalizedGray.submat(regionRect);
+            bubble =
+                    normalizedGray.submat(
+                            bubbleRect
+                    );
 
             core =
-                    normalizedGray.submat(coreRect);
+                    normalizedGray.submat(
+                            coreRect
+                    );
 
             backgroundArea =
                     normalizedGray.submat(
@@ -75,19 +91,22 @@ public final class BubbleMeasurer {
                     );
 
             double regionMean =
-                    Core.mean(region).val[0];
+                    Core.mean(bubble).val[0];
 
             double coreMean =
                     Core.mean(core).val[0];
 
             double backgroundAreaMean =
-                    Core.mean(backgroundArea).val[0];
+                    Core.mean(backgroundArea)
+                            .val[0];
 
             int regionPixelCount =
-                    region.rows() * region.cols();
+                    bubble.rows()
+                            * bubble.cols();
 
             int corePixelCount =
-                    core.rows() * core.cols();
+                    core.rows()
+                            * core.cols();
 
             int borderPixelCount =
                     regionPixelCount
@@ -121,8 +140,11 @@ public final class BubbleMeasurer {
                             backgroundAreaMean
                     );
 
+            /*
+             * Diagnóstico de escuridão absoluta.
+             */
             Core.compare(
-                    region,
+                    bubble,
                     new Scalar(
                             config.getDarkPixelThreshold()
                     ),
@@ -139,6 +161,10 @@ public final class BubbleMeasurer {
                     Core.CMP_LT
             );
 
+            /*
+             * Este é o limiar realmente usado para a comparação
+             * local do núcleo.
+             */
             double localThreshold =
                     clampIntensity(
                             localBackgroundMean
@@ -146,6 +172,9 @@ public final class BubbleMeasurer {
                                     .getLocalDarknessDelta()
                     );
 
+            /*
+             * Esta máscara será preservada dentro do resultado.
+             */
             Core.compare(
                     core,
                     new Scalar(localThreshold),
@@ -175,12 +204,14 @@ public final class BubbleMeasurer {
                             locallyDarkCoreMask
                     );
 
+            byte[] locallyDarkMaskBytes =
+                    copyMask(
+                            locallyDarkCoreMask,
+                            corePixelCount
+                    );
+
             return new BubbleMeasurement(
-                    option,
-                    regionRect.x,
-                    regionRect.y,
-                    regionRect.width,
-                    regionRect.height,
+                    geometry,
 
                     clampIntensity(regionMean),
                     clampIntensity(coreMean),
@@ -188,6 +219,8 @@ public final class BubbleMeasurer {
                     clampIntensity(
                             localBackgroundMean
                     ),
+
+                    localThreshold,
 
                     clampRatio(
                             divide(
@@ -215,7 +248,9 @@ public final class BubbleMeasurer {
                                     locallyDarkCorePixels,
                                     corePixelCount
                             )
-                    )
+                    ),
+
+                    locallyDarkMaskBytes
             );
 
         } finally {
@@ -227,14 +262,63 @@ public final class BubbleMeasurer {
                 core.release();
             }
 
-            if (region != null) {
-                region.release();
+            if (bubble != null) {
+                bubble.release();
             }
 
             regionDarkMask.release();
             coreDarkMask.release();
             locallyDarkCoreMask.release();
         }
+    }
+
+    private BubbleMeasurementGeometry createGeometry(
+            OmrOptionDefinition option,
+            Rect bubbleRect,
+            Rect coreRect,
+            Rect backgroundRect
+    ) {
+        return new BubbleMeasurementGeometry(
+                option,
+                toPixelRectangle(bubbleRect),
+                toPixelRectangle(coreRect),
+                toPixelRectangle(backgroundRect)
+        );
+    }
+
+    private PixelRectangle toPixelRectangle(
+            Rect rect
+    ) {
+        return new PixelRectangle(
+                rect.x,
+                rect.y,
+                rect.width,
+                rect.height
+        );
+    }
+
+    private byte[] copyMask(
+            Mat mask,
+            int expectedPixelCount
+    ) {
+        byte[] bytes =
+                new byte[expectedPixelCount];
+
+        int copiedValues =
+                mask.get(
+                        0,
+                        0,
+                        bytes
+                );
+
+        if (copiedValues <= 0) {
+            throw new IllegalStateException(
+                    "Não foi possível copiar a máscara"
+                            + " de pixels escuros."
+            );
+        }
+
+        return bytes;
     }
 
     private void validateInput(
@@ -263,7 +347,14 @@ public final class BubbleMeasurer {
         }
     }
 
-    private Rect calculateRegionRect(
+    /**
+     * Retângulo externo da bolha.
+     *
+     * Atualmente ele nasce das coordenadas do layout.
+     * Futuramente poderá ser refinado pelo localizador local,
+     * sem alterar o restante da medição.
+     */
+    private Rect calculateBubbleRect(
             Mat image,
             OmrOptionDefinition option
     ) {
@@ -312,43 +403,53 @@ public final class BubbleMeasurer {
     }
 
     private Rect calculateCoreRect(
-            Rect region
+            Rect bubbleRegion
     ) {
         int coreWidth = Math.max(
                 1,
                 (int) Math.round(
-                        region.width
-                                * config.getCoreWidthScale()
+                        bubbleRegion.width
+                                * config
+                                .getCoreWidthScale()
                 )
         );
 
         int coreHeight = Math.max(
                 1,
                 (int) Math.round(
-                        region.height
-                                * config.getCoreHeightScale()
+                        bubbleRegion.height
+                                * config
+                                .getCoreHeightScale()
                 )
         );
 
-        if (region.width >= 3) {
+        if (bubbleRegion.width >= 3) {
             coreWidth = Math.min(
                     coreWidth,
-                    region.width - 2
+                    bubbleRegion.width - 2
             );
         }
 
-        if (region.height >= 3) {
+        if (bubbleRegion.height >= 3) {
             coreHeight = Math.min(
                     coreHeight,
-                    region.height - 2
+                    bubbleRegion.height - 2
             );
         }
 
         return new Rect(
-                region.x
-                        + (region.width - coreWidth) / 2,
-                region.y
-                        + (region.height - coreHeight) / 2,
+                bubbleRegion.x
+                        + (
+                        bubbleRegion.width
+                                - coreWidth
+                ) / 2,
+
+                bubbleRegion.y
+                        + (
+                        bubbleRegion.height
+                                - coreHeight
+                ) / 2,
+
                 coreWidth,
                 coreHeight
         );
@@ -356,50 +457,62 @@ public final class BubbleMeasurer {
 
     private Rect calculateBackgroundRect(
             Mat image,
-            Rect region
+            Rect bubbleRegion
     ) {
         int targetWidth = Math.max(
-                region.width + 2,
+                bubbleRegion.width + 2,
                 (int) Math.round(
-                        region.width
+                        bubbleRegion.width
                                 * config
                                 .getBackgroundWidthScale()
                 )
         );
 
         int targetHeight = Math.max(
-                region.height + 2,
+                bubbleRegion.height + 2,
                 (int) Math.round(
-                        region.height
+                        bubbleRegion.height
                                 * config
                                 .getBackgroundHeightScale()
                 )
         );
 
         int extraX =
-                (targetWidth - region.width + 1) / 2;
+                (
+                        targetWidth
+                                - bubbleRegion.width
+                                + 1
+                ) / 2;
 
         int extraY =
-                (targetHeight - region.height + 1) / 2;
+                (
+                        targetHeight
+                                - bubbleRegion.height
+                                + 1
+                ) / 2;
 
         int left = Math.max(
                 0,
-                region.x - extraX
+                bubbleRegion.x - extraX
         );
 
         int top = Math.max(
                 0,
-                region.y - extraY
+                bubbleRegion.y - extraY
         );
 
         int right = Math.min(
                 image.cols(),
-                region.x + region.width + extraX
+                bubbleRegion.x
+                        + bubbleRegion.width
+                        + extraX
         );
 
         int bottom = Math.min(
                 image.rows(),
-                region.y + region.height + extraY
+                bubbleRegion.y
+                        + bubbleRegion.height
+                        + extraY
         );
 
         return new Rect(
@@ -410,7 +523,9 @@ public final class BubbleMeasurer {
         );
     }
 
-    private void validateRegionSize(Rect region) {
+    private void validateRegionSize(
+            Rect region
+    ) {
         if (region.width
                 < config.getMinimumRegionWidth()
                 || region.height
@@ -438,7 +553,8 @@ public final class BubbleMeasurer {
         }
 
         return (
-                completeMean * completePixelCount
+                completeMean
+                        * completePixelCount
                         - excludedMean
                         * excludedPixelCount
         ) / remainingPixelCount;
@@ -456,14 +572,18 @@ public final class BubbleMeasurer {
                 / (double) denominator;
     }
 
-    private double clampIntensity(double value) {
+    private double clampIntensity(
+            double value
+    ) {
         return Math.max(
                 0.0,
                 Math.min(255.0, value)
         );
     }
 
-    private double clampRatio(double value) {
+    private double clampRatio(
+            double value
+    ) {
         return Math.max(
                 0.0,
                 Math.min(1.0, value)
@@ -491,10 +611,9 @@ public final class BubbleMeasurer {
 //import org.opencv.core.Scalar;
 //
 ///**
-// * Mede uma alternativa em uma imagem normalizada em escala
-// * de cinza.
+// * Mede núcleo, borda e fundo local de uma alternativa.
 // *
-// * A Mat recebida deve possuir exatamente um canal.
+// * A imagem recebida deve estar em escala de cinza.
 // */
 //public final class BubbleMeasurer {
 //
@@ -532,32 +651,78 @@ public final class BubbleMeasurer {
 //        Rect coreRect =
 //                calculateCoreRect(regionRect);
 //
+//        Rect backgroundRect =
+//                calculateBackgroundRect(
+//                        normalizedGray,
+//                        regionRect
+//                );
+//
 //        Mat region = null;
 //        Mat core = null;
+//        Mat backgroundArea = null;
 //
 //        Mat regionDarkMask = new Mat();
 //        Mat coreDarkMask = new Mat();
+//        Mat locallyDarkCoreMask = new Mat();
 //
 //        try {
 //            region =
 //                    normalizedGray.submat(regionRect);
 //
-//            Rect relativeCoreRect =
-//                    new Rect(
-//                            coreRect.x - regionRect.x,
-//                            coreRect.y - regionRect.y,
-//                            coreRect.width,
-//                            coreRect.height
-//                    );
-//
 //            core =
-//                    region.submat(relativeCoreRect);
+//                    normalizedGray.submat(coreRect);
+//
+//            backgroundArea =
+//                    normalizedGray.submat(
+//                            backgroundRect
+//                    );
 //
 //            double regionMean =
 //                    Core.mean(region).val[0];
 //
 //            double coreMean =
 //                    Core.mean(core).val[0];
+//
+//            double backgroundAreaMean =
+//                    Core.mean(backgroundArea).val[0];
+//
+//            int regionPixelCount =
+//                    region.rows() * region.cols();
+//
+//            int corePixelCount =
+//                    core.rows() * core.cols();
+//
+//            int borderPixelCount =
+//                    regionPixelCount
+//                            - corePixelCount;
+//
+//            int backgroundAreaPixelCount =
+//                    backgroundArea.rows()
+//                            * backgroundArea.cols();
+//
+//            int localBackgroundPixelCount =
+//                    backgroundAreaPixelCount
+//                            - regionPixelCount;
+//
+//            double borderMean =
+//                    calculateExcludedMean(
+//                            regionMean,
+//                            regionPixelCount,
+//                            coreMean,
+//                            corePixelCount,
+//                            borderPixelCount,
+//                            regionMean
+//                    );
+//
+//            double localBackgroundMean =
+//                    calculateExcludedMean(
+//                            backgroundAreaMean,
+//                            backgroundAreaPixelCount,
+//                            regionMean,
+//                            regionPixelCount,
+//                            localBackgroundPixelCount,
+//                            backgroundAreaMean
+//                    );
 //
 //            Core.compare(
 //                    region,
@@ -577,20 +742,29 @@ public final class BubbleMeasurer {
 //                    Core.CMP_LT
 //            );
 //
-//            int regionPixelCount =
-//                    region.rows() * region.cols();
+//            double localThreshold =
+//                    clampIntensity(
+//                            localBackgroundMean
+//                                    - config
+//                                    .getLocalDarknessDelta()
+//                    );
 //
-//            int corePixelCount =
-//                    core.rows() * core.cols();
-//
-//            int borderPixelCount =
-//                    regionPixelCount - corePixelCount;
+//            Core.compare(
+//                    core,
+//                    new Scalar(localThreshold),
+//                    locallyDarkCoreMask,
+//                    Core.CMP_LT
+//            );
 //
 //            int regionDarkPixels =
-//                    Core.countNonZero(regionDarkMask);
+//                    Core.countNonZero(
+//                            regionDarkMask
+//                    );
 //
 //            int coreDarkPixels =
-//                    Core.countNonZero(coreDarkMask);
+//                    Core.countNonZero(
+//                            coreDarkMask
+//                    );
 //
 //            int borderDarkPixels =
 //                    Math.max(
@@ -599,31 +773,9 @@ public final class BubbleMeasurer {
 //                                    - coreDarkPixels
 //                    );
 //
-//            double regionDarkRatio =
-//                    divide(
-//                            regionDarkPixels,
-//                            regionPixelCount
-//                    );
-//
-//            double coreDarkRatio =
-//                    divide(
-//                            coreDarkPixels,
-//                            corePixelCount
-//                    );
-//
-//            double borderDarkRatio =
-//                    divide(
-//                            borderDarkPixels,
-//                            borderPixelCount
-//                    );
-//
-//            double borderMean =
-//                    calculateBorderMean(
-//                            regionMean,
-//                            regionPixelCount,
-//                            coreMean,
-//                            corePixelCount,
-//                            borderPixelCount
+//            int locallyDarkCorePixels =
+//                    Core.countNonZero(
+//                            locallyDarkCoreMask
 //                    );
 //
 //            return new BubbleMeasurement(
@@ -632,15 +784,48 @@ public final class BubbleMeasurer {
 //                    regionRect.y,
 //                    regionRect.width,
 //                    regionRect.height,
+//
 //                    clampIntensity(regionMean),
 //                    clampIntensity(coreMean),
 //                    clampIntensity(borderMean),
-//                    clampRatio(regionDarkRatio),
-//                    clampRatio(coreDarkRatio),
-//                    clampRatio(borderDarkRatio)
+//                    clampIntensity(
+//                            localBackgroundMean
+//                    ),
+//
+//                    clampRatio(
+//                            divide(
+//                                    regionDarkPixels,
+//                                    regionPixelCount
+//                            )
+//                    ),
+//
+//                    clampRatio(
+//                            divide(
+//                                    coreDarkPixels,
+//                                    corePixelCount
+//                            )
+//                    ),
+//
+//                    clampRatio(
+//                            divide(
+//                                    borderDarkPixels,
+//                                    borderPixelCount
+//                            )
+//                    ),
+//
+//                    clampRatio(
+//                            divide(
+//                                    locallyDarkCorePixels,
+//                                    corePixelCount
+//                            )
+//                    )
 //            );
 //
 //        } finally {
+//            if (backgroundArea != null) {
+//                backgroundArea.release();
+//            }
+//
 //            if (core != null) {
 //                core.release();
 //            }
@@ -651,6 +836,7 @@ public final class BubbleMeasurer {
 //
 //            regionDarkMask.release();
 //            coreDarkMask.release();
+//            locallyDarkCoreMask.release();
 //        }
 //    }
 //
@@ -747,10 +933,6 @@ public final class BubbleMeasurer {
 //                )
 //        );
 //
-//        /*
-//         * Mantém pelo menos um pixel de borda quando a região
-//         * possui tamanho suficiente.
-//         */
 //        if (region.width >= 3) {
 //            coreWidth = Math.min(
 //                    coreWidth,
@@ -765,19 +947,69 @@ public final class BubbleMeasurer {
 //            );
 //        }
 //
-//        int coreLeft =
-//                region.x
-//                        + (region.width - coreWidth) / 2;
-//
-//        int coreTop =
-//                region.y
-//                        + (region.height - coreHeight) / 2;
-//
 //        return new Rect(
-//                coreLeft,
-//                coreTop,
+//                region.x
+//                        + (region.width - coreWidth) / 2,
+//                region.y
+//                        + (region.height - coreHeight) / 2,
 //                coreWidth,
 //                coreHeight
+//        );
+//    }
+//
+//    private Rect calculateBackgroundRect(
+//            Mat image,
+//            Rect region
+//    ) {
+//        int targetWidth = Math.max(
+//                region.width + 2,
+//                (int) Math.round(
+//                        region.width
+//                                * config
+//                                .getBackgroundWidthScale()
+//                )
+//        );
+//
+//        int targetHeight = Math.max(
+//                region.height + 2,
+//                (int) Math.round(
+//                        region.height
+//                                * config
+//                                .getBackgroundHeightScale()
+//                )
+//        );
+//
+//        int extraX =
+//                (targetWidth - region.width + 1) / 2;
+//
+//        int extraY =
+//                (targetHeight - region.height + 1) / 2;
+//
+//        int left = Math.max(
+//                0,
+//                region.x - extraX
+//        );
+//
+//        int top = Math.max(
+//                0,
+//                region.y - extraY
+//        );
+//
+//        int right = Math.min(
+//                image.cols(),
+//                region.x + region.width + extraX
+//        );
+//
+//        int bottom = Math.min(
+//                image.rows(),
+//                region.y + region.height + extraY
+//        );
+//
+//        return new Rect(
+//                left,
+//                top,
+//                right - left,
+//                bottom - top
 //        );
 //    }
 //
@@ -788,7 +1020,7 @@ public final class BubbleMeasurer {
 //                < config.getMinimumRegionHeight()) {
 //
 //            throw new IllegalArgumentException(
-//                    "A região da alternativa ficou pequena demais: "
+//                    "A região ficou pequena demais: "
 //                            + region.width
 //                            + "x"
 //                            + region.height
@@ -796,27 +1028,23 @@ public final class BubbleMeasurer {
 //        }
 //    }
 //
-//    private double calculateBorderMean(
-//            double regionMean,
-//            int regionPixelCount,
-//            double coreMean,
-//            int corePixelCount,
-//            int borderPixelCount
+//    private double calculateExcludedMean(
+//            double completeMean,
+//            int completePixelCount,
+//            double excludedMean,
+//            int excludedPixelCount,
+//            int remainingPixelCount,
+//            double fallback
 //    ) {
-//        if (borderPixelCount <= 0) {
-//            return regionMean;
+//        if (remainingPixelCount <= 0) {
+//            return fallback;
 //        }
 //
-//        double regionIntensitySum =
-//                regionMean * regionPixelCount;
-//
-//        double coreIntensitySum =
-//                coreMean * corePixelCount;
-//
 //        return (
-//                regionIntensitySum
-//                        - coreIntensitySum
-//        ) / borderPixelCount;
+//                completeMean * completePixelCount
+//                        - excludedMean
+//                        * excludedPixelCount
+//        ) / remainingPixelCount;
 //    }
 //
 //    private double divide(
