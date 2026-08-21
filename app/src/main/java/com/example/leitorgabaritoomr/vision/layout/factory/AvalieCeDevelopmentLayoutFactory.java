@@ -72,11 +72,18 @@ public final class AvalieCeDevelopmentLayoutFactory {
                         0.07,
 
                         /*
-                         * Raios normalizados da região que será
-                         * analisada ao redor de cada bolha.
+                         * Limite externo da bolha.
+                         *
+                         * No canvas canônico de 1600 x 700:
+                         *
+                         * largura = 2 x 0.010 x 1600 = 32 pixels
+                         * altura  = 2 x 0.023 x 700  = 32,2 pixels
+                         *
+                         * Portanto, a região calculada e desenhada
+                         * fica praticamente quadrada.
                          */
                         0.010,
-                        0.018,
+                        0.023,
 
                         /*
                          * Numeração começa em 1.
