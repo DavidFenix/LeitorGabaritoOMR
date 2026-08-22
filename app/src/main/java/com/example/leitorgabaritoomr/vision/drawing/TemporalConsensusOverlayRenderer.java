@@ -3,7 +3,8 @@ package com.example.leitorgabaritoomr.vision.drawing;
 import com.example.leitorgabaritoomr.vision.aggregation.OptionEvidenceAggregate;
 import com.example.leitorgabaritoomr.vision.aggregation.QuestionEvidenceAggregate;
 import com.example.leitorgabaritoomr.vision.aggregation.SheetEvidenceAggregate;
-import com.example.leitorgabaritoomr.vision.layout.OmrOptionDefinition;
+import com.example.leitorgabaritoomr.vision.measurement.BubbleMeasurement;
+import com.example.leitorgabaritoomr.vision.measurement.OmrSheetMeasurementResult;
 
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
@@ -11,16 +12,20 @@ import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
 /**
- * Desenha o consenso temporal das respostas.
+ * Desenha o consenso temporal usando a geometria registrada do
+ * frame atual.
  *
- * Verde:
- * alternativas comuns.
- *
- * Ciano:
- * segunda colocada temporal.
- *
- * Amarelo, laranja ou vermelho:
+ * O SheetEvidenceAggregate fornece exclusivamente o resultado
+ * logico acumulado: alternativas comuns, segunda colocada e
  * vencedora temporal.
+ *
+ * O OmrSheetMeasurementResult fornece exclusivamente a geometria
+ * visual. Cada alternativa e localizada por optionId e desenhada
+ * com os mesmos limites de BubbleMeasurement utilizados na
+ * medicao precisa das etapas 15 e 16.
+ *
+ * Nenhuma coordenada do layout normalizado e convertida novamente
+ * neste renderizador.
  */
 public final class TemporalConsensusOverlayRenderer {
 
@@ -36,13 +41,35 @@ public final class TemporalConsensusOverlayRenderer {
     private static final Scalar STATUS_FOREGROUND =
             new Scalar(255, 255, 255, 255);
 
+    private static final Scalar FAILURE_FOREGROUND =
+            new Scalar(255, 80, 80, 255);
+
+    /**
+     * Assinatura correta para o Laboratorio OMR.
+     */
     public void draw(
             Mat normalizedRegion,
-            SheetEvidenceAggregate sheetAggregate
+            SheetEvidenceAggregate sheetAggregate,
+            OmrSheetMeasurementResult measurementResult
     ) {
         if (normalizedRegion == null
                 || normalizedRegion.empty()
                 || sheetAggregate == null) {
+
+            return;
+        }
+
+        String validationError =
+                validateMeasurementGeometry(
+                        sheetAggregate,
+                        measurementResult
+                );
+
+        if (validationError != null) {
+            drawFailure(
+                    normalizedRegion,
+                    validationError
+            );
 
             return;
         }
@@ -54,7 +81,8 @@ public final class TemporalConsensusOverlayRenderer {
             drawQuestion(
                     normalizedRegion,
                     question,
-                    sheetAggregate.isReady()
+                    sheetAggregate.isReady(),
+                    measurementResult
             );
         }
 
@@ -64,25 +92,100 @@ public final class TemporalConsensusOverlayRenderer {
         );
     }
 
+    /**
+     * Mantem compatibilidade de compilacao com consumidores antigos.
+     *
+     * Sem o resultado de medicao nao existe uma geometria registrada
+     * legitima para desenhar. Portanto, este overload nao retorna ao
+     * desenho aproximado baseado no layout.
+     */
+    @Deprecated
+    public void draw(
+            Mat normalizedRegion,
+            SheetEvidenceAggregate sheetAggregate
+    ) {
+        if (normalizedRegion == null
+                || normalizedRegion.empty()
+                || sheetAggregate == null) {
+
+            return;
+        }
+
+        drawFailure(
+                normalizedRegion,
+                "CONSENSO SEM GEOMETRIA REGISTRADA"
+        );
+    }
+
+    private String validateMeasurementGeometry(
+            SheetEvidenceAggregate sheetAggregate,
+            OmrSheetMeasurementResult measurementResult
+    ) {
+        if (measurementResult == null) {
+            return "MEDICOES DO FRAME INDISPONIVEIS";
+        }
+
+        if (!measurementResult.isComplete()) {
+            return "MEDICOES DO FRAME INCOMPLETAS";
+        }
+
+        int expectedOptionCount =
+                sheetAggregate
+                .getLayout()
+                .getOptionCount();
+
+        if (measurementResult.getMeasuredOptionCount()
+                != expectedOptionCount) {
+
+            return "CONSENSO E MEDICAO POSSUEM TAMANHOS DIFERENTES";
+        }
+
+        for (QuestionEvidenceAggregate question
+                : sheetAggregate.getQuestionAggregates()) {
+
+            for (OptionEvidenceAggregate option
+                    : question.getOptionAggregates()) {
+
+                String optionId =
+                        option
+                        .getOption()
+                        .getId();
+
+                if (measurementResult.findByOptionId(
+                        optionId
+                ) == null) {
+
+                    return "GEOMETRIA AUSENTE PARA "
+                            + optionId;
+                }
+            }
+        }
+
+        return null;
+    }
+
     private void drawQuestion(
             Mat image,
             QuestionEvidenceAggregate question,
-            boolean sheetReady
+            boolean sheetReady,
+            OmrSheetMeasurementResult measurementResult
     ) {
         for (OptionEvidenceAggregate option
                 : question.getOptionAggregates()) {
 
             String optionId =
                     option
-                            .getOption()
-                            .getId();
+                    .getOption()
+                    .getId();
 
             if (!question.isWinner(optionId)
                     && !question.isRunnerUp(optionId)) {
 
                 drawOption(
                         image,
-                        option.getOption(),
+                        measurementResult.findByOptionId(
+                                optionId
+                        ),
                         COMMON_COLOR,
                         1,
                         false
@@ -92,9 +195,12 @@ public final class TemporalConsensusOverlayRenderer {
 
         drawOption(
                 image,
-                question
+                measurementResult.findByOptionId(
+                        question
                         .getRunnerUp()
-                        .getOption(),
+                        .getOption()
+                        .getId()
+                ),
                 RUNNER_UP_COLOR,
                 2,
                 false
@@ -113,9 +219,12 @@ public final class TemporalConsensusOverlayRenderer {
 
         drawOption(
                 image,
-                question
+                measurementResult.findByOptionId(
+                        question
                         .getWinner()
-                        .getOption(),
+                        .getOption()
+                        .getId()
+                ),
                 winnerColor,
                 3,
                 true
@@ -123,8 +232,8 @@ public final class TemporalConsensusOverlayRenderer {
     }
 
     /**
-     * Combina estabilidade das vitórias com a diferença
-     * entre primeira e segunda colocadas no consenso.
+     * Combina estabilidade das vitorias com a diferenca entre a
+     * primeira e a segunda colocadas no consenso.
      */
     private double calculateWinnerStrength(
             QuestionEvidenceAggregate question
@@ -132,13 +241,9 @@ public final class TemporalConsensusOverlayRenderer {
         double voteRatio =
                 clamp01(
                         question
-                                .getWinnerVoteRatio()
+                        .getWinnerVoteRatio()
                 );
 
-        /*
-         * Uma diferença temporal de 0.25 já é visualmente
-         * considerada forte.
-         */
         double normalizedGap =
                 clamp01(
                         question.getConsensusGap()
@@ -155,11 +260,6 @@ public final class TemporalConsensusOverlayRenderer {
             double strength,
             boolean sheetReady
     ) {
-        /*
-         * Enquanto acumula:
-         *
-         * amarelo -> laranja
-         */
         if (!sheetReady) {
             double green =
                     255.0
@@ -173,11 +273,6 @@ public final class TemporalConsensusOverlayRenderer {
             );
         }
 
-        /*
-         * Consenso pronto:
-         *
-         * laranja -> vermelho
-         */
         double green =
                 150.0
                         * (1.0 - strength);
@@ -190,36 +285,33 @@ public final class TemporalConsensusOverlayRenderer {
         );
     }
 
+    /**
+     * Usa diretamente os limites guardados em BubbleMeasurement.
+     * Esses limites pertencem a BubbleMeasurementGeometry e foram
+     * usados nos calculos do frame atual.
+     */
     private void drawOption(
             Mat image,
-            OmrOptionDefinition option,
+            BubbleMeasurement measurement,
             Scalar color,
             int thickness,
             boolean drawCenter
     ) {
         int left =
-                normalizedXToPixel(
-                        option.getLeft(),
-                        image.cols()
-                );
+                measurement.getRegionLeft();
 
         int top =
-                normalizedYToPixel(
-                        option.getTop(),
-                        image.rows()
-                );
+                measurement.getRegionTop();
 
         int right =
-                normalizedXToPixel(
-                        option.getRight(),
-                        image.cols()
-                );
+                left
+                        + measurement.getRegionWidth()
+                        - 1;
 
         int bottom =
-                normalizedYToPixel(
-                        option.getBottom(),
-                        image.rows()
-                );
+                top
+                        + measurement.getRegionHeight()
+                        - 1;
 
         Imgproc.rectangle(
                 image,
@@ -231,20 +323,14 @@ public final class TemporalConsensusOverlayRenderer {
 
         if (drawCenter) {
             int centerX =
-                    normalizedXToPixel(
-                            option
-                                    .getCenter()
-                                    .getX(),
-                            image.cols()
-                    );
+                    left
+                            + measurement.getRegionWidth()
+                            / 2;
 
             int centerY =
-                    normalizedYToPixel(
-                            option
-                                    .getCenter()
-                                    .getY(),
-                            image.rows()
-                    );
+                    top
+                            + measurement.getRegionHeight()
+                            / 2;
 
             Imgproc.circle(
                     image,
@@ -277,6 +363,29 @@ public final class TemporalConsensusOverlayRenderer {
                             + sheet.getRequiredFrames();
         }
 
+        drawStatusBox(
+                image,
+                text,
+                STATUS_FOREGROUND
+        );
+    }
+
+    private void drawFailure(
+            Mat image,
+            String message
+    ) {
+        drawStatusBox(
+                image,
+                message,
+                FAILURE_FOREGROUND
+        );
+    }
+
+    private void drawStatusBox(
+            Mat image,
+            String text,
+            Scalar foreground
+    ) {
         int left = 12;
 
         int top =
@@ -288,7 +397,7 @@ public final class TemporalConsensusOverlayRenderer {
         int right =
                 Math.min(
                         image.cols() - 1,
-                        390
+                        540
                 );
 
         int bottom =
@@ -311,47 +420,8 @@ public final class TemporalConsensusOverlayRenderer {
                 ),
                 Imgproc.FONT_HERSHEY_SIMPLEX,
                 0.65,
-                STATUS_FOREGROUND,
+                foreground,
                 2
-        );
-    }
-
-    private int normalizedXToPixel(
-            double normalizedX,
-            int width
-    ) {
-        return clamp(
-                (int) Math.round(
-                        normalizedX
-                                * (width - 1.0)
-                ),
-                0,
-                width - 1
-        );
-    }
-
-    private int normalizedYToPixel(
-            double normalizedY,
-            int height
-    ) {
-        return clamp(
-                (int) Math.round(
-                        normalizedY
-                                * (height - 1.0)
-                ),
-                0,
-                height - 1
-        );
-    }
-
-    private int clamp(
-            int value,
-            int minimum,
-            int maximum
-    ) {
-        return Math.max(
-                minimum,
-                Math.min(value, maximum)
         );
     }
 

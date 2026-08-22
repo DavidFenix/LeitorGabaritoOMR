@@ -1,64 +1,85 @@
 package com.example.leitorgabaritoomr.vision.debug;
 
+/**
+ * Etapas visuais do Laboratorio OMR.
+ *
+ * A ordem das constantes tambem define a ordem de navegacao
+ * utilizada pelo VisionDebugController.
+ */
 public enum VisionStage {
 
     ORIGINAL(
-            "1/13 - Original"
+            "1/17 - Original"
     ),
 
     GRAYSCALE(
-            "2/13 - Escala de cinza"
+            "2/17 - Escala de cinza"
     ),
 
     BLURRED(
-            "3/13 - Suavizacao"
+            "3/17 - Suavizacao"
     ),
 
     BINARY(
-            "4/13 - Imagem binaria"
+            "4/17 - Imagem binaria"
     ),
 
     ACCEPTED_CANDIDATES(
-            "5/13 - Candidatos aceitos"
+            "5/17 - Candidatos aceitos"
     ),
 
     RESOLVED_MARKERS(
-            "6/13 - Quatro marcadores"
+            "6/17 - Quatro marcadores"
     ),
 
     STABLE_MARKERS(
-            "7/13 - Estabilidade temporal"
+            "7/17 - Estabilidade temporal"
     ),
 
     NORMALIZED_REGION(
-            "8/13 - Regiao normalizada"
+            "8/17 - Regiao normalizada"
     ),
 
     LAYOUT_MAP(
-            "9/13 - Mapa esperado das bolhas"
+            "9/17 - Mapa esperado das bolhas"
     ),
 
     BUBBLE_REGISTRATION(
-            "10/13 - Registro das bolhas"
+            "10/17 - Associacao preliminar"
+    ),
+
+    BUBBLE_TRANSLATION_SEED(
+            "11/17 - Translacao inicial dos blocos"
+    ),
+
+    BUBBLE_GRID_REGISTRATION(
+            "12/17 - Registro geometrico dos blocos"
+    ),
+
+    REGISTERED_BUBBLE_REGIONS(
+            "13/17 - Regioes finais registradas"
+    ),
+
+    BUBBLE_SAMPLING_GEOMETRY(
+            "14/17 - Areas exatas de amostragem"
     ),
 
     BUBBLE_MEASUREMENTS(
-            "11/13 - Medicao das bolhas"
+            "15/17 - Medicao das bolhas"
     ),
 
     QUESTION_COMPARISON(
-            "12/13 - Comparacao por questao"
+            "16/17 - Comparacao por questao"
     ),
 
     TEMPORAL_CONSENSUS(
-            "13/13 - Consenso temporal"
+            "17/17 - Consenso temporal"
     );
 
     private final String displayName;
 
     VisionStage(String displayName) {
-        this.displayName =
-                displayName;
+        this.displayName = displayName;
     }
 
     public String getDisplayName() {

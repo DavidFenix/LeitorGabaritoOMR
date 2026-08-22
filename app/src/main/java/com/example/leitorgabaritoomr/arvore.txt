@@ -1,0 +1,188 @@
+Listagem de caminhos de pasta para o volume Windows-SSD
+O número de série do volume é 000000B7 A07F:6E3B
+C:.
+|   AndroidManifest.xml
+|   
++---java
+|   \---com
+|       \---example
+|           \---leitorgabaritoomr
+|               |   arvore.txt
+|               |   Evalbee_analise.md
+|               |   MainActivity.java
+|               |   Marcadores.md
+|               |   
+|               \---vision
+|                   +---aggregation
+|                   |       OptionEvidenceAggregate.java
+|                   |       QuestionEvidenceAccumulator.java
+|                   |       QuestionEvidenceAccumulatorConfig.java
+|                   |       QuestionEvidenceAggregate.java
+|                   |       SheetEvidenceAggregate.java
+|                   |       
+|                   +---debug
+|                   |       BubbleMeasurementDiagnosticLogger.java
+|                   |       VisionDebugController.java
+|                   |       VisionDebugSink.java
+|                   |       VisionStage.java
+|                   |       
+|                   +---detector
+|                   |       ArucoMarkerDetector.java
+|                   |       OmrMarkerDetector.java
+|                   |       SolidSquareDetectorConfig.java
+|                   |       SolidSquareMarkerDetector.java
+|                   |       
+|                   +---drawing
+|                   |       BubbleCandidateMatchingOverlayRenderer.java
+|                   |       BubbleGridRegistrationOverlayRenderer.java
+|                   |       BubbleMeasurementOverlayRenderer.java
+|                   |       BubbleRegistrationCandidateOverlayRenderer.java
+|                   |       BubbleSamplingGeometryOverlayRenderer.java
+|                   |       BubbleTranslationSeedOverlayRenderer.java
+|                   |       LayoutOverlayRenderer.java
+|                   |       MarkerOverlayRenderer.java
+|                   |       NormalizedRegionPreviewRenderer.java
+|                   |       QuestionComparisonOverlayRenderer.java
+|                   |       RegisteredBubbleRegionOverlayRenderer.java
+|                   |       ResolvedMarkerOverlayRenderer.java
+|                   |       StableMarkerOverlayRenderer.java
+|                   |       TemporalConsensusOverlayRenderer.java
+|                   |       
+|                   +---geometry
+|                   |       CornerRole.java
+|                   |       MarkerSetResolutionResult.java
+|                   |       MarkerSetResolver.java
+|                   |       MarkerSetResolverConfig.java
+|                   |       PixelQuadrilateral.java
+|                   |       PixelRectangle.java
+|                   |       ResolvedMarker.java
+|                   |       ResolvedMarkerSet.java
+|                   |       
+|                   +---image
+|                   |       GrayImageBuffer.java
+|                   |       OpenCvGrayImageBufferAdapter.java
+|                   |       
+|                   +---layout
+|                   |   |   NormalizedCoordinate.java
+|                   |   |   OmrBlockDefinition.java
+|                   |   |   OmrLayoutDefinition.java
+|                   |   |   OmrOptionDefinition.java
+|                   |   |   OmrQuestionDefinition.java
+|                   |   |   
+|                   |   \---factory
+|                   |           AvalieCeDevelopmentLayoutFactory.java
+|                   |           RegularGridLayoutConfig.java
+|                   |           RegularGridLayoutFactory.java
+|                   |           ThreeColumnsFifteenLayoutFactory.java
+|                   |           
+|                   +---measurement
+|                   |       BubbleMeasurement.java
+|                   |       BubbleMeasurementConfig.java
+|                   |       BubbleMeasurementGeometry.java
+|                   |       BubbleMeasurer.java
+|                   |       BubbleSamplingGeometry.java
+|                   |       BubbleSamplingGeometrySet.java
+|                   |       BubbleSamplingMeasurer.java
+|                   |       OmrLayoutMeasurer.java
+|                   |       OmrQuestionMeasurer.java
+|                   |       OmrSheetMeasurementResult.java
+|                   |       QuestionMeasurement.java
+|                   |       
+|                   +---model
+|                   |       DetectedMarker.java
+|                   |       MarkerDetectionResult.java
+|                   |       MarkerDetectorMode.java
+|                   |       MarkerType.java
+|                   |       
+|                   +---normalization
+|                   |       OmrRegionNormalizationResult.java
+|                   |       OmrRegionNormalizer.java
+|                   |       OmrRegionNormalizerConfig.java
+|                   |       
+|                   +---processing
+|                   |       MarkerFrameProcessor.java
+|                   |       
+|                   +---registration
+|                   |       BubbleBlockRegistration.java
+|                   |       BubbleBlockTransform.java
+|                   |       BubbleBlockTranslationEstimator.java
+|                   |       BubbleBlockTranslationSeed.java
+|                   |       BubbleCandidateMatch.java
+|                   |       BubbleCandidateMatcher.java
+|                   |       BubbleCandidateMatchingOverlayRenderer.java
+|                   |       BubbleCandidateMatchingResult.java
+|                   |       BubbleContourCandidate.java
+|                   |       BubbleContourExtractionResult.java
+|                   |       BubbleContourExtractor.java
+|                   |       BubbleGridRegistrar.java
+|                   |       BubbleGridRegistrarConfig.java
+|                   |       BubbleGridRegistrationResult.java
+|                   |       BubbleGridSupport.java
+|                   |       BubblePhysicalCandidateEquivalence.java
+|                   |       BubbleRegistrationSource.java
+|                   |       BubbleTranslationEstimationResult.java
+|                   |       BubbleTranslationSupport.java
+|                   |       ExpectedBubbleTarget.java
+|                   |       ExpectedBubbleTargetFactory.java
+|                   |       OmrBlockRegistrationResult.java
+|                   |       OmrLayoutRegistrationResult.java
+|                   |       PixelAffineTransform.java
+|                   |       RegisteredBubble.java
+|                   |       RegisteredBubbleRegion.java
+|                   |       RegisteredBubbleRegionFactory.java
+|                   |       RegisteredBubbleRegionSet.java
+|                   |       
+|                   +---scoring
+|                   |       BubbleEvidenceScorer.java
+|                   |       BubbleEvidenceScorerConfig.java
+|                   |       
+|                   \---stability
+|                           MarkerSetStabilizer.java
+|                           MarkerSetStabilizerConfig.java
+|                           MarkerStabilityResult.java
+|                           MarkerStabilityState.java
+|                           
+\---res
+    +---drawable
+    |       ic_launcher_background.xml
+    |       ic_launcher_foreground.xml
+    |       
+    +---layout
+    |       activity_main.xml
+    |       
+    +---mipmap-anydpi-v26
+    |       ic_launcher.xml
+    |       ic_launcher_round.xml
+    |       
+    +---mipmap-hdpi
+    |       ic_launcher.webp
+    |       ic_launcher_round.webp
+    |       
+    +---mipmap-mdpi
+    |       ic_launcher.webp
+    |       ic_launcher_round.webp
+    |       
+    +---mipmap-xhdpi
+    |       ic_launcher.webp
+    |       ic_launcher_round.webp
+    |       
+    +---mipmap-xxhdpi
+    |       ic_launcher.webp
+    |       ic_launcher_round.webp
+    |       
+    +---mipmap-xxxhdpi
+    |       ic_launcher.webp
+    |       ic_launcher_round.webp
+    |       
+    +---values
+    |       colors.xml
+    |       strings.xml
+    |       themes.xml
+    |       
+    +---values-night
+    |       themes.xml
+    |       
+    \---xml
+            backup_rules.xml
+            data_extraction_rules.xml
+            
