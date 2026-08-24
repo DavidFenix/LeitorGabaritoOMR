@@ -78,6 +78,9 @@ import com.example.leitorgabaritoomr.vision.interpretation.QuestionInterpreter;
 import com.example.leitorgabaritoomr.vision.interpretation.QuestionInterpreterConfig;
 import com.example.leitorgabaritoomr.vision.interpretation.SheetInterpretationResult;
 import com.example.leitorgabaritoomr.vision.interpretation.SheetInterpreter;
+
+import com.example.leitorgabaritoomr.vision.debug.QuestionInterpretationDiagnosticLogger;
+
 public final class MarkerFrameProcessor {
 
     private final BubbleMeasurementDiagnosticLogger
@@ -188,6 +191,14 @@ public final class MarkerFrameProcessor {
                             QuestionInterpreterConfig
                                     .developmentDefaults()
                     )
+            );
+
+    private final QuestionInterpretationDiagnosticLogger
+            questionInterpretationDiagnosticLogger =
+            new QuestionInterpretationDiagnosticLogger(
+                    sheetInterpreter
+                            .getQuestionInterpreter()
+                            .getConfig()
             );
 
     private final SheetInterpretationOverlayRenderer
@@ -1535,6 +1546,10 @@ public final class MarkerFrameProcessor {
                                                                 sheetInterpreter.interpret(
                                                                         lastSheetEvidenceAggregate
                                                                 );
+
+                                                        questionInterpretationDiagnosticLogger.logOnce(
+                                                                lastSheetInterpretationResult
+                                                        );
                                                     }
 
                                                     sheetInterpretationOverlayRenderer.draw(
@@ -1824,6 +1839,7 @@ public final class MarkerFrameProcessor {
 
                 questionEvidenceAccumulator.reset();
                 bubbleMeasurementDiagnosticLogger.reset();
+                questionInterpretationDiagnosticLogger.reset();
             }
 
             lastSheetEvidenceAggregate =
@@ -1992,6 +2008,8 @@ public final class MarkerFrameProcessor {
         questionEvidenceAccumulator.reset();
 
         bubbleMeasurementDiagnosticLogger.reset();
+
+        questionInterpretationDiagnosticLogger.reset();
 
         lastSheetEvidenceAggregate =
                 questionEvidenceAccumulator

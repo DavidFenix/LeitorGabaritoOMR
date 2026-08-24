@@ -5,6 +5,7 @@ import com.example.leitorgabaritoomr.vision.model.DetectedMarker;
 import org.opencv.core.Point;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashSet;
@@ -17,7 +18,6 @@ public final class MarkerSetResolver {
     private final MarkerSetResolverConfig config;
 
     public MarkerSetResolver() {
-
         this(
                 MarkerSetResolverConfig
                         .developmentDefaults()
@@ -27,11 +27,9 @@ public final class MarkerSetResolver {
     public MarkerSetResolver(
             MarkerSetResolverConfig config
     ) {
-
         if (config == null) {
-
             throw new IllegalArgumentException(
-                    "A configuração do resolvedor é obrigatória."
+                    "A configuracao do resolvedor e obrigatoria."
             );
         }
 
@@ -43,7 +41,6 @@ public final class MarkerSetResolver {
             int frameWidth,
             int frameHeight
     ) {
-
         if (candidates == null
                 || candidates.size() < 4) {
 
@@ -56,9 +53,8 @@ public final class MarkerSetResolver {
         }
 
         if (frameWidth <= 0 || frameHeight <= 0) {
-
             return MarkerSetResolutionResult.rejected(
-                    "Dimensões inválidas do frame.",
+                    "Dimensoes invalidas do frame.",
                     0,
                     -1,
                     -1
@@ -117,7 +113,6 @@ public final class MarkerSetResolver {
                                 bottomRight,
                                 bottomLeft
                         )) {
-
                             continue;
                         }
 
@@ -158,78 +153,83 @@ public final class MarkerSetResolver {
         }
 
         if (best == null) {
-
             return MarkerSetResolutionResult.rejected(
-                    "Nenhum quadrilátero válido encontrado.",
+                    "Nenhum quadrilatero valido encontrado.",
                     evaluatedCombinations,
                     -1,
                     -1
             );
         }
 
-        double secondBestScore =
+        MarkerSetCandidateEvaluation bestEvaluation =
+                best.toEvaluation();
+
+        MarkerSetCandidateEvaluation secondBestEvaluation =
                 secondBest == null
-                        ? -1
-                        : secondBest.score;
+                        ? null
+                        : secondBest.toEvaluation();
 
         if (best.regionAreaRatio
                 < config.getMinimumRegionAreaRatio()) {
 
-            return MarkerSetResolutionResult.rejected(
-                    "A região encontrada é pequena demais.",
-                    evaluatedCombinations,
-                    best.score,
-                    secondBestScore
-            );
+            return MarkerSetResolutionResult
+                    .rejectedWithEvaluations(
+                            "A regiao encontrada e pequena demais.",
+                            evaluatedCombinations,
+                            bestEvaluation,
+                            secondBestEvaluation
+                    );
         }
 
         if (best.sizeSimilarity
                 < config.getMinimumSizeSimilarity()) {
 
-            return MarkerSetResolutionResult.rejected(
-                    "Os marcadores possuem tamanhos incompatíveis.",
-                    evaluatedCombinations,
-                    best.score,
-                    secondBestScore
-            );
+            return MarkerSetResolutionResult
+                    .rejectedWithEvaluations(
+                            "Os marcadores possuem tamanhos incompatíveis.",
+                            evaluatedCombinations,
+                            bestEvaluation,
+                            secondBestEvaluation
+                    );
         }
 
         if (best.score
                 < config.getMinimumAcceptedScore()) {
 
-            return MarkerSetResolutionResult.rejected(
-                    "A confiança do conjunto é insuficiente.",
-                    evaluatedCombinations,
-                    best.score,
-                    secondBestScore
-            );
+            return MarkerSetResolutionResult
+                    .rejectedWithEvaluations(
+                            "A confianca do conjunto e insuficiente.",
+                            evaluatedCombinations,
+                            bestEvaluation,
+                            secondBestEvaluation
+                    );
         }
 
         if (secondBest != null
                 && best.score - secondBest.score
                 < config.getMinimumScoreDifference()) {
 
-            return MarkerSetResolutionResult.rejected(
-                    "Resultado geométrico ambíguo.",
-                    evaluatedCombinations,
-                    best.score,
-                    secondBestScore
-            );
+            return MarkerSetResolutionResult
+                    .rejectedWithEvaluations(
+                            "Resultado geometrico ambiguo.",
+                            evaluatedCombinations,
+                            bestEvaluation,
+                            secondBestEvaluation
+                    );
         }
 
-        return MarkerSetResolutionResult.accepted(
-                best.toResolvedMarkerSet(),
-                evaluatedCombinations,
-                best.score,
-                secondBestScore
-        );
+        return MarkerSetResolutionResult
+                .acceptedWithEvaluations(
+                        bestEvaluation,
+                        secondBestEvaluation,
+                        evaluatedCombinations
+                );
     }
 
     private List<DetectedMarker> selectExtremeCandidates(
             List<DetectedMarker> candidates,
             CornerRole role
     ) {
-
         List<DetectedMarker> sorted =
                 new ArrayList<>(candidates);
 
@@ -259,37 +259,24 @@ public final class MarkerSetResolver {
             DetectedMarker marker,
             CornerRole role
     ) {
-
-        Point center =
-                marker.getCenter();
+        Point center = marker.getCenter();
 
         switch (role) {
-
             case TOP_LEFT:
-
                 return center.x + center.y;
 
             case TOP_RIGHT:
-
-                /*
-                 * Queremos o maior x - y.
-                 * O sinal negativo permite ordenar
-                 * crescentemente.
-                 */
                 return -(center.x - center.y);
 
             case BOTTOM_RIGHT:
-
                 return -(center.x + center.y);
 
             case BOTTOM_LEFT:
-
                 return center.x - center.y;
 
             default:
-
                 throw new IllegalStateException(
-                        "Papel geométrico desconhecido: "
+                        "Papel geometrico desconhecido: "
                                 + role
                 );
         }
@@ -305,7 +292,6 @@ public final class MarkerSetResolver {
             int frameHeight,
             double candidateCloudArea
     ) {
-
         Point tl = topLeft.getCenter();
         Point tr = topRight.getCenter();
         Point br = bottomRight.getCenter();
@@ -323,16 +309,14 @@ public final class MarkerSetResolver {
             return null;
         }
 
-        double regionArea =
-                polygonArea(polygon);
+        double regionArea = polygonArea(polygon);
 
         if (regionArea <= 0) {
             return null;
         }
 
         double frameArea =
-                frameWidth
-                        * (double) frameHeight;
+                frameWidth * (double) frameHeight;
 
         double regionAreaRatio =
                 regionArea / frameArea;
@@ -375,15 +359,6 @@ public final class MarkerSetResolver {
                                 / candidateCloudArea
                 );
 
-        /*
-         * Pontuação total:
-         *
-         * 30% cobertura da área dos candidatos
-         * 25% quantidade de candidatos dentro da região
-         * 20% semelhança entre os marcadores
-         * 15% coerência dos lados opostos
-         * 10% confiança individual
-         */
         double score =
                 cloudCoverage * 0.30
                         + containmentRatio * 0.25
@@ -398,20 +373,21 @@ public final class MarkerSetResolver {
                 bottomLeft,
                 clamp01(score),
                 regionAreaRatio,
+                cloudCoverage,
+                containmentRatio,
                 sizeSimilarity,
-                containmentRatio
+                sideCoherence,
+                averageMarkerConfidence
         );
     }
 
     private boolean areDistinct(
             DetectedMarker... markers
     ) {
-
         Set<DetectedMarker> unique =
                 new HashSet<>();
 
         for (DetectedMarker marker : markers) {
-
             if (!unique.add(marker)) {
                 return false;
             }
@@ -420,10 +396,7 @@ public final class MarkerSetResolver {
         return true;
     }
 
-    private boolean isConvex(
-            Point[] polygon
-    ) {
-
+    private boolean isConvex(Point[] polygon) {
         if (polygon == null
                 || polygon.length != 4) {
 
@@ -436,8 +409,7 @@ public final class MarkerSetResolver {
              index < polygon.length;
              index++) {
 
-            Point a =
-                    polygon[index];
+            Point a = polygon[index];
 
             Point b =
                     polygon[
@@ -451,8 +423,7 @@ public final class MarkerSetResolver {
                                     % polygon.length
                             ];
 
-            double cross =
-                    crossProduct(a, b, c);
+            double cross = crossProduct(a, b, c);
 
             if (Math.abs(cross) < 0.0001) {
                 return false;
@@ -476,25 +447,20 @@ public final class MarkerSetResolver {
             Point b,
             Point c
     ) {
-
         return (b.x - a.x)
                 * (c.y - b.y)
                 - (b.y - a.y)
                 * (c.x - b.x);
     }
 
-    private double polygonArea(
-            Point[] polygon
-    ) {
-
+    private double polygonArea(Point[] polygon) {
         double sum = 0;
 
         for (int index = 0;
              index < polygon.length;
              index++) {
 
-            Point current =
-                    polygon[index];
+            Point current = polygon[index];
 
             Point next =
                     polygon[
@@ -513,40 +479,52 @@ public final class MarkerSetResolver {
     private double calculateMarkerSizeSimilarity(
             DetectedMarker... markers
     ) {
-
-        double minimumArea =
-                Double.MAX_VALUE;
-
-        double maximumArea = 0;
-
-        for (DetectedMarker marker : markers) {
-
-            double area =
-                    polygonArea(
-                            marker.getCorners()
-                    );
-
-            minimumArea =
-                    Math.min(
-                            minimumArea,
-                            area
-                    );
-
-            maximumArea =
-                    Math.max(
-                            maximumArea,
-                            area
-                    );
-        }
-
-        if (maximumArea <= 0
-                || minimumArea == Double.MAX_VALUE) {
-
+        if (markers == null || markers.length != 4) {
             return 0;
         }
 
-        return clamp01(
-                minimumArea / maximumArea
+        double[] areas = new double[markers.length];
+
+        for (int index = 0;
+             index < markers.length;
+             index++) {
+
+            areas[index] =
+                    polygonArea(
+                            markers[index].getCorners()
+                    );
+        }
+
+        Arrays.sort(areas);
+
+        /*
+         * Consenso robusto de tres marcadores:
+         *
+         * - areas[0] / areas[2] avalia os tres menores;
+         * - areas[1] / areas[3] avalia os tres maiores;
+         * - o maior resultado tolera um unico contorno
+         *   degradado por brilho, sombra, corte ou desfoque;
+         * - se houver dois grupos incompatíveis, ambos os
+         *   resultados permanecem baixos.
+         *
+         * Nenhum marcador e escolhido por coordenada ou por
+         * conhecimento do layout do gabarito.
+         */
+        double smallerTripletSimilarity =
+                ratioBetween(
+                        areas[0],
+                        areas[2]
+                );
+
+        double largerTripletSimilarity =
+                ratioBetween(
+                        areas[1],
+                        areas[3]
+                );
+
+        return Math.max(
+                smallerTripletSimilarity,
+                largerTripletSimilarity
         );
     }
 
@@ -556,36 +534,20 @@ public final class MarkerSetResolver {
             Point br,
             Point bl
     ) {
-
-        double top =
-                distance(tl, tr);
-
-        double bottom =
-                distance(bl, br);
-
-        double left =
-                distance(tl, bl);
-
-        double right =
-                distance(tr, br);
+        double top = distance(tl, tr);
+        double bottom = distance(bl, br);
+        double left = distance(tl, bl);
+        double right = distance(tr, br);
 
         double horizontalBalance =
-                ratioBetween(
-                        top,
-                        bottom
-                );
+                ratioBetween(top, bottom);
 
         double verticalBalance =
-                ratioBetween(
-                        left,
-                        right
-                );
+                ratioBetween(left, right);
 
         return clamp01(
-                (
-                        horizontalBalance
-                                + verticalBalance
-                ) / 2.0
+                (horizontalBalance
+                        + verticalBalance) / 2.0
         );
     }
 
@@ -593,21 +555,17 @@ public final class MarkerSetResolver {
             Point[] polygon,
             List<DetectedMarker> candidates
     ) {
-
         if (candidates.isEmpty()) {
             return 0;
         }
 
         int contained = 0;
 
-        for (DetectedMarker candidate
-                : candidates) {
-
+        for (DetectedMarker candidate : candidates) {
             if (isPointInsideConvexPolygon(
                     candidate.getCenter(),
                     polygon
             )) {
-
                 contained++;
             }
         }
@@ -620,15 +578,13 @@ public final class MarkerSetResolver {
             Point point,
             Point[] polygon
     ) {
-
         double previousCross = 0;
 
         for (int index = 0;
              index < polygon.length;
              index++) {
 
-            Point a =
-                    polygon[index];
+            Point a = polygon[index];
 
             Point b =
                     polygon[
@@ -662,64 +618,28 @@ public final class MarkerSetResolver {
     private double calculateCandidateCloudArea(
             List<DetectedMarker> candidates
     ) {
+        double minimumX = Double.MAX_VALUE;
+        double minimumY = Double.MAX_VALUE;
+        double maximumX = -Double.MAX_VALUE;
+        double maximumY = -Double.MAX_VALUE;
 
-        double minimumX =
-                Double.MAX_VALUE;
+        for (DetectedMarker candidate : candidates) {
+            Point center = candidate.getCenter();
 
-        double minimumY =
-                Double.MAX_VALUE;
-
-        double maximumX =
-                -Double.MAX_VALUE;
-
-        double maximumY =
-                -Double.MAX_VALUE;
-
-        for (DetectedMarker candidate
-                : candidates) {
-
-            Point center =
-                    candidate.getCenter();
-
-            minimumX =
-                    Math.min(
-                            minimumX,
-                            center.x
-                    );
-
-            minimumY =
-                    Math.min(
-                            minimumY,
-                            center.y
-                    );
-
-            maximumX =
-                    Math.max(
-                            maximumX,
-                            center.x
-                    );
-
-            maximumY =
-                    Math.max(
-                            maximumY,
-                            center.y
-                    );
+            minimumX = Math.min(minimumX, center.x);
+            minimumY = Math.min(minimumY, center.y);
+            maximumX = Math.max(maximumX, center.x);
+            maximumY = Math.max(maximumY, center.y);
         }
 
-        return Math.max(
-                0,
-                maximumX - minimumX
-        ) * Math.max(
-                0,
-                maximumY - minimumY
-        );
+        return Math.max(0, maximumX - minimumX)
+                * Math.max(0, maximumY - minimumY);
     }
 
     private double distance(
             Point first,
             Point second
     ) {
-
         return Math.hypot(
                 second.x - first.x,
                 second.y - first.y
@@ -730,26 +650,17 @@ public final class MarkerSetResolver {
             double first,
             double second
     ) {
-
-        double maximum =
-                Math.max(first, second);
-
-        double minimum =
-                Math.min(first, second);
+        double maximum = Math.max(first, second);
+        double minimum = Math.min(first, second);
 
         if (maximum <= 0) {
             return 0;
         }
 
-        return clamp01(
-                minimum / maximum
-        );
+        return clamp01(minimum / maximum);
     }
 
-    private double clamp01(
-            double value
-    ) {
-
+    private double clamp01(double value) {
         return Math.max(
                 0,
                 Math.min(1, value)
@@ -765,8 +676,11 @@ public final class MarkerSetResolver {
 
         private final double score;
         private final double regionAreaRatio;
-        private final double sizeSimilarity;
+        private final double cloudCoverage;
         private final double containmentRatio;
+        private final double sizeSimilarity;
+        private final double sideCoherence;
+        private final double averageMarkerConfidence;
 
         private CandidateSet(
                 DetectedMarker topLeft,
@@ -775,30 +689,30 @@ public final class MarkerSetResolver {
                 DetectedMarker bottomLeft,
                 double score,
                 double regionAreaRatio,
+                double cloudCoverage,
+                double containmentRatio,
                 double sizeSimilarity,
-                double containmentRatio
+                double sideCoherence,
+                double averageMarkerConfidence
         ) {
-
             this.topLeft = topLeft;
             this.topRight = topRight;
             this.bottomRight = bottomRight;
             this.bottomLeft = bottomLeft;
 
             this.score = score;
-            this.regionAreaRatio =
-                    regionAreaRatio;
-            this.sizeSimilarity =
-                    sizeSimilarity;
-            this.containmentRatio =
-                    containmentRatio;
+            this.regionAreaRatio = regionAreaRatio;
+            this.cloudCoverage = cloudCoverage;
+            this.containmentRatio = containmentRatio;
+            this.sizeSimilarity = sizeSimilarity;
+            this.sideCoherence = sideCoherence;
+            this.averageMarkerConfidence =
+                    averageMarkerConfidence;
         }
 
         private ResolvedMarkerSet toResolvedMarkerSet() {
-
             Map<CornerRole, ResolvedMarker> markers =
-                    new EnumMap<>(
-                            CornerRole.class
-                    );
+                    new EnumMap<>(CornerRole.class);
 
             markers.put(
                     CornerRole.TOP_LEFT,
@@ -838,6 +752,20 @@ public final class MarkerSetResolver {
                     regionAreaRatio,
                     sizeSimilarity,
                     containmentRatio
+            );
+        }
+
+        private MarkerSetCandidateEvaluation
+        toEvaluation() {
+            return new MarkerSetCandidateEvaluation(
+                    toResolvedMarkerSet(),
+                    score,
+                    regionAreaRatio,
+                    cloudCoverage,
+                    containmentRatio,
+                    sizeSimilarity,
+                    sideCoherence,
+                    averageMarkerConfidence
             );
         }
     }
