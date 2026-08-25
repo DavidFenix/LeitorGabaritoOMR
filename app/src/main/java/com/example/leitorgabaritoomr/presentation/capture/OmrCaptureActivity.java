@@ -14,7 +14,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.example.leitorgabaritoomr.R;
-import com.example.leitorgabaritoomr.vision.interpretation.SheetInterpretationResult;
+import com.example.leitorgabaritoomr.domain.reading.OmrReadingResult;
 
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.OpenCVLoader;
@@ -52,8 +52,7 @@ public final class OmrCaptureActivity
     private volatile boolean cameraEnabled;
     private volatile boolean destroyed;
 
-    private SheetInterpretationResult
-            completedInterpretationResult;
+    private OmrReadingResult completedReadingResult;
 
     @Override
     protected void onCreate(
@@ -233,26 +232,42 @@ public final class OmrCaptureActivity
      */
     @Override
     public void onCaptureCompleted(
-            SheetInterpretationResult interpretationResult
+            OmrReadingResult readingResult
     ) {
         if (destroyed) {
             return;
         }
 
-        completedInterpretationResult =
-                interpretationResult;
+        completedReadingResult = readingResult;
 
         stopCamera();
 
         Log.i(
                 TAG,
-                "Leitura OMR concluida e confirmada."
+                "Leitura OMR concluida e confirmada"
+                        + " | id="
+                        + readingResult.getReadingId()
+                        + " | layout="
+                        + readingResult.getLayoutId()
+                        + "@v"
+                        + readingResult.getLayoutVersion()
+                        + " | questoes="
+                        + readingResult.getQuestionCount()
+                        + " | unicas="
+                        + readingResult.getSingleMarkCount()
+                        + " | brancas="
+                        + readingResult.getBlankCount()
+                        + " | multiplas="
+                        + readingResult.getMultipleMarkCount()
+                        + " | ambiguas="
+                        + readingResult.getAmbiguousCount()
         );
 
         /*
          * A navegacao para a futura tela de resultado sera ligada
-         * aqui. Ate ela existir, o resultado permanece preservado
-         * nesta Activity e a interface mostra Leitura concluida.
+         * aqui. Ate ela existir, o resultado de negocio permanece
+         * preservado nesta Activity e a interface mostra Leitura
+         * concluida.
          */
     }
 
@@ -396,7 +411,7 @@ public final class OmrCaptureActivity
         stopCamera();
         closeCaptureController();
 
-        completedInterpretationResult = null;
+        completedReadingResult = null;
         cameraBridgeView = null;
 
         super.onDestroy();

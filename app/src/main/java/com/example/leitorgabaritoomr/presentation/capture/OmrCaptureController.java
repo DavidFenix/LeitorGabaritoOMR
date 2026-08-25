@@ -4,6 +4,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 
+import com.example.leitorgabaritoomr.application.reading.OmrReadingResultMapper;
+import com.example.leitorgabaritoomr.domain.reading.OmrReadingResult;
 import com.example.leitorgabaritoomr.vision.interpretation.SheetInterpretationResult;
 import com.example.leitorgabaritoomr.vision.layout.OmrLayoutDefinition;
 import com.example.leitorgabaritoomr.vision.model.MarkerDetectorMode;
@@ -32,7 +34,7 @@ public final class OmrCaptureController
     public interface Listener {
 
         void onCaptureCompleted(
-                SheetInterpretationResult interpretationResult
+                OmrReadingResult readingResult
         );
 
         void onCaptureFailed(
@@ -43,6 +45,10 @@ public final class OmrCaptureController
     private final OmrCaptureSession session;
     private final OmrCaptureViewBinder viewBinder;
     private final Listener listener;
+
+    private final OmrReadingResultMapper
+            readingResultMapper =
+            new OmrReadingResultMapper();
 
     private final Handler mainHandler =
             new Handler(Looper.getMainLooper());
@@ -348,8 +354,28 @@ public final class OmrCaptureController
                 return;
             }
 
+            OmrReadingResult readingResult;
+
+            try {
+                readingResult =
+                        readingResultMapper.map(
+                                interpretationResult
+                        );
+
+            } catch (RuntimeException exception) {
+                eventListener.onCaptureFailed(
+                        "Nao foi possivel preparar o resultado"
+                                + " final da leitura: "
+                                + exception
+                                .getClass()
+                                .getSimpleName()
+                );
+
+                return;
+            }
+
             eventListener.onCaptureCompleted(
-                    interpretationResult
+                    readingResult
             );
 
             return;

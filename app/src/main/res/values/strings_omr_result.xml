@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="omr_result_title">Resultado da leitura</string>
+
+    <string name="omr_result_overall_completed">
+        Leitura concluída
+    </string>
+
+    <string name="omr_result_overall_completed_with_review">
+        Leitura concluída com itens para revisar
+    </string>
+
+    <string name="omr_result_overall_incomplete">
+        Leitura incompleta
+    </string>
+
+    <string name="omr_result_layout_format">
+        %1$s • versão %2$d
+    </string>
+
+    <string name="omr_result_captured_at_format">
+        Capturada em %1$s
+    </string>
+
+    <string name="omr_result_summary_title">
+        Resumo
+    </string>
+
+    <string name="omr_result_count_single_format">
+        Respondidas\n%1$d
+    </string>
+
+    <string name="omr_result_count_blank_format">
+        Em branco\n%1$d
+    </string>
+
+    <string name="omr_result_count_review_format">
+        Para revisar\n%1$d
+    </string>
+
+    <string name="omr_result_count_multiple_format">
+        Múltiplas\n%1$d
+    </string>
+
+    <string name="omr_result_count_ambiguous_format">
+        Ambíguas\n%1$d
+    </string>
+
+    <string name="omr_result_count_not_ready_format">
+        Pendentes\n%1$d
+    </string>
+
+    <plurals name="omr_result_review_message">
+        <item quantity="one">
+            %1$d questão exige conferência antes de continuar.
+        </item>
+        <item quantity="other">
+            %1$d questões exigem conferência antes de continuar.
+        </item>
+    </plurals>
+
+    <string name="omr_result_questions_title">
+        Questões
+    </string>
+
+    <string name="omr_result_question_position_format">
+        Questão %1$d
+    </string>
+
+    <string name="omr_result_question_answered_format">
+        Resposta: %1$s
+    </string>
+
+    <string name="omr_result_question_blank">
+        Em branco
+    </string>
+
+    <string name="omr_result_question_multiple_format">
+        Múltiplas marcações: %1$s
+    </string>
+
+    <string name="omr_result_question_ambiguous_format">
+        Marcação ambígua: %1$s
+    </string>
+
+    <string name="omr_result_question_not_ready">
+        Ainda não confirmada
+    </string>
+
+    <string name="omr_result_question_confidence_format">
+        Confiança: %1$d%%
+    </string>
+
+    <string name="omr_result_action_read_again">
+        Nova leitura
+    </string>
+
+    <string name="omr_result_action_finish">
+        Concluir
+    </string>
+
+    <string name="omr_result_error_missing_result">
+        O resultado da leitura não foi recebido.
+    </string>
+
+</resources>
