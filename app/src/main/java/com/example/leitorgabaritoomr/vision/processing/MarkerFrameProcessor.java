@@ -1635,9 +1635,17 @@ public final class MarkerFrameProcessor {
                         normalizedRegionPreviewRenderer
                                 .render(
                                         normalizationResult,
+                                        cleanNormalizationFrame,
                                         rgbaFrame.cols(),
                                         rgbaFrame.rows()
                                 );
+//                normalizedPreviewFrame =
+//                        normalizedRegionPreviewRenderer
+//                                .render(
+//                                        normalizationResult,
+//                                        rgbaFrame.cols(),
+//                                        rgbaFrame.rows()
+//                                );
 
                 debugController.publish(
                         selectedStage,

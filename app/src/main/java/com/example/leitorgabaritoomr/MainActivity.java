@@ -35,6 +35,10 @@ import com.example.leitorgabaritoomr.vision.stability.MarkerStabilityResult;
 
 import com.example.leitorgabaritoomr.vision.processing.DefaultMarkerFrameProcessorFactory;
 
+import android.content.Intent;
+
+import com.example.leitorgabaritoomr.presentation.capture.OmrCaptureActivity;
+
 public class MainActivity extends AppCompatActivity
         implements CameraBridgeViewBase.CvCameraViewListener2 {
 
@@ -74,6 +78,8 @@ public class MainActivity extends AppCompatActivity
 
         setContentView(R.layout.activity_main);
 
+        configurarAcessoCapturaReal();
+
         configurarCameraView();
 
         inicializarOpenCV();
@@ -81,6 +87,23 @@ public class MainActivity extends AppCompatActivity
         if (DEBUG_ATIVAR_CAMERA) {
             checarPermissaoCamera();
         }
+    }
+
+    private void configurarAcessoCapturaReal() {
+
+        findViewById(
+                R.id.buttonOpenOmrCapture
+        ).setOnClickListener(
+                view -> {
+
+                    startActivity(
+                            new Intent(
+                                    this,
+                                    OmrCaptureActivity.class
+                            )
+                    );
+                }
+        );
     }
 
     /*

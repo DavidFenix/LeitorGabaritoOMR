@@ -52,8 +52,32 @@ public final class OmrControlledFixtureAssertions {
                 runResult.isComplete()
         );
 
-        SheetInterpretationResult result =
-                runResult.getInterpretationResult();
+        return assertCompleteAndCorrect(
+                prefix,
+                runResult.getInterpretationResult()
+        );
+    }
+
+    /**
+     * Aplica a mesma regua controlada a qualquer origem que ja tenha
+     * produzido uma interpretacao: runner, sessao, camera ou arquivo.
+     */
+    public static SheetInterpretationResult
+    assertCompleteAndCorrect(
+            String scenarioPrefix,
+            SheetInterpretationResult result
+    ) {
+        String prefix = normalizePrefix(scenarioPrefix);
+
+        assertNotNull(
+                prefix + " | interpretacao ausente",
+                result
+        );
+
+        assertTrue(
+                prefix + " | interpretacao incompleta",
+                result.isComplete()
+        );
 
         assertFinalTotals(prefix, result);
         assertControlledCases(prefix, result);

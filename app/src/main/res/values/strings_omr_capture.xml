@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Instrucoes principais da captura OMR -->
+    <string name="omr_capture_instruction_position_sheet">
+        Enquadre os quatro marcadores da folha
+    </string>
+
+    <string name="omr_capture_instruction_keep_sheet_steady">
+        Mantenha a folha firme
+    </string>
+
+    <string name="omr_capture_instruction_reading_sheet">
+        Lendo e confirmando as respostas…
+    </string>
+
+    <string name="omr_capture_instruction_reposition_sheet">
+        Reposicione a folha no enquadramento
+    </string>
+
+    <string name="omr_capture_instruction_reading_completed">
+        Leitura concluída
+    </string>
+
+    <string name="omr_capture_instruction_capture_failed">
+        Não foi possível concluir a leitura
+    </string>
+
+    <string name="omr_capture_instruction_session_closed">
+        Captura encerrada
+    </string>
+
+    <!-- Progresso baseado nos mesmos contadores usados pelo motor -->
+    <string name="omr_capture_progress_marker_stability">
+        Estabilizando marcadores: %1$d%%
+    </string>
+
+    <string name="omr_capture_progress_evidence_accumulation">
+        Confirmando respostas: %1$d%%
+    </string>
+
+    <string name="omr_capture_progress_complete">
+        Leitura confirmada
+    </string>
+
+    <!-- Acoes e diagnostico -->
+    <string name="omr_capture_action_retry">
+        Tentar novamente
+    </string>
+
+    <string name="omr_capture_failure_detail">
+        Detalhes: %1$s
+    </string>
+
+    <!-- Entrada interna do Laboratorio para a captura real -->
+    <string name="omr_lab_action_open_capture">
+        Leitura real
+    </string>
+
+</resources>

@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:opencv="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
-    android:gravity="center">
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 
     <org.opencv.android.JavaCameraView
         android:id="@+id/cameraViewLeitor"
@@ -14,4 +12,22 @@
         opencv:camera_id="back"
         opencv:show_fps="true" />
 
-</LinearLayout>
+    <Button
+        android:id="@+id/buttonOpenOmrCapture"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="18dp"
+        android:layout_marginBottom="18dp"
+        android:backgroundTint="#D91F2937"
+        android:elevation="8dp"
+        android:minHeight="48dp"
+        android:paddingStart="22dp"
+        android:paddingEnd="22dp"
+        android:text="@string/omr_lab_action_open_capture"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFFFF"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+
+</FrameLayout>

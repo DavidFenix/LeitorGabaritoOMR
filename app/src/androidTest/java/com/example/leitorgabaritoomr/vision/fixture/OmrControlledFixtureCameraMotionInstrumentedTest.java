@@ -477,6 +477,121 @@ OmrControlledFixtureCameraMotionInstrumentedTest {
         );
     }
 
+    @Test
+    public void automaticExposureDuringMotionRemainsCorrect() {
+        String sequenceId =
+                "dynamic-auto-exposure";
+
+        Log.i(
+                TAG,
+                "SEQUENCE_BEGIN | id="
+                        + sequenceId
+                        + " | contrastAmplitude=0.08"
+                        + " | brightnessAmplitude=24"
+                        + " | maxFrames="
+                        + MAXIMUM_FRAME_COUNT
+        );
+
+        OmrFixturePipelineRunner.Result runResult;
+
+        try (OmrFixturePhotometricVariationProvider provider =
+                     OmrFixturePhotometricVariationProvider
+                             .automaticExposure(
+                                     OmrFixtureCameraMotionProvider
+                                             .gentle(sourceRgba)
+                             )) {
+
+            runResult =
+                    OmrFixturePipelineRunner.run(
+                            provider,
+                            MAXIMUM_FRAME_COUNT
+                    );
+        }
+
+        SheetInterpretationResult interpretation =
+                OmrControlledFixtureAssertions
+                        .assertCompleteAndCorrect(
+                                "sequence=" + sequenceId,
+                                runResult
+                        );
+
+        Log.i(
+                TAG,
+                "SEQUENCE_OK | id="
+                        + sequenceId
+                        + " | frames="
+                        + runResult.getProcessedFrameCount()
+                        + " | heldStableSeen="
+                        + runResult
+                        .getProgress()
+                        .wasHeldStableObserved()
+                        + " | lostSeen="
+                        + runResult
+                        .getProgress()
+                        .wasLostStabilityObserved()
+                        + " | "
+                        + OmrControlledFixtureAssertions
+                        .summarize(interpretation)
+        );
+    }
+
+    @Test
+    public void focusPulsesDuringMotionRemainCorrect() {
+        String sequenceId =
+                "dynamic-focus-pulses";
+
+        Log.i(
+                TAG,
+                "SEQUENCE_BEGIN | id="
+                        + sequenceId
+                        + " | blurCycle=1-1-3-5-3-1"
+                        + " | maxFrames="
+                        + MAXIMUM_FRAME_COUNT
+        );
+
+        OmrFixturePipelineRunner.Result runResult;
+
+        try (OmrFixturePhotometricVariationProvider provider =
+                     OmrFixturePhotometricVariationProvider
+                             .pulsingFocus(
+                                     OmrFixtureCameraMotionProvider
+                                             .gentle(sourceRgba)
+                             )) {
+
+            runResult =
+                    OmrFixturePipelineRunner.run(
+                            provider,
+                            MAXIMUM_FRAME_COUNT
+                    );
+        }
+
+        SheetInterpretationResult interpretation =
+                OmrControlledFixtureAssertions
+                        .assertCompleteAndCorrect(
+                                "sequence=" + sequenceId,
+                                runResult
+                        );
+
+        Log.i(
+                TAG,
+                "SEQUENCE_OK | id="
+                        + sequenceId
+                        + " | frames="
+                        + runResult.getProcessedFrameCount()
+                        + " | heldStableSeen="
+                        + runResult
+                        .getProgress()
+                        .wasHeldStableObserved()
+                        + " | lostSeen="
+                        + runResult
+                        .getProgress()
+                        .wasLostStabilityObserved()
+                        + " | "
+                        + OmrControlledFixtureAssertions
+                        .summarize(interpretation)
+        );
+    }
+
     private static Mat loadRgbaFixture(
             Context testContext
     ) throws IOException {
