@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="omr_manual_key_title">
+        Cadastrar gabarito
+    </string>
+
+    <string name="omr_manual_key_layout_format">
+        %1$s • versão %2$d
+    </string>
+
+    <string name="omr_manual_key_progress_format">
+        %1$d de %2$d respondidas • %3$d%%
+    </string>
+
+    <plurals name="omr_manual_key_remaining_format">
+        <item quantity="one">
+            Falta responder %1$d questão.
+        </item>
+        <item quantity="other">
+            Faltam responder %1$d questões.
+        </item>
+    </plurals>
+
+    <string name="omr_manual_key_complete">
+        Todas as questões foram respondidas.
+    </string>
+
+    <string name="omr_manual_key_name_label">
+        Nome do gabarito
+    </string>
+
+    <string name="omr_manual_key_name_placeholder">
+        Ex.: Avaliação diagnóstica de Matemática
+    </string>
+
+    <string name="omr_manual_key_instructions">
+        Selecione uma alternativa correta para cada questão. As opções disponíveis são definidas pelo modelo da folha.
+    </string>
+
+    <string name="omr_manual_key_action_go_to_pending">
+        Ir para a primeira pendente
+    </string>
+
+    <string name="omr_manual_key_questions_title">
+        Respostas oficiais
+    </string>
+
+    <string name="omr_manual_key_question_position_format">
+        Questão %1$d
+    </string>
+
+    <string name="omr_manual_key_question_answered_format">
+        Resposta selecionada: %1$s
+    </string>
+
+    <string name="omr_manual_key_question_pending">
+        Selecione a resposta correta
+    </string>
+
+    <string name="omr_manual_key_action_cancel">
+        Cancelar
+    </string>
+
+    <string name="omr_manual_key_action_save">
+        Salvar gabarito
+    </string>
+
+    <string name="omr_manual_key_error_name_required">
+        Informe um nome para o gabarito.
+    </string>
+
+    <plurals name="omr_manual_key_error_incomplete">
+        <item quantity="one">
+            Responda a questão pendente antes de salvar.
+        </item>
+        <item quantity="other">
+            Responda as %1$d questões pendentes antes de salvar.
+        </item>
+    </plurals>
+
+</resources>

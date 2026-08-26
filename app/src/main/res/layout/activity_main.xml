@@ -12,22 +12,44 @@
         opencv:camera_id="back"
         opencv:show_fps="true" />
 
-    <Button
-        android:id="@+id/buttonOpenOmrCapture"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
+        android:layout_gravity="bottom"
+        android:layout_marginStart="18dp"
         android:layout_marginEnd="18dp"
         android:layout_marginBottom="18dp"
-        android:backgroundTint="#D91F2937"
-        android:elevation="8dp"
-        android:minHeight="48dp"
-        android:paddingStart="22dp"
-        android:paddingEnd="22dp"
-        android:text="@string/omr_lab_action_open_capture"
-        android:textAllCaps="false"
-        android:textColor="#FFFFFFFF"
-        android:textSize="15sp"
-        android:textStyle="bold" />
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/buttonOpenManualAnswerKey"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:backgroundTint="#D91F2937"
+            android:elevation="8dp"
+            android:minHeight="48dp"
+            android:text="@string/omr_lab_action_open_manual_answer_key"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/buttonOpenOmrCapture"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:backgroundTint="#D91F2937"
+            android:elevation="8dp"
+            android:minHeight="48dp"
+            android:text="@string/omr_lab_action_open_capture"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
 
 </FrameLayout>

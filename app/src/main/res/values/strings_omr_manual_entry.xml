@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="omr_lab_action_open_manual_answer_key">
+        Cadastrar gabarito
+    </string>
+
+</resources>

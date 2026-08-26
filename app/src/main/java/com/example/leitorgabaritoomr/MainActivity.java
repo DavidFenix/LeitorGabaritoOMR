@@ -1,43 +1,42 @@
 package com.example.leitorgabaritoomr;
 
 import android.Manifest;
+import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.SurfaceView;
 import android.view.WindowManager;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
+import com.example.leitorgabaritoomr.presentation.capture.OmrCaptureActivity;
+import com.example.leitorgabaritoomr.presentation.grading.OmrManualAnswerKeyActivity;
+import com.example.leitorgabaritoomr.vision.debug.VisionDebugController;
+import com.example.leitorgabaritoomr.vision.debug.VisionStage;
+import com.example.leitorgabaritoomr.vision.geometry.MarkerSetResolutionResult;
+import com.example.leitorgabaritoomr.vision.model.MarkerDetectorMode;
 import com.example.leitorgabaritoomr.vision.model.MarkerDetectionResult;
+import com.example.leitorgabaritoomr.vision.processing.DefaultMarkerFrameProcessorFactory;
 import com.example.leitorgabaritoomr.vision.processing.MarkerFrameProcessor;
+import com.example.leitorgabaritoomr.vision.stability.MarkerStabilityResult;
 
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
 
+import java.io.Serializable;
 import java.util.Locale;
-
-import com.example.leitorgabaritoomr.vision.model.MarkerDetectorMode;
-
-import android.view.KeyEvent;
-
-import com.example.leitorgabaritoomr.vision.debug.VisionDebugController;
-import com.example.leitorgabaritoomr.vision.debug.VisionStage;
-
-import com.example.leitorgabaritoomr.vision.geometry.MarkerSetResolutionResult;
-
-import com.example.leitorgabaritoomr.vision.stability.MarkerStabilityResult;
-
-import com.example.leitorgabaritoomr.vision.processing.DefaultMarkerFrameProcessorFactory;
-
-import android.content.Intent;
-
-import com.example.leitorgabaritoomr.presentation.capture.OmrCaptureActivity;
 
 public class MainActivity extends AppCompatActivity
         implements CameraBridgeViewBase.CvCameraViewListener2 {
@@ -49,6 +48,9 @@ public class MainActivity extends AppCompatActivity
 
     private static final String TAG = "OMR_Camera";
 
+    private static final String STATE_CURRENT_ANSWER_KEY =
+            "omr.main.current_answer_key";
+
     private static final int CAMERA_PERMISSION_CODE = 100;
 
     /*
@@ -59,6 +61,15 @@ public class MainActivity extends AppCompatActivity
 
     private CameraBridgeViewBase cameraBridgeView;
     private MarkerFrameProcessor markerFrameProcessor;
+    private OmrAnswerKeyDefinition currentAnswerKey;
+
+    private final ActivityResultLauncher<Intent>
+            manualAnswerKeyLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts
+                            .StartActivityForResult(),
+                    this::handleManualAnswerKeyResult
+            );
 
     private volatile boolean cameraHabilitada = false;
     private boolean openCvCarregado = false;
@@ -78,7 +89,10 @@ public class MainActivity extends AppCompatActivity
 
         setContentView(R.layout.activity_main);
 
+        restoreCurrentAnswerKey(savedInstanceState);
+
         configurarAcessoCapturaReal();
+        configureManualAnswerKeyAccess();
 
         configurarCameraView();
 
@@ -104,6 +118,94 @@ public class MainActivity extends AppCompatActivity
                     );
                 }
         );
+    }
+
+    private void configureManualAnswerKeyAccess() {
+
+        findViewById(
+                R.id.buttonOpenManualAnswerKey
+        ).setOnClickListener(
+                view -> manualAnswerKeyLauncher.launch(
+                        OmrManualAnswerKeyActivity.createIntent(
+                                this
+                        )
+                )
+        );
+    }
+
+    private void handleManualAnswerKeyResult(
+            ActivityResult activityResult
+    ) {
+        if (activityResult.getResultCode()
+                != Activity.RESULT_OK) {
+
+            return;
+        }
+
+        OmrAnswerKeyDefinition createdAnswerKey =
+                OmrManualAnswerKeyActivity
+                        .extractCreatedAnswerKey(
+                                activityResult.getData()
+                        );
+
+        if (createdAnswerKey == null) {
+            Log.e(
+                    TAG,
+                    "O cadastro retornou sem gabarito válido."
+            );
+
+            Toast.makeText(
+                    this,
+                    "Não foi possível recuperar o gabarito criado.",
+                    Toast.LENGTH_LONG
+            ).show();
+
+            return;
+        }
+
+        currentAnswerKey = createdAnswerKey;
+
+        Log.i(
+                TAG,
+                "Gabarito oficial cadastrado"
+                        + " | id="
+                        + createdAnswerKey.getId()
+                        + " | layout="
+                        + createdAnswerKey.getLayoutId()
+                        + "@v"
+                        + createdAnswerKey.getLayoutVersion()
+                        + " | questões="
+                        + createdAnswerKey.getQuestionCount()
+        );
+
+        Toast.makeText(
+                this,
+                "Gabarito \""
+                        + createdAnswerKey.getName()
+                        + "\" cadastrado com "
+                        + createdAnswerKey.getQuestionCount()
+                        + " questões.",
+                Toast.LENGTH_LONG
+        ).show();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void restoreCurrentAnswerKey(
+            Bundle savedInstanceState
+    ) {
+        if (savedInstanceState == null) {
+            return;
+        }
+
+        Serializable value =
+                savedInstanceState.getSerializable(
+                        STATE_CURRENT_ANSWER_KEY
+                );
+
+        if (value instanceof OmrAnswerKeyDefinition) {
+            currentAnswerKey =
+                    (OmrAnswerKeyDefinition) value;
+        }
     }
 
     /*
@@ -149,14 +251,7 @@ public class MainActivity extends AppCompatActivity
                     return true;
                 }
         );
-//        cameraBridgeView.setOnLongClickListener(
-//                view -> {
-//
-//                    selecionarEtapaAnterior();
-//
-//                    return true;
-//                }
-//        );
+
     }
 
     /*
@@ -362,122 +457,7 @@ public class MainActivity extends AppCompatActivity
             throw throwable;
         }
     }
-//    private void configurarProcessamento() {
-//
-//        Log.d(
-//                TAG,
-//                "PROCESSAMENTO_ETAPA_1:"
-//                        + " iniciando configuração."
-//        );
-//
-//        try {
-//
-//            OmrMarkerDetector detector =
-//                    criarDetectorConfigurado();
-//
-//            /*
-//             * Para continuar usando o detector que já funciona,
-//             * mantemos aqui o ArucoMarkerDetector.
-//             *
-//             * Futuramente poderemos trocar somente esta criação:
-//             *
-//             * new SolidSquareMarkerDetector()
-//             */
-////            OmrMarkerDetector detector =
-////                    new ArucoMarkerDetector();
-//
-//            MarkerOverlayRenderer markerRenderer =
-//                    new MarkerOverlayRenderer();
-//
-//            MarkerSetResolver markerSetResolver =
-//                    new MarkerSetResolver();
-//
-//            ResolvedMarkerOverlayRenderer
-//                    resolvedMarkerRenderer =
-//                    new ResolvedMarkerOverlayRenderer();
-//
-//            MarkerSetStabilizer markerSetStabilizer =
-//                    new MarkerSetStabilizer();
-//
-//            StableMarkerOverlayRenderer
-//                    stableMarkerRenderer =
-//                    new StableMarkerOverlayRenderer();
-//
-//            visionDebugController =
-//                    new VisionDebugController();
-//
-//            //nao entendi: testar a estabilidade continuamente
-////            visionDebugController
-////                    .setAutoFreezeOnStableEnabled(false);
-//
-//            markerFrameProcessor =
-//                    new MarkerFrameProcessor(
-//                            detector,
-//                            markerRenderer,
-//                            markerSetResolver,
-//                            resolvedMarkerRenderer,
-//                            markerSetStabilizer,
-//                            stableMarkerRenderer,
-//                            visionDebugController
-//                    );
-//
-//            Log.d(
-//                    TAG,
-//                    "PROCESSAMENTO_ETAPA_2:"
-//                            + " processador configurado"
-//                            + " | detector="
-//                            + markerFrameProcessor.getDetectorName()
-//            );
-//
-//        } catch (Throwable throwable) {
-//
-//            markerFrameProcessor = null;
-//
-//            Log.e(
-//                    TAG,
-//                    "PROCESSAMENTO_ERRO:"
-//                            + " falha ao configurar o processador.",
-//                    throwable
-//            );
-//
-//            Toast.makeText(
-//                    this,
-//                    "Erro ao configurar o detector: "
-//                            + throwable.getClass().getSimpleName(),
-//                    Toast.LENGTH_LONG
-//            ).show();
-//
-//            throw throwable;
-//        }
-//    }
-
-    /*
-     * =========================================================
-     * PROCESSAMENTO DOS FRAMES
-     * =========================================================
-     */
-
-//    private OmrMarkerDetector criarDetectorConfigurado() {
-//
-//        switch (MARKER_DETECTOR_MODE) {
-//
-//            case ARUCO:
-//
-//                return new ArucoMarkerDetector();
-//
-//            case SOLID_SQUARE:
-//
-//                return new SolidSquareMarkerDetector();
-//
-//            default:
-//
-//                throw new IllegalStateException(
-//                        "Modo de detector não suportado: "
-//                                + MARKER_DETECTOR_MODE
-//                );
-//        }
-//    }
-
+    
     @Override
     public Mat onCameraFrame(
             CameraBridgeViewBase.CvCameraViewFrame inputFrame
@@ -957,6 +937,20 @@ public class MainActivity extends AppCompatActivity
      * CICLO DE VIDA DA ACTIVITY
      * =========================================================
      */
+
+    @Override
+    protected void onSaveInstanceState(
+            @NonNull Bundle outState
+    ) {
+        if (currentAnswerKey != null) {
+            outState.putSerializable(
+                    STATE_CURRENT_ANSWER_KEY,
+                    currentAnswerKey
+            );
+        }
+
+        super.onSaveInstanceState(outState);
+    }
 
     @Override
     protected void onResume() {
