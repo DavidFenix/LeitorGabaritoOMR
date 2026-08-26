@@ -1,6 +1,8 @@
 package com.example.leitorgabaritoomr.presentation.capture;
 
 import android.Manifest;
+import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -10,11 +12,15 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.domain.reading.OmrReadingResult;
+import com.example.leitorgabaritoomr.presentation.result.OmrReadingResultActivity;
 
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.OpenCVLoader;
@@ -53,6 +59,15 @@ public final class OmrCaptureActivity
     private volatile boolean destroyed;
 
     private OmrReadingResult completedReadingResult;
+    private boolean resultScreenOpen;
+
+    private final ActivityResultLauncher<Intent>
+            readingResultLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts
+                            .StartActivityForResult(),
+                    this::onReadingResultActivityFinished
+            );
 
     @Override
     protected void onCreate(
@@ -263,12 +278,92 @@ public final class OmrCaptureActivity
                         + readingResult.getAmbiguousCount()
         );
 
-        /*
-         * A navegacao para a futura tela de resultado sera ligada
-         * aqui. Ate ela existir, o resultado de negocio permanece
-         * preservado nesta Activity e a interface mostra Leitura
-         * concluida.
-         */
+        openReadingResultScreen();
+    }
+
+    private void openReadingResultScreen() {
+        if (destroyed
+                || resultScreenOpen
+                || completedReadingResult == null) {
+
+            return;
+        }
+
+        resultScreenOpen = true;
+
+        readingResultLauncher.launch(
+                OmrReadingResultActivity.createIntent(
+                        this,
+                        completedReadingResult
+                )
+        );
+    }
+
+    private void onReadingResultActivityFinished(
+            ActivityResult activityResult
+    ) {
+        resultScreenOpen = false;
+
+        if (destroyed) {
+            return;
+        }
+
+        if (activityResult.getResultCode()
+                == OmrReadingResultActivity.RESULT_READ_AGAIN) {
+
+            restartCapture();
+            return;
+        }
+
+        finishCaptureFlow(activityResult);
+    }
+
+    private void restartCapture() {
+        OmrCaptureController controller =
+                captureController;
+
+        if (controller == null
+                || controller.isClosed()) {
+
+            showLongMessage(
+                    "Nao foi possivel reiniciar a leitura OMR."
+            );
+
+            setResult(Activity.RESULT_CANCELED);
+            finish();
+            return;
+        }
+
+        completedReadingResult = null;
+
+        controller.retry();
+        startCamera();
+
+        Log.i(
+                TAG,
+                "Nova tentativa de leitura OMR iniciada."
+        );
+    }
+
+    private void finishCaptureFlow(
+            ActivityResult activityResult
+    ) {
+        Intent resultData =
+                activityResult.getData();
+
+        if (activityResult.getResultCode()
+                == Activity.RESULT_OK) {
+
+            setResult(
+                    Activity.RESULT_OK,
+                    resultData
+            );
+
+        } else {
+            setResult(Activity.RESULT_CANCELED);
+        }
+
+        finish();
     }
 
     /**
@@ -412,6 +507,7 @@ public final class OmrCaptureActivity
         closeCaptureController();
 
         completedReadingResult = null;
+        resultScreenOpen = false;
         cameraBridgeView = null;
 
         super.onDestroy();
