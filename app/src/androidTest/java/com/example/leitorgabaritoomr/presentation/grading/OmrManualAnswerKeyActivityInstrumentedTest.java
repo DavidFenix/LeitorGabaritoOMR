@@ -11,7 +11,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.view.View;
 import android.widget.Button;
-import android.widget.LinearLayout;
+import android.widget.ListAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import androidx.test.core.app.ActivityScenario;
@@ -166,8 +167,8 @@ public final class OmrManualAnswerKeyActivityInstrumentedTest {
 
             /*
              * Cada seleção é executada em um ciclo separado da thread
-             * principal. Isso permite que as linhas substituídas pelo
-             * Binder sejam coletadas durante o teste no emulador.
+             * principal. O adaptador cria apenas a linha exercitada e
+             * permite que ela seja coletada antes da próxima questão.
              */
             for (int questionIndex = 0;
                  questionIndex < 52;
@@ -280,12 +281,22 @@ public final class OmrManualAnswerKeyActivityInstrumentedTest {
                 )
         );
 
-        LinearLayout questionContainer =
-                getQuestionContainer(activity);
+        ListView questionList =
+                getQuestionList(activity);
+
+        ListAdapter questionAdapter =
+                questionList.getAdapter();
+
+        assertNotNull(questionAdapter);
 
         assertEquals(
                 52,
-                questionContainer.getChildCount()
+                questionAdapter.getCount()
+        );
+
+        assertTrue(
+                questionList.getChildCount()
+                        < questionAdapter.getCount()
         );
 
         ChipGroup firstOptionGroup =
@@ -511,18 +522,25 @@ public final class OmrManualAnswerKeyActivityInstrumentedTest {
             Activity activity,
             int questionIndex
     ) {
-        LinearLayout questionContainer =
-                getQuestionContainer(activity);
+        ListView questionList =
+                getQuestionList(activity);
+
+        ListAdapter questionAdapter =
+                questionList.getAdapter();
+
+        assertNotNull(questionAdapter);
 
         assertTrue(questionIndex >= 0);
         assertTrue(
                 questionIndex
-                        < questionContainer.getChildCount()
+                        < questionAdapter.getCount()
         );
 
         View questionItem =
-                questionContainer.getChildAt(
-                        questionIndex
+                questionAdapter.getView(
+                        questionIndex,
+                        null,
+                        questionList
                 );
 
         ChipGroup optionGroup =
@@ -535,16 +553,16 @@ public final class OmrManualAnswerKeyActivityInstrumentedTest {
         return optionGroup;
     }
 
-    private static LinearLayout getQuestionContainer(
+    private static ListView getQuestionList(
             Activity activity
     ) {
-        LinearLayout questionContainer =
+        ListView questionList =
                 activity.findViewById(
-                        R.id.containerOmrManualQuestions
+                        R.id.listOmrManualQuestions
                 );
 
-        assertNotNull(questionContainer);
-        return questionContainer;
+        assertNotNull(questionList);
+        return questionList;
     }
 
     private static void assertText(

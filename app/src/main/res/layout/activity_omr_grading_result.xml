@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFF3F4F6"
+    android:orientation="vertical"
+    tools:context=".presentation.grading.OmrGradingResultActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FF1F2937"
+        android:orientation="vertical"
+        android:paddingStart="20dp"
+        android:paddingTop="18dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/omr_grading_result_title"
+            android:textColor="#FFFFFFFF"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/textOmrGradingOverall"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:textColor="#FF86EFAC"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            tools:text="Correção concluída com itens para revisar" />
+
+        <TextView
+            android:id="@+id/textOmrGradingAnswerKey"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:textColor="#FFD1D5DB"
+            android:textSize="13sp"
+            tools:text="Gabarito: Matemática • versão 1" />
+
+        <TextView
+            android:id="@+id/textOmrGradingLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="#FF9CA3AF"
+            android:textSize="12sp"
+            tools:text="Folha: Avalie CE • versão 1" />
+
+        <TextView
+            android:id="@+id/textOmrGradingCapturedAt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="#FF9CA3AF"
+            android:textSize="12sp"
+            tools:text="Capturada em 27/08/2026 10:30" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#FFFFFFFF"
+            android:elevation="1dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/textOmrGradingPercentage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="92dp"
+                android:textColor="#FF166534"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                tools:text="90%" />
+
+            <TextView
+                android:id="@+id/textOmrGradingPoints"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:textColor="#FF374151"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                tools:text="47 de 52 pontos" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/textOmrGradingCountCorrect"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="#FFDCFCE7"
+                android:gravity="center"
+                android:minHeight="58dp"
+                android:padding="7dp"
+                android:textColor="#FF166534"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:text="Acertos\n47" />
+
+            <TextView
+                android:id="@+id/textOmrGradingCountIncorrect"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="7dp"
+                android:layout_weight="1"
+                android:background="#FFFEE2E2"
+                android:gravity="center"
+                android:minHeight="58dp"
+                android:padding="7dp"
+                android:textColor="#FF991B1B"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:text="Erros\n2" />
+
+            <TextView
+                android:id="@+id/textOmrGradingCountBlank"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="7dp"
+                android:layout_weight="1"
+                android:background="#FFE5E7EB"
+                android:gravity="center"
+                android:minHeight="58dp"
+                android:padding="7dp"
+                android:textColor="#FF374151"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:text="Em branco\n3" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="7dp"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/textOmrGradingCountReview"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="#FFFEF3C7"
+                android:gravity="center"
+                android:minHeight="54dp"
+                android:padding="5dp"
+                android:textColor="#FF92400E"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                tools:text="Revisar\n2" />
+
+            <TextView
+                android:id="@+id/textOmrGradingCountMultiple"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="#FFFCE7F3"
+                android:gravity="center"
+                android:minHeight="54dp"
+                android:padding="5dp"
+                android:textColor="#FF9D174D"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                tools:text="Múltiplas\n1" />
+
+            <TextView
+                android:id="@+id/textOmrGradingCountAmbiguous"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="#FFFFEDD5"
+                android:gravity="center"
+                android:minHeight="54dp"
+                android:padding="5dp"
+                android:textColor="#FF9A3412"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                tools:text="Ambíguas\n1" />
+
+            <TextView
+                android:id="@+id/textOmrGradingCountNotReady"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="#FFFEE2E2"
+                android:gravity="center"
+                android:minHeight="54dp"
+                android:padding="5dp"
+                android:textColor="#FF991B1B"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                tools:text="Pendentes\n0" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/textOmrGradingReview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="#FFFFFBEB"
+            android:padding="9dp"
+            android:textColor="#FF92400E"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            tools:text="2 questões exigem conferência antes de finalizar."
+            tools:visibility="visible" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="9dp"
+            android:text="@string/omr_grading_questions_title"
+            android:textColor="#FF111827"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <ListView
+            android:id="@+id/listOmrGradingQuestions"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="7dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:divider="@android:color/transparent"
+            android:dividerHeight="8dp"
+            android:paddingBottom="10dp"
+            android:scrollbars="vertical" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFFFFFFF"
+        android:elevation="10dp"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="12dp">
+
+        <Button
+            android:id="@+id/buttonOmrGradingReadAgain"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:minHeight="48dp"
+            android:text="@string/omr_grading_action_read_again" />
+
+        <Button
+            android:id="@+id/buttonOmrGradingFinish"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:minHeight="48dp"
+            android:text="@string/omr_grading_action_finish" />
+
+    </LinearLayout>
+
+</LinearLayout>

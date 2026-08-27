@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="omr_grading_result_title">Resultado da correção</string>
+
+    <string name="omr_grading_overall_final">
+        Correção concluída
+    </string>
+
+    <string name="omr_grading_overall_review">
+        Correção concluída com itens para revisar
+    </string>
+
+    <string name="omr_grading_overall_incomplete">
+        Correção incompleta
+    </string>
+
+    <string name="omr_grading_answer_key_format">
+        Gabarito: %1$s • versão %2$d
+    </string>
+
+    <string name="omr_grading_layout_format">
+        Folha: %1$s • versão %2$d
+    </string>
+
+    <string name="omr_grading_captured_at_format">
+        Capturada em %1$s
+    </string>
+
+    <string name="omr_grading_percentage_format">
+        %1$d%%
+    </string>
+
+    <string name="omr_grading_points_format">
+        %1$s de %2$s pontos
+    </string>
+
+    <string name="omr_grading_count_correct_format">
+        Acertos\n%1$d
+    </string>
+
+    <string name="omr_grading_count_incorrect_format">
+        Erros\n%1$d
+    </string>
+
+    <string name="omr_grading_count_blank_format">
+        Em branco\n%1$d
+    </string>
+
+    <string name="omr_grading_count_review_format">
+        Revisar\n%1$d
+    </string>
+
+    <string name="omr_grading_count_multiple_format">
+        Múltiplas\n%1$d
+    </string>
+
+    <string name="omr_grading_count_ambiguous_format">
+        Ambíguas\n%1$d
+    </string>
+
+    <string name="omr_grading_count_not_ready_format">
+        Pendentes\n%1$d
+    </string>
+
+    <plurals name="omr_grading_review_message">
+        <item quantity="one">
+            %1$d questão exige conferência antes de finalizar.
+        </item>
+        <item quantity="other">
+            %1$d questões exigem conferência antes de finalizar.
+        </item>
+    </plurals>
+
+    <string name="omr_grading_questions_title">Questões corrigidas</string>
+
+    <string name="omr_grading_question_position_format">
+        Questão %1$d
+    </string>
+
+    <string name="omr_grading_question_correct_format">
+        Correta • marcada: %1$s
+    </string>
+
+    <string name="omr_grading_question_incorrect_format">
+        Incorreta • marcada: %1$s • gabarito: %2$s
+    </string>
+
+    <string name="omr_grading_question_blank_format">
+        Em branco • gabarito: %1$s
+    </string>
+
+    <string name="omr_grading_question_multiple_format">
+        Múltiplas: %1$s • gabarito: %2$s
+    </string>
+
+    <string name="omr_grading_question_ambiguous_format">
+        Ambígua: %1$s • gabarito: %2$s
+    </string>
+
+    <string name="omr_grading_question_not_ready_format">
+        Ainda não confirmada • gabarito: %1$s
+    </string>
+
+    <string name="omr_grading_question_points_format">
+        %1$s/%2$s ponto(s)
+    </string>
+
+    <string name="omr_grading_question_confidence_format">
+        Confiança: %1$d%%
+    </string>
+
+    <string name="omr_grading_action_read_again">Nova leitura</string>
+    <string name="omr_grading_action_finish">Concluir</string>
+
+    <string name="omr_grading_error_missing_result">
+        O resultado da correção não foi recebido.
+    </string>
+
+</resources>

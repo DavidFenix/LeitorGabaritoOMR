@@ -108,15 +108,12 @@ public class MainActivity extends AppCompatActivity
         findViewById(
                 R.id.buttonOpenOmrCapture
         ).setOnClickListener(
-                view -> {
-
-                    startActivity(
-                            new Intent(
-                                    this,
-                                    OmrCaptureActivity.class
-                            )
-                    );
-                }
+                view -> startActivity(
+                        OmrCaptureActivity.createIntent(
+                                this,
+                                currentAnswerKey
+                        )
+                )
         );
     }
 

@@ -2,6 +2,7 @@ package com.example.leitorgabaritoomr.presentation.capture;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -11,6 +12,7 @@ import android.view.WindowManager;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
@@ -19,12 +21,20 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.example.leitorgabaritoomr.R;
+import com.example.leitorgabaritoomr.application.grading.OmrGradingService;
+import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
+import com.example.leitorgabaritoomr.domain.grading.OmrGradingResult;
 import com.example.leitorgabaritoomr.domain.reading.OmrReadingResult;
+import com.example.leitorgabaritoomr.presentation.grading.OmrGradingResultActivity;
 import com.example.leitorgabaritoomr.presentation.result.OmrReadingResultActivity;
+import com.example.leitorgabaritoomr.vision.layout.OmrLayoutDefinition;
+import com.example.leitorgabaritoomr.vision.layout.factory.AvalieCeDevelopmentLayoutFactory;
 
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
+
+import java.io.Serializable;
 
 /**
  * Tela de captura OMR de producao.
@@ -42,6 +52,9 @@ public final class OmrCaptureActivity
     private static final String TAG =
             "OMR_Capture";
 
+    public static final String EXTRA_ANSWER_KEY =
+            "com.example.leitorgabaritoomr.extra.OMR_ANSWER_KEY";
+
     private static final int CAMERA_PERMISSION_CODE =
             101;
 
@@ -53,12 +66,14 @@ public final class OmrCaptureActivity
 
     private CameraBridgeViewBase cameraBridgeView;
     private OmrCaptureController captureController;
+    private OmrAnswerKeyDefinition activeAnswerKey;
 
     private boolean openCvLoaded;
     private volatile boolean cameraEnabled;
     private volatile boolean destroyed;
 
     private OmrReadingResult completedReadingResult;
+    private OmrGradingResult completedGradingResult;
     private boolean resultScreenOpen;
 
     private final ActivityResultLauncher<Intent>
@@ -68,6 +83,52 @@ public final class OmrCaptureActivity
                             .StartActivityForResult(),
                     this::onReadingResultActivityFinished
             );
+
+    private final ActivityResultLauncher<Intent>
+            gradingResultLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts
+                            .StartActivityForResult(),
+                    this::onGradingResultActivityFinished
+            );
+
+    /**
+     * Cria uma captura sem correção automática por gabarito.
+     */
+    public static Intent createIntent(
+            Context context
+    ) {
+        return createIntent(context, null);
+    }
+
+    /**
+     * Cria uma captura que poderá corrigir a leitura com o gabarito
+     * oficial informado.
+     */
+    public static Intent createIntent(
+            Context context,
+            @Nullable OmrAnswerKeyDefinition answerKeyDefinition
+    ) {
+        if (context == null) {
+            throw new IllegalArgumentException(
+                    "O contexto é obrigatório."
+            );
+        }
+
+        Intent intent = new Intent(
+                context,
+                OmrCaptureActivity.class
+        );
+
+        if (answerKeyDefinition != null) {
+            intent.putExtra(
+                    EXTRA_ANSWER_KEY,
+                    answerKeyDefinition
+            );
+        }
+
+        return intent;
+    }
 
     @Override
     protected void onCreate(
@@ -83,12 +144,62 @@ public final class OmrCaptureActivity
                 R.layout.activity_omr_capture
         );
 
+        activeAnswerKey = extractAnswerKey(
+                getIntent()
+        );
+
+        logActiveAnswerKey();
+
         configureCameraView();
         initializeOpenCvAndCapture();
 
         if (openCvLoaded) {
             ensureCameraPermission();
         }
+    }
+
+    @Nullable
+    @SuppressWarnings("deprecation")
+    private OmrAnswerKeyDefinition extractAnswerKey(
+            @Nullable Intent intent
+    ) {
+        if (intent == null) {
+            return null;
+        }
+
+        Serializable value =
+                intent.getSerializableExtra(
+                        EXTRA_ANSWER_KEY
+                );
+
+        if (!(value instanceof OmrAnswerKeyDefinition)) {
+            return null;
+        }
+
+        return (OmrAnswerKeyDefinition) value;
+    }
+
+    private void logActiveAnswerKey() {
+        if (activeAnswerKey == null) {
+            Log.i(
+                    TAG,
+                    "Captura iniciada sem gabarito oficial."
+            );
+            return;
+        }
+
+        Log.i(
+                TAG,
+                "Captura iniciada com gabarito oficial"
+                        + " | id="
+                        + activeAnswerKey.getId()
+                        + " | layout="
+                        + activeAnswerKey.getLayoutId()
+                        + "@v"
+                        + activeAnswerKey.getLayoutVersion()
+                        + " | questoes="
+                        + activeAnswerKey.getQuestionCount()
+        );
     }
 
     private void configureCameraView() {
@@ -278,7 +389,71 @@ public final class OmrCaptureActivity
                         + readingResult.getAmbiguousCount()
         );
 
-        openReadingResultScreen();
+        if (activeAnswerKey == null) {
+            openReadingResultScreen();
+            return;
+        }
+
+        gradeAndOpenGradingResultScreen();
+    }
+
+    private void gradeAndOpenGradingResultScreen() {
+        if (destroyed
+                || completedReadingResult == null
+                || activeAnswerKey == null) {
+
+            return;
+        }
+
+        try {
+            OmrLayoutDefinition layoutDefinition =
+                    AvalieCeDevelopmentLayoutFactory.create();
+
+            OmrGradingService gradingService =
+                    new OmrGradingService();
+
+            completedGradingResult = gradingService.grade(
+                    layoutDefinition,
+                    activeAnswerKey,
+                    completedReadingResult
+            );
+
+            Log.i(
+                    TAG,
+                    "Leitura corrigida com o gabarito oficial"
+                            + " | gabarito="
+                            + activeAnswerKey.getId()
+                            + " | acertos="
+                            + completedGradingResult
+                            .getCorrectCount()
+                            + " | erros="
+                            + completedGradingResult
+                            .getIncorrectCount()
+                            + " | percentual="
+                            + completedGradingResult
+                            .getAwardedPercentage()
+            );
+
+        } catch (RuntimeException exception) {
+            completedGradingResult = null;
+
+            Log.e(
+                    TAG,
+                    "O gabarito oficial não pôde corrigir a leitura.",
+                    exception
+            );
+
+            showLongMessage(
+                    "O gabarito oficial não é compatível com esta"
+                            + " leitura. O resultado será exibido"
+                            + " sem correção."
+            );
+
+            openReadingResultScreen();
+            return;
+        }
+
+        openGradingResultScreen();
     }
 
     private void openReadingResultScreen() {
@@ -318,6 +493,43 @@ public final class OmrCaptureActivity
         finishCaptureFlow(activityResult);
     }
 
+    private void openGradingResultScreen() {
+        if (destroyed
+                || resultScreenOpen
+                || completedGradingResult == null) {
+
+            return;
+        }
+
+        resultScreenOpen = true;
+
+        gradingResultLauncher.launch(
+                OmrGradingResultActivity.createIntent(
+                        this,
+                        completedGradingResult
+                )
+        );
+    }
+
+    private void onGradingResultActivityFinished(
+            ActivityResult activityResult
+    ) {
+        resultScreenOpen = false;
+
+        if (destroyed) {
+            return;
+        }
+
+        if (activityResult.getResultCode()
+                == OmrGradingResultActivity.RESULT_READ_AGAIN) {
+
+            restartCapture();
+            return;
+        }
+
+        finishCaptureFlow(activityResult);
+    }
+
     private void restartCapture() {
         OmrCaptureController controller =
                 captureController;
@@ -335,6 +547,7 @@ public final class OmrCaptureActivity
         }
 
         completedReadingResult = null;
+        completedGradingResult = null;
 
         controller.retry();
         startCamera();
@@ -507,6 +720,8 @@ public final class OmrCaptureActivity
         closeCaptureController();
 
         completedReadingResult = null;
+        completedGradingResult = null;
+        activeAnswerKey = null;
         resultScreenOpen = false;
         cameraBridgeView = null;
 

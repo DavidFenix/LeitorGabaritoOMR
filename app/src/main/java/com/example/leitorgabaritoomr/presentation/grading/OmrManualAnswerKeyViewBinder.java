@@ -5,10 +5,11 @@ import android.graphics.Color;
 import android.text.Editable;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
 import android.widget.Button;
-import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.ProgressBar;
-import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.annotation.IdRes;
@@ -18,6 +19,10 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Aplica {@link OmrManualAnswerKeyViewState} ao layout Android do
@@ -58,11 +63,11 @@ public final class OmrManualAnswerKeyViewBinder {
     private final ProgressBar progressBar;
     private final TextView remainingTextView;
 
-    private final ScrollView scrollView;
     private final TextInputLayout nameInputLayout;
     private final TextInputEditText nameEditText;
     private final Button goToPendingButton;
-    private final LinearLayout questionContainer;
+    private final ListView questionListView;
+    private final QuestionAdapter questionAdapter;
 
     private final Button cancelButton;
     private final Button saveButton;
@@ -107,12 +112,6 @@ public final class OmrManualAnswerKeyViewBinder {
                 TextView.class
         );
 
-        scrollView = requireView(
-                rootView,
-                R.id.scrollOmrManual,
-                ScrollView.class
-        );
-
         nameInputLayout = requireView(
                 rootView,
                 R.id.inputLayoutOmrManualName,
@@ -131,11 +130,14 @@ public final class OmrManualAnswerKeyViewBinder {
                 Button.class
         );
 
-        questionContainer = requireView(
+        questionListView = requireView(
                 rootView,
-                R.id.containerOmrManualQuestions,
-                LinearLayout.class
+                R.id.listOmrManualQuestions,
+                ListView.class
         );
+
+        questionAdapter = new QuestionAdapter();
+        questionListView.setAdapter(questionAdapter);
 
         cancelButton = requireView(
                 rootView,
@@ -226,10 +228,6 @@ public final class OmrManualAnswerKeyViewBinder {
         );
 
         nameEditText.requestFocus();
-
-        scrollView.post(
-                () -> scrollView.smoothScrollTo(0, 0)
-        );
     }
 
     public void clearNameError() {
@@ -249,7 +247,9 @@ public final class OmrManualAnswerKeyViewBinder {
         goToPendingButton.setOnClickListener(null);
         cancelButton.setOnClickListener(null);
         saveButton.setOnClickListener(null);
-        questionContainer.removeAllViews();
+
+        questionAdapter.clear();
+        questionListView.setAdapter(null);
     }
 
     private void applyHeader(
@@ -300,21 +300,9 @@ public final class OmrManualAnswerKeyViewBinder {
     private void applyQuestionItems(
             OmrManualAnswerKeyViewState viewState
     ) {
-        questionContainer.removeAllViews();
-
-        for (OmrManualAnswerKeyViewState.QuestionItem item
-                : viewState.getQuestionItems()) {
-
-            View itemView = layoutInflater.inflate(
-                    R.layout
-                    .item_omr_manual_answer_key_question,
-                    questionContainer,
-                    false
-            );
-
-            bindQuestionItem(itemView, item);
-            questionContainer.addView(itemView);
-        }
+        questionAdapter.replaceItems(
+                viewState.getQuestionItems()
+        );
     }
 
     private void bindQuestionItem(
@@ -506,25 +494,90 @@ public final class OmrManualAnswerKeyViewBinder {
                 currentViewState
                 .getFirstUnansweredPosition();
 
-        int childIndex = position - 1;
+        int adapterPosition = position - 1;
 
-        if (childIndex < 0
-                || childIndex >= questionContainer.getChildCount()) {
+        if (adapterPosition < 0
+                || adapterPosition >= questionAdapter.getCount()) {
             throw new IllegalStateException(
                     "A primeira questão pendente não possui linha."
             );
         }
 
-        View pendingQuestionView =
-                questionContainer.getChildAt(childIndex);
-
-        scrollView.post(
-                () -> scrollView.smoothScrollTo(
-                        0,
-                        questionContainer.getTop()
-                                + pendingQuestionView.getTop()
-                )
+        questionListView.smoothScrollToPosition(
+                adapterPosition
         );
+    }
+
+    /**
+     * Mantém em memória somente as linhas visíveis da lista. Assim o
+     * editor continua leve para folhas com 52, 90 ou mais questões.
+     */
+    private final class QuestionAdapter
+            extends BaseAdapter {
+
+        private List<OmrManualAnswerKeyViewState.QuestionItem>
+                items = Collections.emptyList();
+
+        void replaceItems(
+                List<OmrManualAnswerKeyViewState.QuestionItem>
+                        newItems
+        ) {
+            items = Collections.unmodifiableList(
+                    new ArrayList<>(newItems)
+            );
+
+            notifyDataSetChanged();
+        }
+
+        void clear() {
+            items = Collections.emptyList();
+            notifyDataSetInvalidated();
+        }
+
+        @Override
+        public int getCount() {
+            return items.size();
+        }
+
+        @Override
+        public OmrManualAnswerKeyViewState.QuestionItem
+        getItem(
+                int position
+        ) {
+            return items.get(position);
+        }
+
+        @Override
+        public long getItemId(
+                int position
+        ) {
+            return position;
+        }
+
+        @Override
+        public View getView(
+                int position,
+                View convertView,
+                ViewGroup parent
+        ) {
+            View itemView = convertView;
+
+            if (itemView == null) {
+                itemView = layoutInflater.inflate(
+                        R.layout
+                        .item_omr_manual_answer_key_question,
+                        parent,
+                        false
+                );
+            }
+
+            bindQuestionItem(
+                    itemView,
+                    getItem(position)
+            );
+
+            return itemView;
+        }
     }
 
     private void ensureNotReleased() {
