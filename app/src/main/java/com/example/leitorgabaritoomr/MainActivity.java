@@ -19,7 +19,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.example.leitorgabaritoomr.application.grading.OmrActiveAnswerKeyStore;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
+import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesActiveAnswerKeyStore;
 import com.example.leitorgabaritoomr.presentation.capture.OmrCaptureActivity;
 import com.example.leitorgabaritoomr.presentation.grading.OmrManualAnswerKeyActivity;
 import com.example.leitorgabaritoomr.vision.debug.VisionDebugController;
@@ -61,6 +63,7 @@ public class MainActivity extends AppCompatActivity
 
     private CameraBridgeViewBase cameraBridgeView;
     private MarkerFrameProcessor markerFrameProcessor;
+    private OmrActiveAnswerKeyStore activeAnswerKeyStore;
     private OmrAnswerKeyDefinition currentAnswerKey;
 
     private final ActivityResultLauncher<Intent>
@@ -88,6 +91,11 @@ public class MainActivity extends AppCompatActivity
         );
 
         setContentView(R.layout.activity_main);
+
+        activeAnswerKeyStore =
+                new OmrSharedPreferencesActiveAnswerKeyStore(
+                        this
+                );
 
         restoreCurrentAnswerKey(savedInstanceState);
 
@@ -160,6 +168,27 @@ public class MainActivity extends AppCompatActivity
             return;
         }
 
+        try {
+            activeAnswerKeyStore.saveActive(
+                    createdAnswerKey
+            );
+
+        } catch (RuntimeException exception) {
+            Log.e(
+                    TAG,
+                    "Não foi possível persistir o gabarito criado.",
+                    exception
+            );
+
+            Toast.makeText(
+                    this,
+                    "Não foi possível salvar o gabarito no dispositivo.",
+                    Toast.LENGTH_LONG
+            ).show();
+
+            return;
+        }
+
         currentAnswerKey = createdAnswerKey;
 
         Log.i(
@@ -190,6 +219,35 @@ public class MainActivity extends AppCompatActivity
     private void restoreCurrentAnswerKey(
             Bundle savedInstanceState
     ) {
+        OmrAnswerKeyDefinition persistedAnswerKey = null;
+
+        try {
+            persistedAnswerKey =
+                    activeAnswerKeyStore.loadActiveOrNull();
+
+        } catch (RuntimeException exception) {
+            Log.e(
+                    TAG,
+                    "Não foi possível recuperar o gabarito ativo.",
+                    exception
+            );
+        }
+
+        if (persistedAnswerKey != null) {
+            currentAnswerKey = persistedAnswerKey;
+
+            Log.i(
+                    TAG,
+                    "Gabarito oficial ativo recuperado"
+                            + " | id="
+                            + persistedAnswerKey.getId()
+                            + " | versão="
+                            + persistedAnswerKey.getVersion()
+            );
+
+            return;
+        }
+
         if (savedInstanceState == null) {
             return;
         }
@@ -202,6 +260,20 @@ public class MainActivity extends AppCompatActivity
         if (value instanceof OmrAnswerKeyDefinition) {
             currentAnswerKey =
                     (OmrAnswerKeyDefinition) value;
+
+            try {
+                activeAnswerKeyStore.saveActive(
+                        currentAnswerKey
+                );
+
+            } catch (RuntimeException exception) {
+                Log.e(
+                        TAG,
+                        "Não foi possível migrar o gabarito"
+                                + " do estado da Activity.",
+                        exception
+                );
+            }
         }
     }
 
