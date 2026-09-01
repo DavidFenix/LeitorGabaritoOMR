@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="omr_answer_key_list_title">
+        Gabaritos salvos
+    </string>
+
+    <string name="omr_answer_key_list_subtitle">
+        Selecione a avaliação usada para corrigir as próximas leituras.
+    </string>
+
+    <plurals name="omr_answer_key_list_count">
+        <item quantity="one">
+            %1$d gabarito disponível
+        </item>
+        <item quantity="other">
+            %1$d gabaritos disponíveis
+        </item>
+    </plurals>
+
+    <string name="omr_answer_key_list_empty_title">
+        Nenhum gabarito salvo
+    </string>
+
+    <string name="omr_answer_key_list_empty_message">
+        Cadastre o primeiro gabarito oficial para corrigir as leituras automaticamente.
+    </string>
+
+    <string name="omr_answer_key_list_active_badge">
+        ATIVO
+    </string>
+
+    <string name="omr_answer_key_list_version_format">
+        Versão %1$d
+    </string>
+
+    <plurals name="omr_answer_key_list_questions_format">
+        <item quantity="one">
+            %1$d questão
+        </item>
+        <item quantity="other">
+            %1$d questões
+        </item>
+    </plurals>
+
+    <string name="omr_answer_key_list_layout_format">
+        Folha: %1$s • versão %2$d
+    </string>
+
+    <string name="omr_answer_key_list_weight_format">
+        Peso total: %1$.2f
+    </string>
+
+    <string name="omr_answer_key_list_action_select">
+        Usar este gabarito
+    </string>
+
+    <string name="omr_answer_key_list_action_selected">
+        Em uso
+    </string>
+
+    <string name="omr_answer_key_list_action_delete">
+        Excluir
+    </string>
+
+    <string name="omr_answer_key_list_action_create">
+        Cadastrar novo
+    </string>
+
+    <string name="omr_answer_key_list_action_back">
+        Voltar
+    </string>
+
+    <string name="omr_answer_key_list_selected_message">
+        Gabarito “%1$s” selecionado.
+    </string>
+
+    <string name="omr_answer_key_list_created_message">
+        Gabarito “%1$s” cadastrado e selecionado.
+    </string>
+
+    <string name="omr_answer_key_list_delete_title">
+        Excluir gabarito?
+    </string>
+
+    <string name="omr_answer_key_list_delete_message">
+        O gabarito “%1$s” será removido do dispositivo.
+    </string>
+
+    <string name="omr_answer_key_list_delete_active_message">
+        O gabarito “%1$s” está ativo. Ao excluí-lo, nenhuma avaliação ficará selecionada.
+    </string>
+
+    <string name="omr_answer_key_list_delete_confirm">
+        Excluir
+    </string>
+
+    <string name="omr_answer_key_list_delete_cancel">
+        Cancelar
+    </string>
+
+    <string name="omr_answer_key_list_deleted_message">
+        Gabarito “%1$s” excluído.
+    </string>
+
+    <string name="omr_answer_key_list_load_error">
+        Não foi possível carregar os gabaritos salvos.
+    </string>
+
+    <string name="omr_answer_key_list_create_error">
+        Não foi possível recuperar o gabarito cadastrado.
+    </string>
+
+    <string name="omr_answer_key_list_save_error">
+        Não foi possível salvar o novo gabarito.
+    </string>
+
+    <string name="omr_answer_key_list_select_error">
+        Não foi possível selecionar este gabarito.
+    </string>
+
+    <string name="omr_answer_key_list_delete_error">
+        Não foi possível excluir este gabarito.
+    </string>
+
+</resources>

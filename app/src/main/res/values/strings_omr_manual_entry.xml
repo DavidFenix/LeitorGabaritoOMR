@@ -2,7 +2,7 @@
 <resources>
 
     <string name="omr_lab_action_open_manual_answer_key">
-        Cadastrar gabarito
+        Gabaritos salvos
     </string>
 
 </resources>

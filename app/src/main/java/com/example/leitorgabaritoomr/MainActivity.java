@@ -19,11 +19,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.example.leitorgabaritoomr.application.grading.OmrActiveAnswerKeyStore;
+import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyRepository;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
-import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesActiveAnswerKeyStore;
+import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesAnswerKeyRepository;
 import com.example.leitorgabaritoomr.presentation.capture.OmrCaptureActivity;
-import com.example.leitorgabaritoomr.presentation.grading.OmrManualAnswerKeyActivity;
+import com.example.leitorgabaritoomr.presentation.grading.OmrAnswerKeyListActivity;
 import com.example.leitorgabaritoomr.vision.debug.VisionDebugController;
 import com.example.leitorgabaritoomr.vision.debug.VisionStage;
 import com.example.leitorgabaritoomr.vision.geometry.MarkerSetResolutionResult;
@@ -37,7 +37,6 @@ import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
 
-import java.io.Serializable;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity
@@ -50,9 +49,6 @@ public class MainActivity extends AppCompatActivity
 
     private static final String TAG = "OMR_Camera";
 
-    private static final String STATE_CURRENT_ANSWER_KEY =
-            "omr.main.current_answer_key";
-
     private static final int CAMERA_PERMISSION_CODE = 100;
 
     /*
@@ -63,15 +59,15 @@ public class MainActivity extends AppCompatActivity
 
     private CameraBridgeViewBase cameraBridgeView;
     private MarkerFrameProcessor markerFrameProcessor;
-    private OmrActiveAnswerKeyStore activeAnswerKeyStore;
+    private OmrAnswerKeyRepository answerKeyRepository;
     private OmrAnswerKeyDefinition currentAnswerKey;
 
     private final ActivityResultLauncher<Intent>
-            manualAnswerKeyLauncher =
+            answerKeyListLauncher =
             registerForActivityResult(
                     new ActivityResultContracts
                             .StartActivityForResult(),
-                    this::handleManualAnswerKeyResult
+                    this::handleAnswerKeyListResult
             );
 
     private volatile boolean cameraHabilitada = false;
@@ -92,15 +88,15 @@ public class MainActivity extends AppCompatActivity
 
         setContentView(R.layout.activity_main);
 
-        activeAnswerKeyStore =
-                new OmrSharedPreferencesActiveAnswerKeyStore(
+        answerKeyRepository =
+                new OmrSharedPreferencesAnswerKeyRepository(
                         this
                 );
 
-        restoreCurrentAnswerKey(savedInstanceState);
+        restoreCurrentAnswerKey();
 
         configurarAcessoCapturaReal();
-        configureManualAnswerKeyAccess();
+        configureAnswerKeyListAccess();
 
         configurarCameraView();
 
@@ -125,156 +121,106 @@ public class MainActivity extends AppCompatActivity
         );
     }
 
-    private void configureManualAnswerKeyAccess() {
+    private void configureAnswerKeyListAccess() {
 
         findViewById(
                 R.id.buttonOpenManualAnswerKey
         ).setOnClickListener(
-                view -> manualAnswerKeyLauncher.launch(
-                        OmrManualAnswerKeyActivity.createIntent(
+                view -> answerKeyListLauncher.launch(
+                        OmrAnswerKeyListActivity.createIntent(
                                 this
                         )
                 )
         );
     }
 
-    private void handleManualAnswerKeyResult(
+    private void handleAnswerKeyListResult(
             ActivityResult activityResult
     ) {
         if (activityResult.getResultCode()
-                != Activity.RESULT_OK) {
-
-            return;
-        }
-
-        OmrAnswerKeyDefinition createdAnswerKey =
-                OmrManualAnswerKeyActivity
-                        .extractCreatedAnswerKey(
-                                activityResult.getData()
-                        );
-
-        if (createdAnswerKey == null) {
-            Log.e(
-                    TAG,
-                    "O cadastro retornou sem gabarito válido."
-            );
-
-            Toast.makeText(
-                    this,
-                    "Não foi possível recuperar o gabarito criado.",
-                    Toast.LENGTH_LONG
-            ).show();
+                != Activity.RESULT_OK
+                || !OmrAnswerKeyListActivity
+                .didRepositoryChange(
+                        activityResult.getData()
+                )) {
 
             return;
         }
 
         try {
-            activeAnswerKeyStore.saveActive(
-                    createdAnswerKey
-            );
+            currentAnswerKey =
+                    answerKeyRepository.loadActiveOrNull();
 
         } catch (RuntimeException exception) {
+            currentAnswerKey = null;
+
             Log.e(
                     TAG,
-                    "Não foi possível persistir o gabarito criado.",
+                    "Não foi possível atualizar o gabarito ativo"
+                            + " após o gerenciamento.",
                     exception
             );
 
             Toast.makeText(
                     this,
-                    "Não foi possível salvar o gabarito no dispositivo.",
+                    "Não foi possível atualizar o gabarito ativo.",
                     Toast.LENGTH_LONG
             ).show();
 
             return;
         }
 
-        currentAnswerKey = createdAnswerKey;
+        if (currentAnswerKey == null) {
+            Log.i(
+                    TAG,
+                    "Nenhum gabarito oficial está ativo"
+                            + " após o gerenciamento."
+            );
+
+            return;
+        }
 
         Log.i(
                 TAG,
-                "Gabarito oficial cadastrado"
+                "Gabarito oficial ativo atualizado"
                         + " | id="
-                        + createdAnswerKey.getId()
-                        + " | layout="
-                        + createdAnswerKey.getLayoutId()
-                        + "@v"
-                        + createdAnswerKey.getLayoutVersion()
+                        + currentAnswerKey.getId()
+                        + " | versão="
+                        + currentAnswerKey.getVersion()
                         + " | questões="
-                        + createdAnswerKey.getQuestionCount()
+                        + currentAnswerKey.getQuestionCount()
         );
-
-        Toast.makeText(
-                this,
-                "Gabarito \""
-                        + createdAnswerKey.getName()
-                        + "\" cadastrado com "
-                        + createdAnswerKey.getQuestionCount()
-                        + " questões.",
-                Toast.LENGTH_LONG
-        ).show();
     }
 
-    @SuppressWarnings("deprecation")
-    private void restoreCurrentAnswerKey(
-            Bundle savedInstanceState
-    ) {
-        OmrAnswerKeyDefinition persistedAnswerKey = null;
-
+    private void restoreCurrentAnswerKey() {
         try {
-            persistedAnswerKey =
-                    activeAnswerKeyStore.loadActiveOrNull();
+            currentAnswerKey =
+                    answerKeyRepository.loadActiveOrNull();
 
         } catch (RuntimeException exception) {
+            currentAnswerKey = null;
+
             Log.e(
                     TAG,
                     "Não foi possível recuperar o gabarito ativo.",
                     exception
             );
-        }
-
-        if (persistedAnswerKey != null) {
-            currentAnswerKey = persistedAnswerKey;
-
-            Log.i(
-                    TAG,
-                    "Gabarito oficial ativo recuperado"
-                            + " | id="
-                            + persistedAnswerKey.getId()
-                            + " | versão="
-                            + persistedAnswerKey.getVersion()
-            );
 
             return;
         }
 
-        if (savedInstanceState == null) {
+        if (currentAnswerKey == null) {
             return;
         }
 
-        Serializable value =
-                savedInstanceState.getSerializable(
-                        STATE_CURRENT_ANSWER_KEY
-                );
-
-        if (value instanceof OmrAnswerKeyDefinition) {
-            currentAnswerKey =
-                    (OmrAnswerKeyDefinition) value;
-
-            try {
-                activeAnswerKeyStore.saveActive(
-                        currentAnswerKey
-                );
-
-            } catch (RuntimeException exception) {
-                Log.e(
-                        TAG,
-                        "Não foi possível migrar o gabarito"
-                                + " do estado da Activity.",
-                        exception
-                );
-            }
-        }
+        Log.i(
+                TAG,
+                "Gabarito oficial ativo recuperado"
+                        + " | id="
+                        + currentAnswerKey.getId()
+                        + " | versão="
+                        + currentAnswerKey.getVersion()
+        );
     }
 
     /*
@@ -1006,20 +952,6 @@ public class MainActivity extends AppCompatActivity
      * CICLO DE VIDA DA ACTIVITY
      * =========================================================
      */
-
-    @Override
-    protected void onSaveInstanceState(
-            @NonNull Bundle outState
-    ) {
-        if (currentAnswerKey != null) {
-            outState.putSerializable(
-                    STATE_CURRENT_ANSWER_KEY,
-                    currentAnswerKey
-            );
-        }
-
-        super.onSaveInstanceState(outState);
-    }
 
     @Override
     protected void onResume() {
