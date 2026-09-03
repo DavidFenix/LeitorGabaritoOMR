@@ -2,7 +2,9 @@ package com.example.leitorgabaritoomr.presentation.grading;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -46,6 +48,10 @@ public final class OmrAnswerKeyListActivity
     private static final String STATE_REPOSITORY_CHANGED =
             "omr.answer_key_list.repository_changed";
 
+    private static final String EXTRA_STORAGE_NAMESPACE =
+            "com.example.leitorgabaritoomr.extra."
+                    + "ANSWER_KEY_STORAGE_NAMESPACE";
+
     private static final String TAG =
             "OmrAnswerKeyList";
 
@@ -73,6 +79,29 @@ public final class OmrAnswerKeyListActivity
         return new Intent(
                 context,
                 OmrAnswerKeyListActivity.class
+        );
+    }
+
+    /**
+     * Cria um Intent com armazenamento isolado para testes instrumentados.
+     *
+     * O método possui visibilidade de pacote para não fazer parte do contrato
+     * público usado pelo aplicativo.
+     */
+    static Intent createIsolatedStorageIntent(
+            Context context,
+            String storageNamespace
+    ) {
+        if (storageNamespace == null
+                || storageNamespace.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "O namespace de armazenamento é obrigatório."
+            );
+        }
+
+        return createIntent(context).putExtra(
+                EXTRA_STORAGE_NAMESPACE,
+                storageNamespace.trim()
         );
     }
 
@@ -119,7 +148,7 @@ public final class OmrAnswerKeyListActivity
 
         repository =
                 new OmrSharedPreferencesAnswerKeyRepository(
-                        this
+                        createRepositoryContext()
                 );
 
         View rootView = findViewById(
@@ -146,6 +175,40 @@ public final class OmrAnswerKeyListActivity
         }
 
         renderRepository();
+    }
+
+    private Context createRepositoryContext() {
+        String storageNamespace = getIntent()
+                .getStringExtra(
+                        EXTRA_STORAGE_NAMESPACE
+                );
+
+        if (storageNamespace == null
+                || storageNamespace.trim().isEmpty()) {
+            return this;
+        }
+
+        Context baseContext = this;
+        String preferencesSuffix =
+                "." + storageNamespace.trim();
+
+        return new ContextWrapper(baseContext) {
+            @Override
+            public Context getApplicationContext() {
+                return this;
+            }
+
+            @Override
+            public SharedPreferences getSharedPreferences(
+                    String name,
+                    int mode
+            ) {
+                return baseContext.getSharedPreferences(
+                        name + preferencesSuffix,
+                        mode
+                );
+            }
+        };
     }
 
     private void configureBinder() {

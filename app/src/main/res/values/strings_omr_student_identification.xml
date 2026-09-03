@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="omr_student_identification_title">
+        Identificar aluno
+    </string>
+
+    <string name="omr_student_identification_subtitle">
+        Informe quem realizará esta leitura antes de abrir a câmera.
+    </string>
+
+    <string name="omr_student_identification_answer_key_format">
+        %1$s • versão %2$d • %3$d questões
+    </string>
+
+    <string name="omr_student_identification_section_title">
+        Dados do aluno
+    </string>
+
+    <string name="omr_student_identification_instructions">
+        A matrícula organiza todas as avaliações do mesmo aluno no histórico. Nome e turma ficarão registrados como estavam no momento da prova.
+    </string>
+
+    <string name="omr_student_identification_registration_label">
+        Matrícula
+    </string>
+
+    <string name="omr_student_identification_registration_helper">
+        Pode conter números, letras e zeros à esquerda.
+    </string>
+
+    <string name="omr_student_identification_name_label">
+        Nome completo
+    </string>
+
+    <string name="omr_student_identification_class_label">
+        Turma
+    </string>
+
+    <string name="omr_student_identification_class_helper">
+        Ex.: 9º A, 3ª série B ou turma cadastrada no sistema.
+    </string>
+
+    <string name="omr_student_identification_error_registration">
+        Informe a matrícula do aluno.
+    </string>
+
+    <string name="omr_student_identification_error_name">
+        Informe o nome do aluno.
+    </string>
+
+    <string name="omr_student_identification_error_class">
+        Informe a turma do aluno.
+    </string>
+
+    <string name="omr_student_identification_action_cancel">
+        Cancelar
+    </string>
+
+    <string name="omr_student_identification_action_history">
+        Ver histórico
+    </string>
+
+    <string name="omr_student_identification_action_start">
+        Iniciar leitura
+    </string>
+
+</resources>

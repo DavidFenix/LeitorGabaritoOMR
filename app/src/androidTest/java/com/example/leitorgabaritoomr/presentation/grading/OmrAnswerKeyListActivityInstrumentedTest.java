@@ -13,6 +13,7 @@ import static org.junit.Assert.assertTrue;
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.view.View;
@@ -40,11 +41,14 @@ import java.util.Arrays;
 /**
  * Protege o contrato Android da tela de gabaritos salvos.
  *
- * Os testes usam preferências limpas do processo de teste e gabaritos de duas
- * questões. Não inicializam câmera, OpenCV nem o pipeline de leitura.
+ * Os testes usam preferências exclusivas e gabaritos de duas questões. Não
+ * acessam os gabaritos reais, câmera, OpenCV nem o pipeline de leitura.
  */
 @RunWith(AndroidJUnit4.class)
 public final class OmrAnswerKeyListActivityInstrumentedTest {
+
+    private static final String TEST_STORAGE_NAMESPACE =
+            "answer_key_list_instrumented_test";
 
     private static final String REPOSITORY_PREFERENCES_NAME =
             "omr_answer_key_repository";
@@ -53,6 +57,7 @@ public final class OmrAnswerKeyListActivityInstrumentedTest {
             "omr_active_answer_key";
 
     private Context applicationContext;
+    private Context isolatedRepositoryContext;
     private OmrSharedPreferencesAnswerKeyRepository repository;
 
     @Before
@@ -60,18 +65,39 @@ public final class OmrAnswerKeyListActivityInstrumentedTest {
         applicationContext =
                 ApplicationProvider.getApplicationContext();
 
-        clearStoredAnswerKeys();
+        clearTestAnswerKeys();
+
+        isolatedRepositoryContext = new ContextWrapper(
+                applicationContext
+        ) {
+            @Override
+            public Context getApplicationContext() {
+                return this;
+            }
+
+            @Override
+            public SharedPreferences getSharedPreferences(
+                    String name,
+                    int mode
+            ) {
+                return applicationContext.getSharedPreferences(
+                        testPreferencesName(name),
+                        mode
+                );
+            }
+        };
 
         repository =
                 new OmrSharedPreferencesAnswerKeyRepository(
-                        applicationContext
+                        isolatedRepositoryContext
                 );
     }
 
     @After
     public void tearDown() {
-        clearStoredAnswerKeys();
+        clearTestAnswerKeys();
         repository = null;
+        isolatedRepositoryContext = null;
         applicationContext = null;
     }
 
@@ -465,18 +491,37 @@ public final class OmrAnswerKeyListActivityInstrumentedTest {
     }
 
     private Intent createActivityIntent() {
-        return OmrAnswerKeyListActivity.createIntent(
-                applicationContext
-        );
+        return OmrAnswerKeyListActivity
+                .createIsolatedStorageIntent(
+                        applicationContext,
+                        TEST_STORAGE_NAMESPACE
+                );
     }
 
-    private void clearStoredAnswerKeys() {
+    private static String testPreferencesName(
+            String productionPreferencesName
+    ) {
+        return productionPreferencesName
+                + "."
+                + TEST_STORAGE_NAMESPACE;
+    }
+
+    private void clearTestAnswerKeys() {
         if (applicationContext == null) {
             return;
         }
 
-        clearPreferences(REPOSITORY_PREFERENCES_NAME);
-        clearPreferences(LEGACY_PREFERENCES_NAME);
+        clearPreferences(
+                testPreferencesName(
+                        REPOSITORY_PREFERENCES_NAME
+                )
+        );
+
+        clearPreferences(
+                testPreferencesName(
+                        LEGACY_PREFERENCES_NAME
+                )
+        );
     }
 
     private void clearPreferences(

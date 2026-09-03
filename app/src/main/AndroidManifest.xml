@@ -45,6 +45,14 @@
             android:name=".presentation.grading.OmrAnswerKeyListActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".presentation.student.OmrStudentIdentificationActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".presentation.history.OmrStudentHistoryActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>

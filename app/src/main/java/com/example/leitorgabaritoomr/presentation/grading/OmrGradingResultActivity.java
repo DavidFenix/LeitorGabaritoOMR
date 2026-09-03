@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -29,6 +30,9 @@ public final class OmrGradingResultActivity
     public static final String EXTRA_GRADING_RESULT =
             "com.example.leitorgabaritoomr.extra.OMR_GRADING_RESULT";
 
+    private static final String EXTRA_READ_ONLY =
+            "com.example.leitorgabaritoomr.extra.OMR_GRADING_RESULT_READ_ONLY";
+
     /**
      * Resultado devolvido quando o usuário deseja corrigir outra
      * leitura usando o mesmo fluxo.
@@ -46,6 +50,35 @@ public final class OmrGradingResultActivity
             Context context,
             OmrGradingResult gradingResult
     ) {
+        return createIntent(
+                context,
+                gradingResult,
+                false
+        );
+    }
+
+    /**
+     * Cria o Intent usado para consultar um resultado já salvo.
+     *
+     * Nesse modo a tela não oferece uma nova leitura e o botão
+     * principal apenas retorna à tela anterior.
+     */
+    public static Intent createReadOnlyIntent(
+            Context context,
+            OmrGradingResult gradingResult
+    ) {
+        return createIntent(
+                context,
+                gradingResult,
+                true
+        );
+    }
+
+    private static Intent createIntent(
+            Context context,
+            OmrGradingResult gradingResult,
+            boolean readOnly
+    ) {
         if (context == null) {
             throw new IllegalArgumentException(
                     "O contexto é obrigatório."
@@ -61,10 +94,29 @@ public final class OmrGradingResultActivity
         return new Intent(
                 context,
                 OmrGradingResultActivity.class
-        ).putExtra(
-                EXTRA_GRADING_RESULT,
-                gradingResult
-        );
+        )
+                .putExtra(
+                        EXTRA_GRADING_RESULT,
+                        gradingResult
+                )
+                .putExtra(
+                        EXTRA_READ_ONLY,
+                        readOnly
+                );
+    }
+
+    /**
+     * Informa se o Intent solicita a apresentação somente para
+     * consulta.
+     */
+    public static boolean isReadOnlyIntent(
+            @Nullable Intent intent
+    ) {
+        return intent != null
+                && intent.getBooleanExtra(
+                        EXTRA_READ_ONLY,
+                        false
+                );
     }
 
     /**
@@ -136,6 +188,37 @@ public final class OmrGradingResultActivity
 
         viewBinder.render(viewState);
 
+        setResult(Activity.RESULT_CANCELED);
+
+        bindActions(
+                isReadOnlyIntent(getIntent())
+        );
+    }
+
+    private void bindActions(
+            boolean readOnly
+    ) {
+        if (readOnly) {
+            View readAgainButton = findViewById(
+                    R.id.buttonOmrGradingReadAgain
+            );
+
+            Button finishButton = findViewById(
+                    R.id.buttonOmrGradingFinish
+            );
+
+            readAgainButton.setVisibility(View.GONE);
+            finishButton.setText(
+                    R.string.omr_grading_action_back
+            );
+
+            viewBinder.setOnFinishClickListener(
+                    view -> finish()
+            );
+
+            return;
+        }
+
         viewBinder.setOnReadAgainClickListener(
                 view -> returnResultAndFinish(
                         RESULT_READ_AGAIN
@@ -147,8 +230,6 @@ public final class OmrGradingResultActivity
                         Activity.RESULT_OK
                 )
         );
-
-        setResult(Activity.RESULT_CANCELED);
     }
 
     private void handleMissingGradingResult() {

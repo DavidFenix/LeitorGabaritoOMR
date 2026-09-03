@@ -307,6 +307,72 @@ public final class OmrGradingResultActivityInstrumentedTest {
     }
 
     @Test
+    public void readOnlyModeHidesReadAgainAndBackFinishesCanceled() {
+        OmrGradingResult original =
+                createMinimalGradingResult();
+
+        Intent intent = createReadOnlyActivityIntent(
+                original
+        );
+
+        assertTrue(
+                OmrGradingResultActivity.isReadOnlyIntent(
+                        intent
+                )
+        );
+
+        try (ActivityScenario<OmrGradingResultActivity>
+                     scenario =
+                     ActivityScenario.launchActivityForResult(
+                             intent
+                     )) {
+
+            scenario.onActivity(activity -> {
+                View readAgainButton = activity.findViewById(
+                        R.id.buttonOmrGradingReadAgain
+                );
+
+                Button backButton = activity.findViewById(
+                        R.id.buttonOmrGradingFinish
+                );
+
+                assertNotNull(readAgainButton);
+                assertNotNull(backButton);
+
+                assertEquals(
+                        View.GONE,
+                        readAgainButton.getVisibility()
+                );
+
+                assertEquals(
+                        activity.getString(
+                                R.string.omr_grading_action_back
+                        ),
+                        backButton.getText().toString()
+                );
+
+                assertTrue(backButton.performClick());
+            });
+
+            Instrumentation.ActivityResult result =
+                    scenario.getResult();
+
+            assertEquals(
+                    Activity.RESULT_CANCELED,
+                    result.getResultCode()
+            );
+
+            assertEquals(
+                    null,
+                    OmrGradingResultActivity
+                            .extractGradingResult(
+                                    result.getResultData()
+                            )
+            );
+        }
+    }
+
+    @Test
     public void missingResultFinishesCanceled() {
         Context context =
                 ApplicationProvider
@@ -352,6 +418,20 @@ public final class OmrGradingResultActivityInstrumentedTest {
                 context,
                 gradingResult
         );
+    }
+
+    private static Intent createReadOnlyActivityIntent(
+            OmrGradingResult gradingResult
+    ) {
+        Context context =
+                ApplicationProvider
+                        .getApplicationContext();
+
+        return OmrGradingResultActivity
+                .createReadOnlyIntent(
+                        context,
+                        gradingResult
+                );
     }
 
     private static OmrGradingResult

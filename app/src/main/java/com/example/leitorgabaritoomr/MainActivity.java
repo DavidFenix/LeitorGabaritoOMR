@@ -21,9 +21,11 @@ import androidx.core.content.ContextCompat;
 
 import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyRepository;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
+import com.example.leitorgabaritoomr.domain.student.OmrStudentIdentity;
 import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesAnswerKeyRepository;
 import com.example.leitorgabaritoomr.presentation.capture.OmrCaptureActivity;
 import com.example.leitorgabaritoomr.presentation.grading.OmrAnswerKeyListActivity;
+import com.example.leitorgabaritoomr.presentation.student.OmrStudentIdentificationActivity;
 import com.example.leitorgabaritoomr.vision.debug.VisionDebugController;
 import com.example.leitorgabaritoomr.vision.debug.VisionStage;
 import com.example.leitorgabaritoomr.vision.geometry.MarkerSetResolutionResult;
@@ -70,6 +72,14 @@ public class MainActivity extends AppCompatActivity
                     this::handleAnswerKeyListResult
             );
 
+    private final ActivityResultLauncher<Intent>
+            studentIdentificationLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts
+                            .StartActivityForResult(),
+                    this::handleStudentIdentificationResult
+            );
+
     private volatile boolean cameraHabilitada = false;
     private boolean openCvCarregado = false;
 
@@ -112,11 +122,95 @@ public class MainActivity extends AppCompatActivity
         findViewById(
                 R.id.buttonOpenOmrCapture
         ).setOnClickListener(
-                view -> startActivity(
-                        OmrCaptureActivity.createIntent(
-                                this,
-                                currentAnswerKey
-                        )
+                view -> beginRealCaptureFlow()
+        );
+    }
+
+    private void beginRealCaptureFlow() {
+        if (currentAnswerKey == null) {
+            startActivity(
+                    OmrCaptureActivity.createIntent(
+                            this
+                    )
+            );
+
+            return;
+        }
+
+        studentIdentificationLauncher.launch(
+                OmrStudentIdentificationActivity.createIntent(
+                        this,
+                        currentAnswerKey
+                )
+        );
+    }
+
+    private void handleStudentIdentificationResult(
+            ActivityResult activityResult
+    ) {
+        if (activityResult.getResultCode()
+                != Activity.RESULT_OK) {
+
+            Log.i(
+                    TAG,
+                    "Identificacao do aluno cancelada."
+            );
+
+            return;
+        }
+
+        OmrStudentIdentity studentIdentity =
+                OmrStudentIdentificationActivity
+                        .extractStudentIdentity(
+                                activityResult.getData()
+                        );
+
+        if (studentIdentity == null) {
+            Log.e(
+                    TAG,
+                    "A identificacao terminou sem um aluno valido."
+            );
+
+            Toast.makeText(
+                    this,
+                    "Nao foi possivel identificar o aluno.",
+                    Toast.LENGTH_LONG
+            ).show();
+
+            return;
+        }
+
+        if (currentAnswerKey == null) {
+            Log.e(
+                    TAG,
+                    "O gabarito ativo nao esta mais disponivel."
+            );
+
+            Toast.makeText(
+                    this,
+                    "O gabarito ativo nao esta mais disponivel.",
+                    Toast.LENGTH_LONG
+            ).show();
+
+            return;
+        }
+
+        Log.i(
+                TAG,
+                "Aluno identificado para a leitura"
+                        + " | matricula="
+                        + studentIdentity.getRegistration()
+                        + " | turma="
+                        + studentIdentity.getClassName()
+                        + " | gabarito="
+                        + currentAnswerKey.getId()
+        );
+
+        startActivity(
+                OmrCaptureActivity.createIntent(
+                        this,
+                        currentAnswerKey,
+                        studentIdentity
                 )
         );
     }

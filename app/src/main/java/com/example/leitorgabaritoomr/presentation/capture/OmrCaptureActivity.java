@@ -22,9 +22,13 @@ import androidx.core.content.ContextCompat;
 
 import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.application.grading.OmrGradingService;
+import com.example.leitorgabaritoomr.application.history.OmrGradingHistoryRecorder;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.domain.grading.OmrGradingResult;
+import com.example.leitorgabaritoomr.domain.history.OmrGradingHistoryRecord;
 import com.example.leitorgabaritoomr.domain.reading.OmrReadingResult;
+import com.example.leitorgabaritoomr.domain.student.OmrStudentIdentity;
+import com.example.leitorgabaritoomr.infrastructure.history.OmrSQLiteGradingHistoryRepository;
 import com.example.leitorgabaritoomr.presentation.grading.OmrGradingResultActivity;
 import com.example.leitorgabaritoomr.presentation.result.OmrReadingResultActivity;
 import com.example.leitorgabaritoomr.vision.layout.OmrLayoutDefinition;
@@ -55,6 +59,10 @@ public final class OmrCaptureActivity
     public static final String EXTRA_ANSWER_KEY =
             "com.example.leitorgabaritoomr.extra.OMR_ANSWER_KEY";
 
+    public static final String EXTRA_STUDENT_IDENTITY =
+            "com.example.leitorgabaritoomr.extra."
+                    + "OMR_STUDENT_IDENTITY";
+
     private static final int CAMERA_PERMISSION_CODE =
             101;
 
@@ -67,6 +75,9 @@ public final class OmrCaptureActivity
     private CameraBridgeViewBase cameraBridgeView;
     private OmrCaptureController captureController;
     private OmrAnswerKeyDefinition activeAnswerKey;
+    private OmrStudentIdentity activeStudentIdentity;
+    private OmrSQLiteGradingHistoryRepository gradingHistoryRepository;
+    private OmrGradingHistoryRecorder gradingHistoryRecorder;
 
     private boolean openCvLoaded;
     private volatile boolean cameraEnabled;
@@ -98,7 +109,11 @@ public final class OmrCaptureActivity
     public static Intent createIntent(
             Context context
     ) {
-        return createIntent(context, null);
+        return createIntent(
+                context,
+                null,
+                null
+        );
     }
 
     /**
@@ -108,6 +123,24 @@ public final class OmrCaptureActivity
     public static Intent createIntent(
             Context context,
             @Nullable OmrAnswerKeyDefinition answerKeyDefinition
+    ) {
+        return createIntent(
+                context,
+                answerKeyDefinition,
+                null
+        );
+    }
+
+    /**
+     * Cria uma captura vinculada ao gabarito e ao aluno informados.
+     *
+     * Os parametros permanecem opcionais para preservar o Laboratorio e os
+     * fluxos de leitura sem correcao que ja existem.
+     */
+    public static Intent createIntent(
+            Context context,
+            @Nullable OmrAnswerKeyDefinition answerKeyDefinition,
+            @Nullable OmrStudentIdentity studentIdentity
     ) {
         if (context == null) {
             throw new IllegalArgumentException(
@@ -124,6 +157,13 @@ public final class OmrCaptureActivity
             intent.putExtra(
                     EXTRA_ANSWER_KEY,
                     answerKeyDefinition
+            );
+        }
+
+        if (studentIdentity != null) {
+            intent.putExtra(
+                    EXTRA_STUDENT_IDENTITY,
+                    studentIdentity
             );
         }
 
@@ -148,7 +188,13 @@ public final class OmrCaptureActivity
                 getIntent()
         );
 
+        activeStudentIdentity = extractStudentIdentity(
+                getIntent()
+        );
+
         logActiveAnswerKey();
+        logActiveStudentIdentity();
+        initializeGradingHistory();
 
         configureCameraView();
         initializeOpenCvAndCapture();
@@ -179,6 +225,27 @@ public final class OmrCaptureActivity
         return (OmrAnswerKeyDefinition) value;
     }
 
+    @Nullable
+    @SuppressWarnings("deprecation")
+    private OmrStudentIdentity extractStudentIdentity(
+            @Nullable Intent intent
+    ) {
+        if (intent == null) {
+            return null;
+        }
+
+        Serializable value =
+                intent.getSerializableExtra(
+                        EXTRA_STUDENT_IDENTITY
+                );
+
+        if (!(value instanceof OmrStudentIdentity)) {
+            return null;
+        }
+
+        return (OmrStudentIdentity) value;
+    }
+
     private void logActiveAnswerKey() {
         if (activeAnswerKey == null) {
             Log.i(
@@ -200,6 +267,65 @@ public final class OmrCaptureActivity
                         + " | questoes="
                         + activeAnswerKey.getQuestionCount()
         );
+    }
+
+    private void logActiveStudentIdentity() {
+        if (activeStudentIdentity == null) {
+            Log.i(
+                    TAG,
+                    "Captura iniciada sem aluno identificado."
+            );
+            return;
+        }
+
+        Log.i(
+                TAG,
+                "Aluno vinculado a sessao de captura"
+                        + " | id="
+                        + activeStudentIdentity.getStudentId()
+                        + " | matricula="
+                        + activeStudentIdentity.getRegistration()
+                        + " | turma="
+                        + activeStudentIdentity.getClassName()
+        );
+    }
+
+    private void initializeGradingHistory() {
+        if (activeStudentIdentity == null) {
+            return;
+        }
+
+        try {
+            gradingHistoryRepository =
+                    new OmrSQLiteGradingHistoryRepository(
+                            this
+                    );
+
+            gradingHistoryRecorder =
+                    new OmrGradingHistoryRecorder(
+                            gradingHistoryRepository
+                    );
+
+            Log.i(
+                    TAG,
+                    "Historico de correcoes preparado para o aluno"
+                            + " | studentId="
+                            + activeStudentIdentity.getStudentId()
+            );
+
+        } catch (RuntimeException exception) {
+            closeGradingHistory();
+
+            Log.e(
+                    TAG,
+                    "Nao foi possivel preparar o historico de correcoes.",
+                    exception
+            );
+
+            showLongMessage(
+                    "Nao foi possivel preparar o historico deste aluno."
+            );
+        }
     }
 
     private void configureCameraView() {
@@ -520,7 +646,15 @@ public final class OmrCaptureActivity
             return;
         }
 
-        if (activityResult.getResultCode()
+        int resultCode = activityResult.getResultCode();
+
+        if (!applyGradingHistoryDecision(resultCode)) {
+
+            openGradingResultScreen();
+            return;
+        }
+
+        if (resultCode
                 == OmrGradingResultActivity.RESULT_READ_AGAIN) {
 
             restartCapture();
@@ -528,6 +662,66 @@ public final class OmrCaptureActivity
         }
 
         finishCaptureFlow(activityResult);
+    }
+
+    /**
+     * Aplica ao historico a decisao devolvida pela tela de resultado.
+     */
+    private boolean applyGradingHistoryDecision(
+            int activityResultCode
+    ) {
+        try {
+            OmrGradingHistoryRecord historyRecord =
+                    OmrCaptureHistoryCommitter
+                            .recordIfConfirmed(
+                            activityResultCode,
+                            activeStudentIdentity,
+                            completedGradingResult,
+                            gradingHistoryRecorder
+                    );
+
+            if (historyRecord == null) {
+                Log.i(
+                        TAG,
+                        "Historico mantido sem alteracoes"
+                                + " | resultCode="
+                                + activityResultCode
+                                + " | possuiAluno="
+                                + (activeStudentIdentity != null)
+                );
+
+                return true;
+            }
+
+            Log.i(
+                    TAG,
+                    "Correcao registrada no historico"
+                            + " | historyRecordId="
+                            + historyRecord.getHistoryRecordId()
+                            + " | readingId="
+                            + historyRecord.getReadingId()
+                            + " | studentId="
+                            + historyRecord.getStudent().getStudentId()
+                            + " | percentual="
+                            + historyRecord.getAwardedPercentage()
+            );
+
+            return true;
+
+        } catch (RuntimeException exception) {
+            Log.e(
+                    TAG,
+                    "Falha ao registrar a correcao no historico.",
+                    exception
+            );
+
+            showLongMessage(
+                    "A nota nao foi salva. Confira o armazenamento"
+                            + " e toque em concluir novamente."
+            );
+
+            return false;
+        }
     }
 
     private void restartCapture() {
@@ -718,14 +912,40 @@ public final class OmrCaptureActivity
 
         stopCamera();
         closeCaptureController();
+        closeGradingHistory();
 
         completedReadingResult = null;
         completedGradingResult = null;
         activeAnswerKey = null;
+        activeStudentIdentity = null;
         resultScreenOpen = false;
         cameraBridgeView = null;
 
         super.onDestroy();
+    }
+
+    private void closeGradingHistory() {
+        gradingHistoryRecorder = null;
+
+        OmrSQLiteGradingHistoryRepository repository =
+                gradingHistoryRepository;
+
+        gradingHistoryRepository = null;
+
+        if (repository == null) {
+            return;
+        }
+
+        try {
+            repository.close();
+
+        } catch (RuntimeException exception) {
+            Log.w(
+                    TAG,
+                    "Falha ao fechar o historico de correcoes.",
+                    exception
+            );
+        }
     }
 
     private void closeCaptureController() {

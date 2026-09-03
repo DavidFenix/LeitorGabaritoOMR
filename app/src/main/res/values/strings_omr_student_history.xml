@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="omr_student_history_title">
+        Histórico do aluno
+    </string>
+
+    <string name="omr_student_history_identity_format">
+        Matrícula: %1$s • Turma: %2$s
+    </string>
+
+    <plurals name="omr_student_history_result_count">
+        <item quantity="one">
+            %1$d resultado registrado
+        </item>
+        <item quantity="other">
+            %1$d resultados registrados
+        </item>
+    </plurals>
+
+    <string name="omr_student_history_final_count_format">
+        Concluídos\n%1$d
+    </string>
+
+    <string name="omr_student_history_review_count_format">
+        Revisar\n%1$d
+    </string>
+
+    <string name="omr_student_history_pending_count_format">
+        Pendentes\n%1$d
+    </string>
+
+    <string name="omr_student_history_empty_title">
+        Nenhum resultado registrado
+    </string>
+
+    <string name="omr_student_history_empty_message">
+        As correções confirmadas deste aluno aparecerão aqui.
+    </string>
+
+    <string name="omr_student_history_status_final">
+        CONCLUÍDO
+    </string>
+
+    <string name="omr_student_history_status_review">
+        REVISAR
+    </string>
+
+    <string name="omr_student_history_status_pending">
+        PENDENTE
+    </string>
+
+    <string name="omr_student_history_answer_key_format">
+        Gabarito: %1$s • versão %2$d
+    </string>
+
+    <string name="omr_student_history_stored_at_format">
+        Registrada em %1$s
+    </string>
+
+    <string name="omr_student_history_percentage_format">
+        %1$.2f%%
+    </string>
+
+    <string name="omr_student_history_points_format">
+        %1$s de %2$s pontos
+    </string>
+
+    <string name="omr_student_history_action_details">
+        Ver detalhes
+    </string>
+
+    <string name="omr_student_history_action_back">
+        Voltar
+    </string>
+
+    <string name="omr_student_history_error_missing_student">
+        O aluno do histórico não foi recebido.
+    </string>
+
+    <string name="omr_student_history_error_load">
+        Não foi possível carregar o histórico deste aluno.
+    </string>
+
+</resources>

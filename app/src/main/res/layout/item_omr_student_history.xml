@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#FFFFFFFF"
+    android:elevation="1dp"
+    android:minHeight="156dp"
+    android:orientation="horizontal">
+
+    <View
+        android:id="@+id/viewOmrStudentHistoryStatusIndicator"
+        android:layout_width="6dp"
+        android:layout_height="match_parent"
+        android:background="#FF16A34A" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:paddingTop="13dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/textOmrStudentHistoryAnswerKey"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:maxLines="2"
+                android:textColor="#FF111827"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                tools:text="Gabarito: Avaliação de Matemática • versão 4" />
+
+            <TextView
+                android:id="@+id/textOmrStudentHistoryStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="#FFDCFCE7"
+                android:paddingStart="8dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="4dp"
+                android:text="@string/omr_student_history_status_final"
+                android:textColor="#FF166534"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/textOmrStudentHistoryStoredAt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:textColor="#FF6B7280"
+            android:textSize="12sp"
+            tools:text="Registrada em 02/09/2026 18:45" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="9dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/textOmrStudentHistoryPercentage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="94dp"
+                android:textColor="#FF166534"
+                android:textSize="27sp"
+                android:textStyle="bold"
+                tools:text="86,54%" />
+
+            <TextView
+                android:id="@+id/textOmrStudentHistoryPoints"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:textColor="#FF374151"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                tools:text="45 de 52 pontos" />
+
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/buttonOmrStudentHistoryDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="9dp"
+            android:minHeight="44dp"
+            android:text="@string/omr_student_history_action_details"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+</LinearLayout>
