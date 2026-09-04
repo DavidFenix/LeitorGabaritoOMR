@@ -17,7 +17,7 @@ public final class OmrSheetTemplateCatalog {
 
     private static final int COMPACT_TEMPLATE_VERSION = 1;
     private static final int COMPACT_CANONICAL_WIDTH = 1200;
-    private static final int COMPACT_CANONICAL_HEIGHT = 700;
+    private static final int COMPACT_CANONICAL_HEIGHT = 500;
     private static final int COMPACT_QUESTIONS_PER_BLOCK = 5;
 
     private static final String[] FOUR_OPTION_LABELS = {
@@ -34,15 +34,15 @@ public final class OmrSheetTemplateCatalog {
             0.72
     };
 
-    private static final double COMPACT_FIRST_ROW_Y = 0.20;
-    private static final double COMPACT_ROW_SPACING_Y = 0.15;
+    private static final double COMPACT_FIRST_ROW_Y = 0.24;
+    private static final double COMPACT_ROW_SPACING_Y = 0.12;
 
     /*
-     * No canvas 1200 x 700, a regiao mede aproximadamente
+     * No canvas 1200 x 500, a regiao mede aproximadamente
      * 36 x 36 pixels.
      */
     private static final double COMPACT_SAMPLING_RADIUS_X = 0.015;
-    private static final double COMPACT_SAMPLING_RADIUS_Y = 0.026;
+    private static final double COMPACT_SAMPLING_RADIUS_Y = 0.036;
 
     private OmrSheetTemplateCatalog() {
     }

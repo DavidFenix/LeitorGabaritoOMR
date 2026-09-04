@@ -32,7 +32,7 @@ public final class OmrDynamicLayoutFactoryTest {
         assertEquals("omr-compact-ad-q001", layout.getId());
         assertEquals(1, layout.getVersion());
         assertEquals(1200, layout.getCanonicalWidth());
-        assertEquals(700, layout.getCanonicalHeight());
+        assertEquals(500, layout.getCanonicalHeight());
         assertEquals(1, layout.getBlockCount());
         assertEquals(1, layout.getQuestionCount());
         assertEquals(4, layout.getOptionCount());
@@ -166,7 +166,7 @@ public final class OmrDynamicLayoutFactoryTest {
                     DELTA
             );
             assertEquals(
-                    0.026,
+                    0.036,
                     option.getSamplingRadiusY(),
                     DELTA
             );
@@ -193,7 +193,7 @@ public final class OmrDynamicLayoutFactoryTest {
                 DELTA
         );
         assertEquals(
-                0.20,
+                0.24,
                 firstOption.getCenter().getY(),
                 DELTA
         );
