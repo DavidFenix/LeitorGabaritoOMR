@@ -67,6 +67,19 @@
         Cadastrar novo
     </string>
 
+    <string name="omr_answer_key_list_create_count_title">
+        Quantas questões terá a avaliação?
+    </string>
+
+    <plurals name="omr_answer_key_list_create_question_count">
+        <item quantity="one">%1$d questão</item>
+        <item quantity="other">%1$d questões</item>
+    </plurals>
+
+    <string name="omr_answer_key_list_create_count_cancel">
+        Cancelar
+    </string>
+
     <string name="omr_answer_key_list_action_back">
         Voltar
     </string>

@@ -21,6 +21,7 @@ import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyRepository;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesAnswerKeyRepository;
+import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateCatalog;
 
 import java.io.Serializable;
 import java.util.Collections;
@@ -57,6 +58,7 @@ public final class OmrAnswerKeyListActivity
 
     private OmrAnswerKeyRepository repository;
     private OmrAnswerKeyListViewBinder viewBinder;
+    private AlertDialog questionCountDialog;
     private boolean repositoryChanged;
 
     private final ActivityResultLauncher<Intent>
@@ -245,15 +247,88 @@ public final class OmrAnswerKeyListActivity
         );
 
         viewBinder.setOnCreateClickListener(
-                view -> manualAnswerKeyLauncher.launch(
-                        OmrManualAnswerKeyActivity.createIntent(
-                                this
-                        )
-                )
+                view -> showQuestionCountDialog()
         );
 
         viewBinder.setOnBackClickListener(
                 view -> finish()
+        );
+    }
+
+    private void showQuestionCountDialog() {
+        if (questionCountDialog != null
+                && questionCountDialog.isShowing()) {
+
+            return;
+        }
+
+        int minimum = OmrSheetTemplateCatalog
+                .COMPACT_MIN_QUESTION_COUNT;
+
+        int maximum = OmrSheetTemplateCatalog
+                .COMPACT_MAX_QUESTION_COUNT;
+
+        String[] countLabels =
+                new String[maximum - minimum + 1];
+
+        for (int index = 0;
+             index < countLabels.length;
+             index++) {
+
+            int questionCount = minimum + index;
+
+            countLabels[index] = getResources()
+                    .getQuantityString(
+                            R.plurals
+                                    .omr_answer_key_list_create_question_count,
+                            questionCount,
+                            questionCount
+                    );
+        }
+
+        AlertDialog dialog =
+                new AlertDialog.Builder(this)
+                        .setTitle(
+                                R.string
+                                        .omr_answer_key_list_create_count_title
+                        )
+                        .setItems(
+                                countLabels,
+                                (dialogInterface, selectedIndex) ->
+                                        openDynamicAnswerKeyEditor(
+                                                minimum
+                                                        + selectedIndex
+                                        )
+                        )
+                        .setNegativeButton(
+                                R.string
+                                        .omr_answer_key_list_create_count_cancel,
+                                null
+                        )
+                        .create();
+
+        questionCountDialog = dialog;
+
+        dialog.setOnDismissListener(
+                dialogInterface -> {
+                    if (questionCountDialog == dialog) {
+                        questionCountDialog = null;
+                    }
+                }
+        );
+
+        dialog.show();
+    }
+
+    private void openDynamicAnswerKeyEditor(
+            int questionCount
+    ) {
+        manualAnswerKeyLauncher.launch(
+                OmrManualAnswerKeyActivity
+                        .createCompactIntent(
+                                this,
+                                questionCount
+                        )
         );
     }
 
@@ -587,6 +662,14 @@ public final class OmrAnswerKeyListActivity
 
     @Override
     protected void onDestroy() {
+        AlertDialog dialog = questionCountDialog;
+        questionCountDialog = null;
+
+        if (dialog != null) {
+            dialog.setOnDismissListener(null);
+            dialog.dismiss();
+        }
+
         if (viewBinder != null) {
             viewBinder.release();
             viewBinder = null;
