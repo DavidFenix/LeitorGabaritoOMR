@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="omr_lab_action_open_sheet_export">
+        Gerar cartão-resposta
+    </string>
+
+    <string name="omr_sheet_export_title">
+        Gerar cartão-resposta
+    </string>
+
+    <string name="omr_sheet_export_subtitle">
+        Crie um arquivo vetorial para inserir e imprimir junto da avaliação.
+    </string>
+
+    <string name="omr_sheet_export_count_title">
+        1. Escolha a quantidade de questões
+    </string>
+
+    <string name="omr_sheet_export_count_message">
+        Esta família compacta aceita qualquer quantidade inteira de 1 a 10.
+    </string>
+
+    <string name="omr_sheet_export_count_content_description">
+        Quantidade de questões do cartão-resposta
+    </string>
+
+    <plurals name="omr_sheet_export_question_count">
+        <item quantity="one">%1$d questão</item>
+        <item quantity="other">%1$d questões</item>
+    </plurals>
+
+    <plurals name="omr_sheet_export_selected_summary">
+        <item quantity="one">Cartão preparado para %1$d questão</item>
+        <item quantity="other">Cartão preparado para %1$d questões</item>
+    </plurals>
+
+    <string name="omr_sheet_export_file_title">
+        2. Salve o arquivo SVG
+    </string>
+
+    <string name="omr_sheet_export_format_description">
+        O SVG mantém linhas e textos nítidos ao ser inserido no Word, LibreOffice ou outro editor compatível.
+    </string>
+
+    <string name="omr_sheet_export_filename_format">
+        cartao-resposta-%1$03d-itens-v1.svg
+    </string>
+
+    <string name="omr_sheet_export_size_description">
+        Tamanho original aproximado: 18 cm × 8 cm.
+    </string>
+
+    <string name="omr_sheet_export_proportion_title">
+        Preserve a proporção
+    </string>
+
+    <string name="omr_sheet_export_proportion_message">
+        Ao redimensionar, mantenha a proporção entre largura e altura. Esticar apenas um dos lados pode reduzir a confiabilidade da leitura.
+    </string>
+
+    <string name="omr_sheet_export_action_back">
+        Voltar
+    </string>
+
+    <string name="omr_sheet_export_action_save">
+        Escolher local e salvar
+    </string>
+
+    <string name="omr_sheet_export_action_saving">
+        Aguardando…
+    </string>
+
+    <plurals name="omr_sheet_export_saved_success">
+        <item quantity="one">Cartão de %1$d questão salvo com sucesso.</item>
+        <item quantity="other">Cartão de %1$d questões salvo com sucesso.</item>
+    </plurals>
+
+    <string name="omr_sheet_export_cancelled">
+        Salvamento cancelado. Nenhum arquivo foi alterado.
+    </string>
+
+    <string name="omr_sheet_export_prepare_error">
+        Não foi possível preparar o cartão-resposta.
+    </string>
+
+    <string name="omr_sheet_export_save_error">
+        Não foi possível gravar o arquivo no local escolhido.
+    </string>
+
+</resources>

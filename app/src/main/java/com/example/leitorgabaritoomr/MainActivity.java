@@ -24,6 +24,7 @@ import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.domain.student.OmrStudentIdentity;
 import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesAnswerKeyRepository;
 import com.example.leitorgabaritoomr.presentation.capture.OmrCaptureActivity;
+import com.example.leitorgabaritoomr.presentation.export.OmrSheetExportActivity;
 import com.example.leitorgabaritoomr.presentation.grading.OmrAnswerKeyListActivity;
 import com.example.leitorgabaritoomr.presentation.student.OmrStudentIdentificationActivity;
 import com.example.leitorgabaritoomr.vision.debug.VisionDebugController;
@@ -107,6 +108,7 @@ public class MainActivity extends AppCompatActivity
 
         configurarAcessoCapturaReal();
         configureAnswerKeyListAccess();
+        configureSheetExportAccess();
 
         configurarCameraView();
 
@@ -222,6 +224,18 @@ public class MainActivity extends AppCompatActivity
         ).setOnClickListener(
                 view -> answerKeyListLauncher.launch(
                         OmrAnswerKeyListActivity.createIntent(
+                                this
+                        )
+                )
+        );
+    }
+
+    private void configureSheetExportAccess() {
+        findViewById(
+                R.id.buttonOpenOmrSheetExport
+        ).setOnClickListener(
+                view -> startActivity(
+                        OmrSheetExportActivity.createIntent(
                                 this
                         )
                 )
