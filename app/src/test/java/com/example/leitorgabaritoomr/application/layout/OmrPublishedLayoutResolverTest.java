@@ -54,6 +54,37 @@ public final class OmrPublishedLayoutResolverTest {
     }
 
     @Test
+    public void resolvesEveryPublishedLayoutFromOneToNinety() {
+        for (int questionCount =
+             OmrSheetTemplateCatalog.MIN_QUESTION_COUNT;
+             questionCount
+                     <= OmrSheetTemplateCatalog.MAX_QUESTION_COUNT;
+             questionCount++) {
+
+            String layoutId = expectedPublishedLayoutId(
+                    questionCount
+            );
+
+            OmrLayoutDefinition layout = resolver.resolve(
+                    layoutId,
+                    1,
+                    questionCount
+            );
+
+            assertEquals(layoutId, layout.getId());
+            assertEquals(1, layout.getVersion());
+            assertEquals(
+                    questionCount,
+                    layout.getQuestionCount()
+            );
+            assertEquals(
+                    questionCount * 4,
+                    layout.getOptionCount()
+            );
+        }
+    }
+
+    @Test
     public void resolvedCompactLayoutEqualsCatalogGeometry() {
         OmrLayoutDefinition expected =
                 OmrDynamicLayoutFactory.create(
@@ -158,6 +189,37 @@ public final class OmrPublishedLayoutResolverTest {
     }
 
     @Test
+    public void resolvesExtendedLayoutFromAnswerKeyIdentity() {
+        OmrLayoutDefinition layout =
+                OmrDynamicLayoutFactory.create(
+                        OmrSheetTemplateCatalog
+                                .extendedFourOptions(90)
+                );
+
+        OmrAnswerKeyDefinition answerKey =
+                new OmrAnswerKeyDefinitionFactory()
+                        .createSingleAnswerKey(
+                                "answer-key-90",
+                                1,
+                                "Avaliação de noventa questões",
+                                layout,
+                                answerLabels(90),
+                                1.0
+                        );
+
+        OmrLayoutDefinition resolved =
+                resolver.resolveForAnswerKey(answerKey);
+
+        assertEquals(
+                "omr-extended-ad-q090",
+                resolved.getId()
+        );
+        assertEquals(90, resolved.getQuestionCount());
+        assertEquals(6, resolved.getBlockCount());
+        assertEquals(360, resolved.getOptionCount());
+    }
+
+    @Test
     public void keepsLegacyFiftyTwoQuestionLayoutAvailable() {
         OmrLayoutDefinition legacy =
                 AvalieCeDevelopmentLayoutFactory.create();
@@ -180,6 +242,21 @@ public final class OmrPublishedLayoutResolverTest {
                 "omr-compact-ad-q010",
                 1,
                 7
+        ));
+    }
+
+    @Test
+    public void rejectsPublishedFamilyIdThatDisagreesWithCount() {
+        expectIllegalArgument(() -> resolver.resolve(
+                "omr-medium-ad-q030",
+                1,
+                31
+        ));
+
+        expectIllegalArgument(() -> resolver.resolve(
+                "omr-extended-ad-q090",
+                1,
+                89
         ));
     }
 
@@ -243,6 +320,32 @@ public final class OmrPublishedLayoutResolverTest {
         }
 
         return labels;
+    }
+
+    private String expectedPublishedLayoutId(
+            int questionCount
+    ) {
+        String family;
+
+        if (questionCount <= OmrSheetTemplateCatalog
+                .COMPACT_MAX_QUESTION_COUNT) {
+
+            family = "compact";
+
+        } else if (questionCount <= OmrSheetTemplateCatalog
+                .MEDIUM_MAX_QUESTION_COUNT) {
+
+            family = "medium";
+
+        } else {
+            family = "extended";
+        }
+
+        return String.format(
+                "omr-%s-ad-q%03d",
+                family,
+                questionCount
+        );
     }
 
     private void expectIllegalArgument(

@@ -5,15 +5,28 @@ import java.util.Locale;
 /**
  * Catalogo dos modelos de cartao-resposta publicados pelo app.
  *
- * Nesta primeira versao, somente a familia compacta de 1 a 10
- * questoes esta publicada. Cada quantidade recebe uma identidade
- * propria para que QR Code, gabarito oficial e leitura possam
- * confirmar exatamente a mesma geometria.
+ * Cada quantidade recebe uma identidade propria para que QR Code,
+ * gabarito oficial e leitura possam confirmar exatamente a mesma
+ * geometria.
+ *
+ * A familia compacta validada permanece imutavel entre 1 e 10
+ * questoes. As familias media e ampliada distribuem, respectivamente,
+ * ate 30 e ate 90 questoes sem reduzir todas as bolhas para a mesma
+ * altura do cartao compacto.
  */
 public final class OmrSheetTemplateCatalog {
 
+    public static final int MIN_QUESTION_COUNT = 1;
+    public static final int MAX_QUESTION_COUNT = 90;
+
     public static final int COMPACT_MIN_QUESTION_COUNT = 1;
     public static final int COMPACT_MAX_QUESTION_COUNT = 10;
+
+    public static final int MEDIUM_MIN_QUESTION_COUNT = 11;
+    public static final int MEDIUM_MAX_QUESTION_COUNT = 30;
+
+    public static final int EXTENDED_MIN_QUESTION_COUNT = 31;
+    public static final int EXTENDED_MAX_QUESTION_COUNT = 90;
 
     private static final int COMPACT_TEMPLATE_VERSION = 1;
     private static final int COMPACT_CANONICAL_WIDTH = 1200;
@@ -44,7 +57,61 @@ public final class OmrSheetTemplateCatalog {
     private static final double COMPACT_SAMPLING_RADIUS_X = 0.015;
     private static final double COMPACT_SAMPLING_RADIUS_Y = 0.036;
 
+    private static final int MEDIUM_TEMPLATE_VERSION = 1;
+    private static final int MEDIUM_CANONICAL_WIDTH = 1200;
+    private static final int MEDIUM_CANONICAL_HEIGHT = 750;
+    private static final int MEDIUM_QUESTIONS_PER_BLOCK = 10;
+
+    private static final double[] MEDIUM_OPTION_LOCAL_X = {
+            0.35,
+            0.49,
+            0.63,
+            0.77
+    };
+
+    private static final double MEDIUM_FIRST_ROW_Y = 0.18;
+    private static final double MEDIUM_ROW_SPACING_Y = 0.068;
+    private static final double MEDIUM_SAMPLING_RADIUS_X = 0.015;
+    private static final double MEDIUM_SAMPLING_RADIUS_Y = 0.024;
+
+    private static final int EXTENDED_TEMPLATE_VERSION = 1;
+    private static final int EXTENDED_CANONICAL_WIDTH = 1200;
+    private static final int EXTENDED_CANONICAL_HEIGHT = 1000;
+    private static final int EXTENDED_QUESTIONS_PER_BLOCK = 15;
+
+    private static final double[] EXTENDED_OPTION_LOCAL_X = {
+            0.40,
+            0.55,
+            0.70,
+            0.85
+    };
+
+    private static final double EXTENDED_FIRST_ROW_Y = 0.165;
+    private static final double EXTENDED_ROW_SPACING_Y = 0.050;
+    private static final double EXTENDED_SAMPLING_RADIUS_X = 0.011;
+    private static final double EXTENDED_SAMPLING_RADIUS_Y = 0.018;
+
     private OmrSheetTemplateCatalog() {
+    }
+
+    /**
+     * Resolve a familia publicada correspondente a qualquer quantidade
+     * aceita pelo aplicativo.
+     */
+    public static OmrSheetTemplateSpec publishedFourOptions(
+            int questionCount
+    ) {
+        validatePublishedQuestionCount(questionCount);
+
+        if (questionCount <= COMPACT_MAX_QUESTION_COUNT) {
+            return compactFourOptions(questionCount);
+        }
+
+        if (questionCount <= MEDIUM_MAX_QUESTION_COUNT) {
+            return mediumFourOptions(questionCount);
+        }
+
+        return extendedFourOptions(questionCount);
     }
 
     public static OmrSheetTemplateSpec compactFourOptions(
@@ -93,5 +160,116 @@ public final class OmrSheetTemplateCatalog {
                 COMPACT_SAMPLING_RADIUS_Y,
                 1
         );
+    }
+
+    public static OmrSheetTemplateSpec mediumFourOptions(
+            int questionCount
+    ) {
+        validateFamilyQuestionCount(
+                "medio",
+                questionCount,
+                MEDIUM_MIN_QUESTION_COUNT,
+                MEDIUM_MAX_QUESTION_COUNT
+        );
+
+        return new OmrSheetTemplateSpec(
+                createTemplateId("medium", questionCount),
+                MEDIUM_TEMPLATE_VERSION,
+                createTemplateName("medio", questionCount),
+                questionCount,
+                MEDIUM_CANONICAL_WIDTH,
+                MEDIUM_CANONICAL_HEIGHT,
+                MEDIUM_QUESTIONS_PER_BLOCK,
+                FOUR_OPTION_LABELS,
+                MEDIUM_OPTION_LOCAL_X,
+                MEDIUM_FIRST_ROW_Y,
+                MEDIUM_ROW_SPACING_Y,
+                MEDIUM_SAMPLING_RADIUS_X,
+                MEDIUM_SAMPLING_RADIUS_Y,
+                1
+        );
+    }
+
+    public static OmrSheetTemplateSpec extendedFourOptions(
+            int questionCount
+    ) {
+        validateFamilyQuestionCount(
+                "ampliado",
+                questionCount,
+                EXTENDED_MIN_QUESTION_COUNT,
+                EXTENDED_MAX_QUESTION_COUNT
+        );
+
+        return new OmrSheetTemplateSpec(
+                createTemplateId("extended", questionCount),
+                EXTENDED_TEMPLATE_VERSION,
+                createTemplateName("ampliado", questionCount),
+                questionCount,
+                EXTENDED_CANONICAL_WIDTH,
+                EXTENDED_CANONICAL_HEIGHT,
+                EXTENDED_QUESTIONS_PER_BLOCK,
+                FOUR_OPTION_LABELS,
+                EXTENDED_OPTION_LOCAL_X,
+                EXTENDED_FIRST_ROW_Y,
+                EXTENDED_ROW_SPACING_Y,
+                EXTENDED_SAMPLING_RADIUS_X,
+                EXTENDED_SAMPLING_RADIUS_Y,
+                1
+        );
+    }
+
+    private static String createTemplateId(
+            String family,
+            int questionCount
+    ) {
+        return String.format(
+                Locale.US,
+                "omr-%s-ad-q%03d",
+                family,
+                questionCount
+        );
+    }
+
+    private static String createTemplateName(
+            String family,
+            int questionCount
+    ) {
+        return "Cartao "
+                + family
+                + " - "
+                + questionCount
+                + " questoes - alternativas A-D";
+    }
+
+    private static void validatePublishedQuestionCount(
+            int questionCount
+    ) {
+        validateFamilyQuestionCount(
+                "publicado",
+                questionCount,
+                MIN_QUESTION_COUNT,
+                MAX_QUESTION_COUNT
+        );
+    }
+
+    private static void validateFamilyQuestionCount(
+            String family,
+            int questionCount,
+            int minimum,
+            int maximum
+    ) {
+        if (questionCount < minimum
+                || questionCount > maximum) {
+
+            throw new IllegalArgumentException(
+                    "O modelo "
+                            + family
+                            + " aceita entre "
+                            + minimum
+                            + " e "
+                            + maximum
+                            + " questoes."
+            );
+        }
     }
 }

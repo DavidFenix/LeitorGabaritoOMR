@@ -200,6 +200,185 @@ public final class OmrDynamicLayoutFactoryTest {
     }
 
     @Test
+    public void publishedCatalogSelectsFamiliesAtEveryBoundary() {
+        assertPublishedFamily(
+                1,
+                "omr-compact-ad-q001",
+                500,
+                5,
+                1
+        );
+
+        assertPublishedFamily(
+                10,
+                "omr-compact-ad-q010",
+                500,
+                5,
+                2
+        );
+
+        assertPublishedFamily(
+                11,
+                "omr-medium-ad-q011",
+                750,
+                10,
+                2
+        );
+
+        assertPublishedFamily(
+                30,
+                "omr-medium-ad-q030",
+                750,
+                10,
+                3
+        );
+
+        assertPublishedFamily(
+                31,
+                "omr-extended-ad-q031",
+                1000,
+                15,
+                3
+        );
+
+        assertPublishedFamily(
+                90,
+                "omr-extended-ad-q090",
+                1000,
+                15,
+                6
+        );
+    }
+
+    @Test
+    public void everyPublishedCountCreatesOnlyItsRealQuestions() {
+        for (int questionCount =
+             OmrSheetTemplateCatalog.MIN_QUESTION_COUNT;
+             questionCount
+                     <= OmrSheetTemplateCatalog.MAX_QUESTION_COUNT;
+             questionCount++) {
+
+            OmrLayoutDefinition layout =
+                    createPublishedLayout(questionCount);
+
+            assertEquals(
+                    questionCount,
+                    layout.getQuestionCount()
+            );
+
+            assertEquals(
+                    questionCount * 4,
+                    layout.getOptionCount()
+            );
+
+            String expectedLastQuestionId = String.format(
+                    "question-%03d",
+                    questionCount
+            );
+
+            assertEquals(
+                    expectedLastQuestionId,
+                    layout.getAllQuestions()
+                            .get(questionCount - 1)
+                            .getId()
+            );
+
+            assertFalse(
+                    containsQuestion(
+                            layout,
+                            String.format(
+                                    "question-%03d",
+                                    questionCount + 1
+                            )
+                    )
+            );
+        }
+    }
+
+    @Test
+    public void everyPublishedSamplingRegionStaysInsideLayout() {
+        for (int questionCount =
+             OmrSheetTemplateCatalog.MIN_QUESTION_COUNT;
+             questionCount
+                     <= OmrSheetTemplateCatalog.MAX_QUESTION_COUNT;
+             questionCount++) {
+
+            OmrLayoutDefinition layout =
+                    createPublishedLayout(questionCount);
+
+            for (OmrOptionDefinition option
+                    : layout.getAllOptions()) {
+
+                assertTrue(option.getLeft() >= 0.0);
+                assertTrue(option.getTop() >= 0.0);
+                assertTrue(option.getRight() <= 1.0);
+                assertTrue(option.getBottom() <= 1.0);
+            }
+        }
+    }
+
+    @Test
+    public void publishedSelectionPreservesCompactGeometry() {
+        for (int questionCount = 1;
+             questionCount <= 10;
+             questionCount++) {
+
+            OmrLayoutDefinition compact =
+                    createCompactLayout(questionCount);
+
+            OmrLayoutDefinition published =
+                    createPublishedLayout(questionCount);
+
+            assertEquals(compact.getId(), published.getId());
+            assertEquals(
+                    compact.getCanonicalWidth(),
+                    published.getCanonicalWidth()
+            );
+            assertEquals(
+                    compact.getCanonicalHeight(),
+                    published.getCanonicalHeight()
+            );
+            assertEquals(
+                    compact.getOptionCount(),
+                    published.getOptionCount()
+            );
+
+            for (int optionIndex = 0;
+                 optionIndex < compact.getOptionCount();
+                 optionIndex++) {
+
+                OmrOptionDefinition expected =
+                        compact.getAllOptions().get(optionIndex);
+
+                OmrOptionDefinition actual =
+                        published.getAllOptions().get(optionIndex);
+
+                assertEquals(expected.getId(), actual.getId());
+                assertEquals(
+                        expected.getCenter().getX(),
+                        actual.getCenter().getX(),
+                        DELTA
+                );
+                assertEquals(
+                        expected.getCenter().getY(),
+                        actual.getCenter().getY(),
+                        DELTA
+                );
+                assertEquals(
+                        expected.getSamplingRadiusX(),
+                        actual.getSamplingRadiusX(),
+                        DELTA
+                );
+                assertEquals(
+                        expected.getSamplingRadiusY(),
+                        actual.getSamplingRadiusY(),
+                        DELTA
+                );
+            }
+        }
+    }
+
+    @Test
     public void templateSpecProtectsItsOptionArrays() {
         String[] labels = {"A", "B", "C", "D"};
         double[] positions = {0.30, 0.44, 0.58, 0.72};
@@ -291,6 +470,39 @@ public final class OmrDynamicLayoutFactoryTest {
         );
     }
 
+    @Test
+    public void publishedCatalogAndNewFamiliesRejectWrongCounts() {
+        expectIllegalArgument(() ->
+                OmrSheetTemplateCatalog
+                        .publishedFourOptions(0)
+        );
+
+        expectIllegalArgument(() ->
+                OmrSheetTemplateCatalog
+                        .publishedFourOptions(91)
+        );
+
+        expectIllegalArgument(() ->
+                OmrSheetTemplateCatalog
+                        .mediumFourOptions(10)
+        );
+
+        expectIllegalArgument(() ->
+                OmrSheetTemplateCatalog
+                        .mediumFourOptions(31)
+        );
+
+        expectIllegalArgument(() ->
+                OmrSheetTemplateCatalog
+                        .extendedFourOptions(30)
+        );
+
+        expectIllegalArgument(() ->
+                OmrSheetTemplateCatalog
+                        .extendedFourOptions(91)
+        );
+    }
+
     private OmrLayoutDefinition createCompactLayout(
             int questionCount
     ) {
@@ -298,6 +510,44 @@ public final class OmrDynamicLayoutFactoryTest {
                 OmrSheetTemplateCatalog
                         .compactFourOptions(questionCount)
         );
+    }
+
+    private OmrLayoutDefinition createPublishedLayout(
+            int questionCount
+    ) {
+        return OmrDynamicLayoutFactory.create(
+                OmrSheetTemplateCatalog
+                        .publishedFourOptions(questionCount)
+        );
+    }
+
+    private void assertPublishedFamily(
+            int questionCount,
+            String expectedId,
+            int expectedCanonicalHeight,
+            int expectedQuestionsPerBlock,
+            int expectedBlockCount
+    ) {
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .publishedFourOptions(questionCount);
+
+        OmrLayoutDefinition layout =
+                OmrDynamicLayoutFactory.create(spec);
+
+        assertEquals(expectedId, spec.getTemplateId());
+        assertEquals(1200, spec.getCanonicalWidth());
+        assertEquals(
+                expectedCanonicalHeight,
+                spec.getCanonicalHeight()
+        );
+        assertEquals(
+                expectedQuestionsPerBlock,
+                spec.getQuestionsPerBlock()
+        );
+        assertEquals(expectedBlockCount, spec.getBlockCount());
+        assertEquals(questionCount, layout.getQuestionCount());
+        assertEquals(questionCount * 4, layout.getOptionCount());
     }
 
     private OmrSheetTemplateSpec createSpec(

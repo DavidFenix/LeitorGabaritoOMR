@@ -53,16 +53,16 @@ public final class OmrPublishedLayoutResolver {
             );
         }
 
-        OmrLayoutDefinition compactLayout =
-                createCompactCandidateOrNull(questionCount);
+        OmrLayoutDefinition publishedLayout =
+                createPublishedCandidateOrNull(questionCount);
 
         if (hasIdentity(
-                compactLayout,
+                publishedLayout,
                 normalizedLayoutId,
                 layoutVersion,
                 questionCount
         )) {
-            return compactLayout;
+            return publishedLayout;
         }
 
         OmrLayoutDefinition legacyLayout =
@@ -88,22 +88,22 @@ public final class OmrPublishedLayoutResolver {
         );
     }
 
-    private OmrLayoutDefinition createCompactCandidateOrNull(
+    private OmrLayoutDefinition createPublishedCandidateOrNull(
             int questionCount
     ) {
         if (questionCount
                 < OmrSheetTemplateCatalog
-                .COMPACT_MIN_QUESTION_COUNT
+                .MIN_QUESTION_COUNT
                 || questionCount
                 > OmrSheetTemplateCatalog
-                .COMPACT_MAX_QUESTION_COUNT) {
+                .MAX_QUESTION_COUNT) {
 
             return null;
         }
 
         OmrSheetTemplateSpec spec =
                 OmrSheetTemplateCatalog
-                        .compactFourOptions(questionCount);
+                        .publishedFourOptions(questionCount);
 
         return OmrDynamicLayoutFactory.create(spec);
     }
