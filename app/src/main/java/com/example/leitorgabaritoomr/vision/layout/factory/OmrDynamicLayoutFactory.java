@@ -197,10 +197,10 @@ public final class OmrDynamicLayoutFactory {
             double localX
     ) {
         double blockWidth =
-                1.0 / spec.getBlockCount();
+                spec.getBlockWidth();
 
         double blockLeft =
-                blockIndex * blockWidth;
+                spec.getBlockLeft(blockIndex);
 
         return blockLeft
                 + localX * blockWidth;

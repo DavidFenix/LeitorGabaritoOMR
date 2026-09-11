@@ -91,6 +91,39 @@ public final class OmrSheetTemplateCatalog {
     private static final double EXTENDED_SAMPLING_RADIUS_X = 0.011;
     private static final double EXTENDED_SAMPLING_RADIUS_Y = 0.018;
 
+    private static final int STANDARD_V2_TEMPLATE_VERSION = 2;
+    private static final int STANDARD_V2_CANONICAL_WIDTH = 1200;
+    private static final int STANDARD_V2_LAYOUT_COLUMN_COUNT = 5;
+    private static final int STANDARD_V2_QUESTIONS_PER_COLUMN = 18;
+
+    private static final double STANDARD_V2_FIRST_ROW = 160.0;
+    private static final double STANDARD_V2_ROW_SPACING = 52.0;
+    private static final double STANDARD_V2_BOTTOM_RESERVE = 100.0;
+    private static final double STANDARD_V2_SAMPLING_RADIUS = 18.0;
+
+    private static final double[] STANDARD_V2_FOUR_OPTION_LOCAL_X = {
+            0.340,
+            0.525,
+            0.710,
+            0.895
+    };
+
+    private static final String[] FIVE_OPTION_LABELS = {
+            "A",
+            "B",
+            "C",
+            "D",
+            "E"
+    };
+
+    private static final double[] STANDARD_V2_FIVE_OPTION_LOCAL_X = {
+            0.300,
+            0.455,
+            0.610,
+            0.765,
+            0.920
+    };
+
     private OmrSheetTemplateCatalog() {
     }
 
@@ -215,6 +248,102 @@ public final class OmrSheetTemplateCatalog {
                 EXTENDED_SAMPLING_RADIUS_X,
                 EXTENDED_SAMPLING_RADIUS_Y,
                 1
+        );
+    }
+
+    /**
+     * Modelo fisico padronizado de segunda geracao. Ele ainda nao substitui
+     * automaticamente os modelos publicados v1: deve ser selecionado de
+     * forma explicita ate concluir a validacao visual e de leitura.
+     */
+    public static OmrSheetTemplateSpec standardFourOptionsV2(
+            int questionCount
+    ) {
+        return createStandardV2(
+                questionCount,
+                "ad",
+                "alternativas A-D",
+                FOUR_OPTION_LABELS,
+                STANDARD_V2_FOUR_OPTION_LOCAL_X
+        );
+    }
+
+    /**
+     * Reserva a mesma malha fisica para a futura modalidade A-E. A camada
+     * de interface continuara oferecendo A-D ate que o fluxo completo de
+     * criacao, persistencia e leitura de cinco alternativas seja validado.
+     */
+    public static OmrSheetTemplateSpec standardFiveOptionsV2(
+            int questionCount
+    ) {
+        return createStandardV2(
+                questionCount,
+                "ae",
+                "alternativas A-E",
+                FIVE_OPTION_LABELS,
+                STANDARD_V2_FIVE_OPTION_LOCAL_X
+        );
+    }
+
+    private static OmrSheetTemplateSpec createStandardV2(
+            int questionCount,
+            String optionCode,
+            String optionDescription,
+            String[] optionLabels,
+            double[] optionLocalX
+    ) {
+        validatePublishedQuestionCount(questionCount);
+
+        int actualRowCount = Math.min(
+                questionCount,
+                STANDARD_V2_QUESTIONS_PER_COLUMN
+        );
+
+        int canonicalHeight = (int) Math.round(
+                STANDARD_V2_FIRST_ROW
+                        + (actualRowCount - 1)
+                        * STANDARD_V2_ROW_SPACING
+                        + STANDARD_V2_BOTTOM_RESERVE
+        );
+
+        return new OmrSheetTemplateSpec(
+                createStandardV2TemplateId(
+                        optionCode,
+                        questionCount
+                ),
+                STANDARD_V2_TEMPLATE_VERSION,
+                "Cartao padronizado v2 - "
+                        + questionCount
+                        + (questionCount == 1
+                        ? " questao - "
+                        : " questoes - ")
+                        + optionDescription,
+                questionCount,
+                STANDARD_V2_CANONICAL_WIDTH,
+                canonicalHeight,
+                STANDARD_V2_QUESTIONS_PER_COLUMN,
+                STANDARD_V2_LAYOUT_COLUMN_COUNT,
+                optionLabels,
+                optionLocalX,
+                STANDARD_V2_FIRST_ROW / canonicalHeight,
+                STANDARD_V2_ROW_SPACING / canonicalHeight,
+                STANDARD_V2_SAMPLING_RADIUS
+                        / STANDARD_V2_CANONICAL_WIDTH,
+                STANDARD_V2_SAMPLING_RADIUS
+                        / canonicalHeight,
+                1
+        );
+    }
+
+    private static String createStandardV2TemplateId(
+            String optionCode,
+            int questionCount
+    ) {
+        return String.format(
+                Locale.US,
+                "omr-standard-%s-q%03d",
+                optionCode,
+                questionCount
         );
     }
 

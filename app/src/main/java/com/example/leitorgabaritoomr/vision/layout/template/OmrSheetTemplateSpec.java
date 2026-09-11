@@ -29,6 +29,7 @@ public final class OmrSheetTemplateSpec {
     private final int canonicalWidth;
     private final int canonicalHeight;
     private final int questionsPerBlock;
+    private final int layoutColumnCount;
 
     private final String[] optionLabels;
     private final double[] optionLocalX;
@@ -48,6 +49,51 @@ public final class OmrSheetTemplateSpec {
             int canonicalWidth,
             int canonicalHeight,
             int questionsPerBlock,
+            String[] optionLabels,
+            double[] optionLocalX,
+            double firstRowY,
+            double rowSpacingY,
+            double samplingRadiusX,
+            double samplingRadiusY,
+            int firstQuestionNumber
+    ) {
+        this(
+                templateId,
+                templateVersion,
+                templateName,
+                questionCount,
+                canonicalWidth,
+                canonicalHeight,
+                questionsPerBlock,
+                calculateBlockCount(
+                        questionCount,
+                        questionsPerBlock
+                ),
+                optionLabels,
+                optionLocalX,
+                firstRowY,
+                rowSpacingY,
+                samplingRadiusX,
+                samplingRadiusY,
+                firstQuestionNumber
+        );
+    }
+
+    /**
+     * Cria uma especificacao que pode reservar mais colunas fisicas do que
+     * a quantidade atualmente ocupada por blocos. Isso permite manter a
+     * largura de cada coluna constante e centralizar apenas as colunas
+     * utilizadas, sem criar questoes ou blocos fantasmas.
+     */
+    public OmrSheetTemplateSpec(
+            String templateId,
+            int templateVersion,
+            String templateName,
+            int questionCount,
+            int canonicalWidth,
+            int canonicalHeight,
+            int questionsPerBlock,
+            int layoutColumnCount,
             String[] optionLabels,
             double[] optionLocalX,
             double firstRowY,
@@ -139,8 +185,25 @@ public final class OmrSheetTemplateSpec {
                 questionsPerBlock
         );
 
+        if (layoutColumnCount < blockCount
+                || layoutColumnCount > MAX_QUESTION_COUNT) {
+
+            throw new IllegalArgumentException(
+                    "layoutColumnCount deve estar entre "
+                            + blockCount
+                            + " e "
+                            + MAX_QUESTION_COUNT
+                            + "."
+            );
+        }
+
+        int actualRowCount = Math.min(
+                questionCount,
+                questionsPerBlock
+        );
+
         validateVerticalGeometry(
-                questionsPerBlock,
+                actualRowCount,
                 firstRowY,
                 rowSpacingY,
                 samplingRadiusY
@@ -148,6 +211,7 @@ public final class OmrSheetTemplateSpec {
 
         validateHorizontalGeometry(
                 blockCount,
+                layoutColumnCount,
                 normalizedPositions,
                 samplingRadiusX
         );
@@ -157,6 +221,7 @@ public final class OmrSheetTemplateSpec {
         this.canonicalWidth = canonicalWidth;
         this.canonicalHeight = canonicalHeight;
         this.questionsPerBlock = questionsPerBlock;
+        this.layoutColumnCount = layoutColumnCount;
         this.optionLabels = normalizedLabels;
         this.optionLocalX = normalizedPositions;
         this.firstRowY = firstRowY;
@@ -274,17 +339,24 @@ public final class OmrSheetTemplateSpec {
 
     private void validateHorizontalGeometry(
             int blockCount,
+            int columnCount,
             double[] localPositions,
             double radiusX
     ) {
-        double blockWidth = 1.0 / blockCount;
+        double blockWidth = 1.0 / columnCount;
+        double contentLeft =
+                (1.0 - blockCount * blockWidth)
+                        / 2.0;
+
         double previousRight = -1.0;
 
         for (int blockIndex = 0;
              blockIndex < blockCount;
              blockIndex++) {
 
-            double blockLeft = blockIndex * blockWidth;
+            double blockLeft =
+                    contentLeft
+                            + blockIndex * blockWidth;
 
             for (double localX : localPositions) {
                 double centerX =
@@ -314,10 +386,14 @@ public final class OmrSheetTemplateSpec {
         }
     }
 
-    private int calculateBlockCount(
+    private static int calculateBlockCount(
             int totalQuestions,
             int rowCapacity
     ) {
+        if (totalQuestions <= 0 || rowCapacity <= 0) {
+            return 1;
+        }
+
         return (totalQuestions + rowCapacity - 1)
                 / rowCapacity;
     }
@@ -417,6 +493,34 @@ public final class OmrSheetTemplateSpec {
         );
     }
 
+    public int getLayoutColumnCount() {
+        return layoutColumnCount;
+    }
+
+    public double getBlockWidth() {
+        return 1.0 / layoutColumnCount;
+    }
+
+    public double getBlockLeft(
+            int blockIndex
+    ) {
+        if (blockIndex < 0
+                || blockIndex >= getBlockCount()) {
+
+            throw new IllegalArgumentException(
+                    "blockIndex fora dos limites do modelo."
+            );
+        }
+
+        double blockWidth = getBlockWidth();
+        double contentLeft =
+                (1.0 - getBlockCount() * blockWidth)
+                        / 2.0;
+
+        return contentLeft
+                + blockIndex * blockWidth;
+    }
+
     public int getQuestionCountForBlock(
             int blockIndex
     ) {
@@ -480,11 +584,12 @@ public final class OmrSheetTemplateSpec {
     public String toString() {
         return String.format(
                 Locale.US,
-                "%s@v%d[questoes=%d, blocos=%d, alternativas=%d, canvas=%dx%d]",
+                "%s@v%d[questoes=%d, blocos=%d, colunasLayout=%d, alternativas=%d, canvas=%dx%d]",
                 templateId,
                 templateVersion,
                 questionCount,
                 getBlockCount(),
+                layoutColumnCount,
                 getOptionCount(),
                 canonicalWidth,
                 canonicalHeight
