@@ -31,7 +31,7 @@ public final class OmrSheetExportViewStateTest {
     @Test
     public void everyPublishedCountConvertsToAndFromIndex() {
         for (int questionCount = 1;
-             questionCount <= 10;
+             questionCount <= 90;
              questionCount++) {
 
             OmrSheetExportViewState state =
@@ -62,10 +62,10 @@ public final class OmrSheetExportViewStateTest {
     }
 
     @Test
-    public void elevenQuestionsIsRejected() {
+    public void ninetyOneQuestionsIsRejected() {
         expectIllegalArgument(() ->
                 OmrSheetExportViewState
-                        .fromQuestionCount(11)
+                        .fromQuestionCount(91)
         );
     }
 
@@ -78,10 +78,10 @@ public final class OmrSheetExportViewStateTest {
     }
 
     @Test
-    public void selectionIndexTenIsRejected() {
+    public void selectionIndexNinetyIsRejected() {
         expectIllegalArgument(() ->
                 OmrSheetExportViewState
-                        .fromSelectionIndex(10)
+                        .fromSelectionIndex(90)
         );
     }
 

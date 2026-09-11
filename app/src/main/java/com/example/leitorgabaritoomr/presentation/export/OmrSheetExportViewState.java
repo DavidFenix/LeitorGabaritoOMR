@@ -5,9 +5,9 @@ import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateCata
 /**
  * Estado visual imutavel da escolha do modelo de cartao-resposta.
  *
- * A primeira familia publicada pelo aplicativo permite qualquer quantidade
- * inteira entre 1 e 10 questoes. A conversao para indice existe apenas para
- * manter o Spinner Android fora das regras de dominio da tela.
+ * O catalogo publicado pelo aplicativo permite qualquer quantidade inteira
+ * entre 1 e 90 questoes. A conversao para indice existe apenas para manter o
+ * Spinner Android fora das regras de dominio da tela.
  */
 public final class OmrSheetExportViewState {
 
@@ -39,7 +39,7 @@ public final class OmrSheetExportViewState {
     ) {
         int questionCount =
                 OmrSheetTemplateCatalog
-                        .COMPACT_MIN_QUESTION_COUNT
+                        .MIN_QUESTION_COUNT
                         + selectionIndex;
 
         return fromQuestionCount(questionCount);
@@ -62,7 +62,7 @@ public final class OmrSheetExportViewState {
     public int getSelectionIndex() {
         return questionCount
                 - OmrSheetTemplateCatalog
-                .COMPACT_MIN_QUESTION_COUNT;
+                .MIN_QUESTION_COUNT;
     }
 
     private static void validateQuestionCount(
@@ -70,18 +70,18 @@ public final class OmrSheetExportViewState {
     ) {
         if (questionCount
                 < OmrSheetTemplateCatalog
-                .COMPACT_MIN_QUESTION_COUNT
+                .MIN_QUESTION_COUNT
                 || questionCount
                 > OmrSheetTemplateCatalog
-                .COMPACT_MAX_QUESTION_COUNT) {
+                .MAX_QUESTION_COUNT) {
 
             throw new IllegalArgumentException(
                     "A quantidade deve estar entre "
                             + OmrSheetTemplateCatalog
-                            .COMPACT_MIN_QUESTION_COUNT
+                            .MIN_QUESTION_COUNT
                             + " e "
                             + OmrSheetTemplateCatalog
-                            .COMPACT_MAX_QUESTION_COUNT
+                            .MAX_QUESTION_COUNT
                             + "."
             );
         }

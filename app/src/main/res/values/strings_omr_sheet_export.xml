@@ -18,7 +18,7 @@
     </string>
 
     <string name="omr_sheet_export_count_message">
-        Esta família compacta aceita qualquer quantidade inteira de 1 a 10.
+        Escolha qualquer quantidade inteira de 1 a 90. O formato do cartão será ajustado automaticamente.
     </string>
 
     <string name="omr_sheet_export_count_content_description">
@@ -48,7 +48,7 @@
     </string>
 
     <string name="omr_sheet_export_size_description">
-        Tamanho original aproximado: 18 cm × 8 cm.
+        Tamanho original: 18 cm de largura, com altura ajustada à quantidade de questões.
     </string>
 
     <string name="omr_sheet_export_proportion_title">

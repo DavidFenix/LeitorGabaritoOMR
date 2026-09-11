@@ -220,10 +220,10 @@ public final class OmrSheetExportViewBinder {
 
     private void configureQuestionCountSpinner() {
         int minimum = OmrSheetTemplateCatalog
-                .COMPACT_MIN_QUESTION_COUNT;
+                .MIN_QUESTION_COUNT;
 
         int maximum = OmrSheetTemplateCatalog
-                .COMPACT_MAX_QUESTION_COUNT;
+                .MAX_QUESTION_COUNT;
 
         String[] labels =
                 new String[maximum - minimum + 1];

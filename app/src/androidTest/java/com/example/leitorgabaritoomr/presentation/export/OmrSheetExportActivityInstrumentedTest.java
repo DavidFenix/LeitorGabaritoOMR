@@ -54,6 +54,11 @@ public final class OmrSheetExportActivityInstrumentedTest {
                                 spinner.getSelectedItemPosition()
                         );
 
+                        assertEquals(
+                                90,
+                                spinner.getCount()
+                        );
+
                         assertSelectionSummary(
                                 activity,
                                 10
@@ -90,14 +95,14 @@ public final class OmrSheetExportActivityInstrumentedTest {
     }
 
     @Test
-    public void everyCountFromOneToTenUpdatesSummaryAndFileName() {
+    public void everyCountFromOneToNinetyUpdatesSummaryAndFileName() {
         try (ActivityScenario<OmrSheetExportActivity> scenario =
                      ActivityScenario.launch(
                              createActivityIntent()
                      )) {
 
             for (int questionCount = 1;
-                 questionCount <= 10;
+                 questionCount <= 90;
                  questionCount++) {
 
                 int selectedCount = questionCount;
@@ -161,7 +166,7 @@ public final class OmrSheetExportActivityInstrumentedTest {
                             activity,
                             R.id.spinnerOmrSheetQuestionCount,
                             Spinner.class
-                    ).setSelection(6)
+                    ).setSelection(89)
             );
 
             InstrumentationRegistry
@@ -179,17 +184,17 @@ public final class OmrSheetExportActivityInstrumentedTest {
                         );
 
                         assertEquals(
-                                6,
+                                89,
                                 spinner.getSelectedItemPosition()
                         );
 
                         assertSelectionSummary(
                                 activity,
-                                7
+                                90
                         );
 
                         assertEquals(
-                                "cartao-resposta-007-itens-v1.svg",
+                                "cartao-resposta-090-itens-v1.svg",
                                 textOf(
                                         activity,
                                         R.id.textOmrSheetExportFileName
