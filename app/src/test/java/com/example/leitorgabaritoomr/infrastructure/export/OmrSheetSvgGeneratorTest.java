@@ -164,6 +164,219 @@ public final class OmrSheetSvgGeneratorTest {
     }
 
     @Test
+    public void everyPublishedCountGeneratesExactOmrElements() {
+        for (int questionCount =
+             OmrSheetTemplateCatalog.MIN_QUESTION_COUNT;
+             questionCount
+                     <= OmrSheetTemplateCatalog.MAX_QUESTION_COUNT;
+             questionCount++) {
+
+            OmrSheetTemplateSpec spec =
+                    OmrSheetTemplateCatalog
+                            .publishedFourOptions(questionCount);
+
+            OmrSheetSvgDocument document =
+                    generator.generate(spec);
+
+            String svg = document.getContent();
+
+            assertEquals(
+                    String.format(
+                            "cartao-resposta-%03d-itens-v1.svg",
+                            questionCount
+                    ),
+                    document.getSuggestedFileName()
+            );
+
+            assertEquals(
+                    spec.getTemplateId(),
+                    document.getTemplateId()
+            );
+            assertEquals(questionCount, document.getQuestionCount());
+
+            assertEquals(
+                    questionCount,
+                    countOccurrences(
+                            svg,
+                            "class=\"omr-question-number\""
+                    )
+            );
+
+            assertEquals(
+                    questionCount * 4,
+                    countOccurrences(
+                            svg,
+                            "class=\"omr-bubble\""
+                    )
+            );
+
+            assertEquals(
+                    spec.getBlockCount() * 4,
+                    countOccurrences(
+                            svg,
+                            "class=\"omr-option-label\""
+                    )
+            );
+
+            assertEquals(
+                    4,
+                    countOccurrences(
+                            svg,
+                            "class=\"omr-marker\""
+                    )
+            );
+
+            assertTrue(
+                    svg.contains(
+                            String.format(
+                                    "data-question-id=\"question-%03d\"",
+                                    questionCount
+                            )
+                    )
+            );
+        }
+    }
+
+    @Test
+    public void publishedBoundaryDocumentsExposeFamilyIdentity() {
+        assertPublishedDocument(
+                1,
+                "omr-compact-ad-q001"
+        );
+        assertPublishedDocument(
+                10,
+                "omr-compact-ad-q010"
+        );
+        assertPublishedDocument(
+                11,
+                "omr-medium-ad-q011"
+        );
+        assertPublishedDocument(
+                30,
+                "omr-medium-ad-q030"
+        );
+        assertPublishedDocument(
+                31,
+                "omr-extended-ad-q031"
+        );
+        assertPublishedDocument(
+                90,
+                "omr-extended-ad-q090"
+        );
+    }
+
+    @Test
+    public void physicalHeightGrowsBetweenPublishedFamilies()
+            throws Exception {
+
+        Element compactRoot = parseSvg(
+                generatePublished(10).getContent()
+        ).getDocumentElement();
+
+        Element mediumRoot = parseSvg(
+                generatePublished(11).getContent()
+        ).getDocumentElement();
+
+        Element extendedRoot = parseSvg(
+                generatePublished(31).getContent()
+        ).getDocumentElement();
+
+        assertEquals("180.000mm", compactRoot.getAttribute("width"));
+        assertEquals("180.000mm", mediumRoot.getAttribute("width"));
+        assertEquals("180.000mm", extendedRoot.getAttribute("width"));
+
+        assertEquals("80.380mm", compactRoot.getAttribute("height"));
+        assertEquals("117.100mm", mediumRoot.getAttribute("height"));
+        assertEquals("152.628mm", extendedRoot.getAttribute("height"));
+
+        assertEquals(
+                "0 0 1264.800 564.800",
+                compactRoot.getAttribute("viewBox")
+        );
+        assertEquals(
+                "0 0 1287.750 837.750",
+                mediumRoot.getAttribute("viewBox")
+        );
+        assertEquals(
+                "0 0 1315.200 1115.200",
+                extendedRoot.getAttribute("viewBox")
+        );
+    }
+
+    @Test
+    public void ninetyQuestionSvgContainsSixBlocksAndNoPhantoms() {
+        String svg = generatePublished(90).getContent();
+
+        assertEquals(
+                6,
+                countOccurrences(svg, "class=\"omr-block\"")
+        );
+        assertEquals(
+                90,
+                countOccurrences(
+                        svg,
+                        "class=\"omr-question-number\""
+                )
+        );
+        assertEquals(
+                360,
+                countOccurrences(svg, "class=\"omr-bubble\"")
+        );
+        assertEquals(
+                24,
+                countOccurrences(
+                        svg,
+                        "class=\"omr-option-label\""
+                )
+        );
+        assertTrue(
+                svg.contains(
+                        "data-question-id=\"question-090\""
+                )
+        );
+        assertFalse(
+                svg.contains(
+                        "data-question-id=\"question-091\""
+                )
+        );
+    }
+
+    @Test
+    public void boundaryBubblesUsePublishedCanonicalGeometry()
+            throws Exception {
+
+        int[] counts = {11, 30, 31, 90};
+
+        for (int questionCount : counts) {
+            OmrSheetTemplateSpec spec =
+                    OmrSheetTemplateCatalog
+                            .publishedFourOptions(questionCount);
+
+            OmrLayoutDefinition layout =
+                    OmrDynamicLayoutFactory.create(spec);
+
+            Document svg = parseSvg(
+                    generator.generate(spec).getContent()
+            );
+
+            assertBubbleMatchesLayout(
+                    svg,
+                    layout,
+                    "question-001-option-01"
+            );
+
+            assertBubbleMatchesLayout(
+                    svg,
+                    layout,
+                    String.format(
+                            "question-%03d-option-04",
+                            questionCount
+                    )
+            );
+        }
+    }
+
+    @Test
     public void firstBubbleUsesTheSameCanonicalCoordinatesAsLayout()
             throws Exception {
 
@@ -310,6 +523,44 @@ public final class OmrSheetSvgGeneratorTest {
         return generator.generate(
                 OmrSheetTemplateCatalog
                         .compactFourOptions(questionCount)
+        );
+    }
+
+    private OmrSheetSvgDocument generatePublished(
+            int questionCount
+    ) {
+        return generator.generate(
+                OmrSheetTemplateCatalog
+                        .publishedFourOptions(questionCount)
+        );
+    }
+
+    private void assertPublishedDocument(
+            int questionCount,
+            String expectedTemplateId
+    ) {
+        OmrSheetSvgDocument document =
+                generatePublished(questionCount);
+
+        assertEquals(
+                expectedTemplateId,
+                document.getTemplateId()
+        );
+        assertEquals(1, document.getTemplateVersion());
+        assertEquals(questionCount, document.getQuestionCount());
+        assertTrue(
+                document.getContent().contains(
+                        "data-template-id=\""
+                                + expectedTemplateId
+                                + "\""
+                )
+        );
+        assertTrue(
+                document.getContent().contains(
+                        "data-question-count=\""
+                                + questionCount
+                                + "\""
+                )
         );
     }
 

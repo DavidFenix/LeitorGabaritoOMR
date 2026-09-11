@@ -220,7 +220,7 @@ public final class OmrSheetExportActivity
     ) {
         OmrSheetTemplateSpec spec =
                 OmrSheetTemplateCatalog
-                        .compactFourOptions(questionCount);
+                        .publishedFourOptions(questionCount);
 
         return svgGenerator.generate(spec);
     }
