@@ -309,6 +309,15 @@ public final class MarkerSetResolver {
             return null;
         }
 
+        if (!hasCoherentCornerRoles(
+                tl,
+                tr,
+                br,
+                bl
+        )) {
+            return null;
+        }
+
         double regionArea = polygonArea(polygon);
 
         if (regionArea <= 0) {
@@ -440,6 +449,37 @@ public final class MarkerSetResolver {
         }
 
         return true;
+    }
+
+    /**
+     * Impede que o mesmo quadrilatero seja avaliado novamente com os
+     * papeis dos cantos espelhados ou girados.
+     *
+     * Os marcadores solidos nao possuem identidade propria. Portanto,
+     * a orientacao usada pelo leitor e a orientacao visual do frame:
+     * a media do topo deve estar acima da media da base e a media da
+     * esquerda deve estar a esquerda da media da direita.
+     */
+    private boolean hasCoherentCornerRoles(
+            Point topLeft,
+            Point topRight,
+            Point bottomRight,
+            Point bottomLeft
+    ) {
+        double topCenterY =
+                (topLeft.y + topRight.y) / 2.0;
+
+        double bottomCenterY =
+                (bottomLeft.y + bottomRight.y) / 2.0;
+
+        double leftCenterX =
+                (topLeft.x + bottomLeft.x) / 2.0;
+
+        double rightCenterX =
+                (topRight.x + bottomRight.x) / 2.0;
+
+        return bottomCenterY - topCenterY > 0.0001
+                && rightCenterX - leftCenterX > 0.0001;
     }
 
     private double crossProduct(

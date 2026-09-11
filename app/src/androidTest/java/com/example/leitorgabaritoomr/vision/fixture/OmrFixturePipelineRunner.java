@@ -7,6 +7,8 @@ import com.example.leitorgabaritoomr.vision.geometry.MarkerSetCandidateEvaluatio
 import com.example.leitorgabaritoomr.vision.geometry.MarkerSetResolutionResult;
 import com.example.leitorgabaritoomr.vision.geometry.ResolvedMarkerSet;
 import com.example.leitorgabaritoomr.vision.interpretation.SheetInterpretationResult;
+import com.example.leitorgabaritoomr.vision.layout.OmrLayoutDefinition;
+import com.example.leitorgabaritoomr.vision.layout.factory.AvalieCeDevelopmentLayoutFactory;
 import com.example.leitorgabaritoomr.vision.model.MarkerDetectionResult;
 import com.example.leitorgabaritoomr.vision.model.MarkerDetectorMode;
 import com.example.leitorgabaritoomr.vision.processing.DefaultMarkerFrameProcessorFactory;
@@ -40,6 +42,7 @@ public final class OmrFixturePipelineRunner {
     public static Result run(Mat sourceRgba) {
         return run(
                 sourceRgba,
+                AvalieCeDevelopmentLayoutFactory.create(),
                 DEFAULT_MAX_FRAME_COUNT
         );
     }
@@ -48,12 +51,37 @@ public final class OmrFixturePipelineRunner {
             Mat sourceRgba,
             int maximumFrameCount
     ) {
+        return run(
+                sourceRgba,
+                AvalieCeDevelopmentLayoutFactory.create(),
+                maximumFrameCount
+        );
+    }
+
+    public static Result run(
+            Mat sourceRgba,
+            OmrLayoutDefinition layoutDefinition
+    ) {
+        return run(
+                sourceRgba,
+                layoutDefinition,
+                DEFAULT_MAX_FRAME_COUNT
+        );
+    }
+
+    public static Result run(
+            Mat sourceRgba,
+            OmrLayoutDefinition layoutDefinition,
+            int maximumFrameCount
+    ) {
         validateRgbaFrame(sourceRgba);
+        validateLayoutDefinition(layoutDefinition);
         validateMaximumFrameCount(maximumFrameCount);
 
         return runFrames(
                 frameIndex -> sourceRgba.clone(),
-                maximumFrameCount
+                maximumFrameCount,
+                layoutDefinition
         );
     }
 
@@ -62,6 +90,7 @@ public final class OmrFixturePipelineRunner {
     ) {
         return run(
                 frameProvider,
+                AvalieCeDevelopmentLayoutFactory.create(),
                 DEFAULT_MAX_FRAME_COUNT
         );
     }
@@ -77,23 +106,49 @@ public final class OmrFixturePipelineRunner {
             OmrFixtureFrameProvider frameProvider,
             int maximumFrameCount
     ) {
+        return run(
+                frameProvider,
+                AvalieCeDevelopmentLayoutFactory.create(),
+                maximumFrameCount
+        );
+    }
+
+    public static Result run(
+            OmrFixtureFrameProvider frameProvider,
+            OmrLayoutDefinition layoutDefinition
+    ) {
+        return run(
+                frameProvider,
+                layoutDefinition,
+                DEFAULT_MAX_FRAME_COUNT
+        );
+    }
+
+    public static Result run(
+            OmrFixtureFrameProvider frameProvider,
+            OmrLayoutDefinition layoutDefinition,
+            int maximumFrameCount
+    ) {
         if (frameProvider == null) {
             throw new IllegalArgumentException(
                     "O provedor de frames e obrigatorio."
             );
         }
 
+        validateLayoutDefinition(layoutDefinition);
         validateMaximumFrameCount(maximumFrameCount);
 
         return runFrames(
                 frameProvider::createRgbaFrame,
-                maximumFrameCount
+                maximumFrameCount,
+                layoutDefinition
         );
     }
 
     private static Result runFrames(
             RgbaFrameFactory frameFactory,
-            int maximumFrameCount
+            int maximumFrameCount,
+            OmrLayoutDefinition layoutDefinition
     ) {
 
 
@@ -119,7 +174,8 @@ public final class OmrFixturePipelineRunner {
             processor =
                     DefaultMarkerFrameProcessorFactory.create(
                             MarkerDetectorMode.SOLID_SQUARE,
-                            debugController
+                            debugController,
+                            layoutDefinition
                     );
 
             for (int frameIndex = 0;
@@ -553,6 +609,16 @@ public final class OmrFixturePipelineRunner {
         if (maximumFrameCount <= 0) {
             throw new IllegalArgumentException(
                     "maximumFrameCount deve ser positivo."
+            );
+        }
+    }
+
+    private static void validateLayoutDefinition(
+            OmrLayoutDefinition layoutDefinition
+    ) {
+        if (layoutDefinition == null) {
+            throw new IllegalArgumentException(
+                    "O layout da fixture e obrigatorio."
             );
         }
     }
