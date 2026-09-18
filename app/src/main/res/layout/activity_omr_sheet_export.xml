@@ -83,6 +83,23 @@
                     android:spinnerMode="dropdown" />
 
                 <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/omr_sheet_export_option_count_title"
+                    android:textColor="#FF111827"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <Spinner
+                    android:id="@+id/spinnerOmrSheetOptionCount"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="6dp"
+                    android:contentDescription="@string/omr_sheet_export_option_count_content_description"
+                    android:spinnerMode="dropdown" />
+
+                <TextView
                     android:id="@+id/textOmrSheetExportSelected"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

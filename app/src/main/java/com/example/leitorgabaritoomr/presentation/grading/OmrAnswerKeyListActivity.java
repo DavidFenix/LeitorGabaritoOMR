@@ -59,6 +59,7 @@ public final class OmrAnswerKeyListActivity
     private OmrAnswerKeyRepository repository;
     private OmrAnswerKeyListViewBinder viewBinder;
     private AlertDialog questionCountDialog;
+    private AlertDialog optionCountDialog;
     private boolean repositoryChanged;
 
     private final ActivityResultLauncher<Intent>
@@ -295,7 +296,7 @@ public final class OmrAnswerKeyListActivity
                         .setItems(
                                 countLabels,
                                 (dialogInterface, selectedIndex) ->
-                                        openDynamicAnswerKeyEditor(
+                                        showOptionCountDialog(
                                                 minimum
                                                         + selectedIndex
                                         )
@@ -320,14 +321,74 @@ public final class OmrAnswerKeyListActivity
         dialog.show();
     }
 
-    private void openDynamicAnswerKeyEditor(
+    private void showOptionCountDialog(
             int questionCount
+    ) {
+        if (optionCountDialog != null
+                && optionCountDialog.isShowing()) {
+
+            return;
+        }
+
+        String[] optionLabels = {
+                getString(
+                        R.string
+                                .omr_answer_key_list_create_four_options
+                ),
+                getString(
+                        R.string
+                                .omr_answer_key_list_create_five_options
+                )
+        };
+
+        AlertDialog dialog =
+                new AlertDialog.Builder(this)
+                        .setTitle(
+                                R.string
+                                        .omr_answer_key_list_create_option_count_title
+                        )
+                        .setItems(
+                                optionLabels,
+                                (dialogInterface, selectedIndex) ->
+                                        openDynamicAnswerKeyEditor(
+                                                questionCount,
+                                                selectedIndex == 0
+                                                        ? OmrSheetTemplateCatalog
+                                                        .STANDARD_V2_FOUR_OPTION_COUNT
+                                                        : OmrSheetTemplateCatalog
+                                                        .STANDARD_V2_FIVE_OPTION_COUNT
+                                        )
+                        )
+                        .setNegativeButton(
+                                R.string
+                                        .omr_answer_key_list_create_count_cancel,
+                                null
+                        )
+                        .create();
+
+        optionCountDialog = dialog;
+
+        dialog.setOnDismissListener(
+                dialogInterface -> {
+                    if (optionCountDialog == dialog) {
+                        optionCountDialog = null;
+                    }
+                }
+        );
+
+        dialog.show();
+    }
+
+    private void openDynamicAnswerKeyEditor(
+            int questionCount,
+            int optionCount
     ) {
         manualAnswerKeyLauncher.launch(
                 OmrManualAnswerKeyActivity
                         .createStandardV2Intent(
                                 this,
-                                questionCount
+                                questionCount,
+                                optionCount
                         )
         );
     }
@@ -668,6 +729,14 @@ public final class OmrAnswerKeyListActivity
         if (dialog != null) {
             dialog.setOnDismissListener(null);
             dialog.dismiss();
+        }
+
+        AlertDialog optionDialog = optionCountDialog;
+        optionCountDialog = null;
+
+        if (optionDialog != null) {
+            optionDialog.setOnDismissListener(null);
+            optionDialog.dismiss();
         }
 
         if (viewBinder != null) {

@@ -18,6 +18,7 @@ import static org.junit.Assert.assertTrue;
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ListAdapter;
 import android.widget.ListView;
@@ -28,6 +29,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.example.leitorgabaritoomr.R;
+import com.google.android.material.chip.ChipGroup;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -131,6 +133,14 @@ OmrAnswerKeyDynamicCreationFlowInstrumentedTest {
                     .atPosition(89)
                     .perform(click());
 
+            onView(
+                    withText(
+                            R.string
+                                    .omr_answer_key_list_create_four_options
+                    )
+            ).inRoot(isDialog())
+                    .perform(click());
+
             openedActivity =
                     instrumentation.waitForMonitorWithTimeout(
                             monitor,
@@ -172,6 +182,108 @@ OmrAnswerKeyDynamicCreationFlowInstrumentedTest {
                                         .contains(
                                                 "Cartao padronizado v2"
                                         )
+                        );
+                    }
+            );
+
+        } finally {
+            finishActivity(
+                    instrumentation,
+                    openedActivity
+            );
+
+            instrumentation.removeMonitor(monitor);
+        }
+    }
+
+    @Test
+    public void selectingFiveOptionsOpensAeEditorWithFiveChips() {
+        Instrumentation instrumentation =
+                InstrumentationRegistry.getInstrumentation();
+
+        Instrumentation.ActivityMonitor monitor =
+                instrumentation.addMonitor(
+                        OmrManualAnswerKeyActivity.class.getName(),
+                        null,
+                        false
+                );
+
+        Activity openedActivity = null;
+
+        try (ActivityScenario<OmrAnswerKeyListActivity>
+                     scenario = ActivityScenario.launch(
+                             createActivityIntent()
+                     )) {
+
+            onView(
+                    withId(
+                            R.id.buttonOmrAnswerKeyListCreate
+                    )
+            ).perform(click());
+
+            onData(anything())
+                    .inRoot(isDialog())
+                    .atPosition(1)
+                    .perform(click());
+
+            onView(
+                    withText(
+                            R.string
+                                    .omr_answer_key_list_create_five_options
+                    )
+            ).inRoot(isDialog())
+                    .perform(click());
+
+            openedActivity =
+                    instrumentation.waitForMonitorWithTimeout(
+                            monitor,
+                            ACTIVITY_TIMEOUT_MILLIS
+                    );
+
+            assertNotNull(openedActivity);
+
+            Activity activityToInspect = openedActivity;
+
+            instrumentation.runOnMainSync(
+                    () -> {
+                        ListView questionList =
+                                activityToInspect.findViewById(
+                                        R.id.listOmrManualQuestions
+                                );
+
+                        assertNotNull(questionList);
+
+                        ListAdapter adapter =
+                                questionList.getAdapter();
+
+                        assertNotNull(adapter);
+                        assertEquals(2, adapter.getCount());
+
+                        View firstQuestion = adapter.getView(
+                                0,
+                                null,
+                                questionList
+                        );
+
+                        ChipGroup options =
+                                firstQuestion.findViewById(
+                                        R.id
+                                                .chipGroupOmrManualQuestionOptions
+                                );
+
+                        assertNotNull(options);
+                        assertEquals(5, options.getChildCount());
+
+                        android.widget.TextView layoutText =
+                                activityToInspect.findViewById(
+                                        R.id.textOmrManualLayout
+                                );
+
+                        assertNotNull(layoutText);
+                        assertTrue(
+                                layoutText.getText()
+                                        .toString()
+                                        .contains("A-E")
                         );
                     }
             );

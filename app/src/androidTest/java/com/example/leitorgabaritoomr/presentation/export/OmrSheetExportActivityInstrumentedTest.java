@@ -60,9 +60,22 @@ public final class OmrSheetExportActivityInstrumentedTest {
                                 spinner.getCount()
                         );
 
+                        Spinner optionSpinner = requireView(
+                                activity,
+                                R.id.spinnerOmrSheetOptionCount,
+                                Spinner.class
+                        );
+
+                        assertEquals(
+                                0,
+                                optionSpinner.getSelectedItemPosition()
+                        );
+                        assertEquals(2, optionSpinner.getCount());
+
                         assertSelectionSummary(
                                 activity,
-                                10
+                                10,
+                                4
                         );
 
                         assertEquals(
@@ -136,7 +149,8 @@ public final class OmrSheetExportActivityInstrumentedTest {
 
                             assertSelectionSummary(
                                     activity,
-                                    selectedCount
+                                    selectedCount,
+                                    4
                             );
 
                             assertEquals(
@@ -156,18 +170,26 @@ public final class OmrSheetExportActivityInstrumentedTest {
     }
 
     @Test
-    public void selectedCountSurvivesActivityRecreation() {
+    public void selectedCountsSurviveActivityRecreation() {
         try (ActivityScenario<OmrSheetExportActivity> scenario =
                      ActivityScenario.launch(
                              createActivityIntent()
                      )) {
 
             scenario.onActivity(
-                    activity -> requireView(
-                            activity,
-                            R.id.spinnerOmrSheetQuestionCount,
-                            Spinner.class
-                    ).setSelection(89)
+                    activity -> {
+                        requireView(
+                                activity,
+                                R.id.spinnerOmrSheetQuestionCount,
+                                Spinner.class
+                        ).setSelection(89);
+
+                        requireView(
+                                activity,
+                                R.id.spinnerOmrSheetOptionCount,
+                                Spinner.class
+                        ).setSelection(1);
+                    }
             );
 
             InstrumentationRegistry
@@ -189,13 +211,25 @@ public final class OmrSheetExportActivityInstrumentedTest {
                                 spinner.getSelectedItemPosition()
                         );
 
-                        assertSelectionSummary(
+                        Spinner optionSpinner = requireView(
                                 activity,
-                                90
+                                R.id.spinnerOmrSheetOptionCount,
+                                Spinner.class
                         );
 
                         assertEquals(
-                                "cartao-resposta-090-itens-4-alternativas-v2.svg",
+                                1,
+                                optionSpinner.getSelectedItemPosition()
+                        );
+
+                        assertSelectionSummary(
+                                activity,
+                                90,
+                                5
+                        );
+
+                        assertEquals(
+                                "cartao-resposta-090-itens-5-alternativas-v2.svg",
                                 textOf(
                                         activity,
                                         R.id.textOmrSheetExportFileName
@@ -207,28 +241,48 @@ public final class OmrSheetExportActivityInstrumentedTest {
     }
 
     @Test
-    public void exportUsesStandardFourOptionV2ForEveryCount() {
+    public void exportUsesSelectedStandardV2ModelForEveryCount() {
+        assertEquals(
+                4,
+                OmrSheetExportActivity
+                        .createExportTemplate(10)
+                        .getOptionCount()
+        );
+
         for (int questionCount = 1;
              questionCount <= 90;
              questionCount++) {
 
-            OmrSheetTemplateSpec spec =
-                    OmrSheetExportActivity
-                            .createExportTemplate(questionCount);
+            for (int optionCount = 4;
+                 optionCount <= 5;
+                 optionCount++) {
 
-            assertEquals(
-                    String.format(
-                            "omr-standard-ad-q%03d",
-                            questionCount
-                    ),
-                    spec.getTemplateId()
-            );
-            assertEquals(2, spec.getTemplateVersion());
-            assertEquals(
-                    questionCount,
-                    spec.getQuestionCount()
-            );
-            assertEquals(4, spec.getOptionCount());
+                OmrSheetTemplateSpec spec =
+                        OmrSheetExportActivity
+                                .createExportTemplate(
+                                        questionCount,
+                                        optionCount
+                                );
+
+                assertEquals(
+                        String.format(
+                                optionCount == 4
+                                        ? "omr-standard-ad-q%03d"
+                                        : "omr-standard-ae-q%03d",
+                                questionCount
+                        ),
+                        spec.getTemplateId()
+                );
+                assertEquals(2, spec.getTemplateVersion());
+                assertEquals(
+                        questionCount,
+                        spec.getQuestionCount()
+                );
+                assertEquals(
+                        optionCount,
+                        spec.getOptionCount()
+                );
+            }
         }
     }
 
@@ -292,14 +346,16 @@ public final class OmrSheetExportActivityInstrumentedTest {
 
     private void assertSelectionSummary(
             Activity activity,
-            int questionCount
+            int questionCount,
+            int optionCount
     ) {
         assertEquals(
                 activity.getResources().getQuantityString(
                         R.plurals
                                 .omr_sheet_export_selected_summary,
                         questionCount,
-                        questionCount
+                        questionCount,
+                        optionCount
                 ),
                 textOf(
                         activity,

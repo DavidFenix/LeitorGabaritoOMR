@@ -93,16 +93,36 @@ public final class OmrManualAnswerKeyActivity
     }
 
     /**
-     * Abre o editor usando o modelo físico padronizado v2, com alternativas
-     * A-D e qualquer quantidade publicada entre 1 e 90 questões.
+     * Abre o editor usando o modelo físico padronizado v2 A-D. Este método
+     * permanece como atalho compatível para os chamadores existentes.
      */
     public static Intent createStandardV2Intent(
             Context context,
             int questionCount
     ) {
+        return createStandardV2Intent(
+                context,
+                questionCount,
+                OmrSheetTemplateCatalog
+                        .STANDARD_V2_FOUR_OPTION_COUNT
+        );
+    }
+
+    /**
+     * Abre o editor usando o modelo físico padronizado v2 com quatro ou
+     * cinco alternativas e qualquer quantidade de 1 a 90 questões.
+     */
+    public static Intent createStandardV2Intent(
+            Context context,
+            int questionCount,
+            int optionCount
+    ) {
         OmrSheetTemplateSpec spec =
                 OmrSheetTemplateCatalog
-                        .standardFourOptionsV2(questionCount);
+                        .standardOptionsV2(
+                                questionCount,
+                                optionCount
+                        );
 
         return createLayoutIntent(context, spec);
     }

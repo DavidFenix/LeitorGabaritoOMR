@@ -275,6 +275,61 @@ public final class OmrPhysicalStandardLayoutV2Test {
     }
 
     @Test
+    public void genericV2SelectorResolvesFourAndFiveOptionModels() {
+        for (int questionCount = 1;
+             questionCount <= 90;
+             questionCount++) {
+
+            OmrSheetTemplateSpec four =
+                    OmrSheetTemplateCatalog
+                            .standardOptionsV2(
+                                    questionCount,
+                                    OmrSheetTemplateCatalog
+                                            .STANDARD_V2_FOUR_OPTION_COUNT
+                            );
+
+            OmrSheetTemplateSpec five =
+                    OmrSheetTemplateCatalog
+                            .standardOptionsV2(
+                                    questionCount,
+                                    OmrSheetTemplateCatalog
+                                            .STANDARD_V2_FIVE_OPTION_COUNT
+                            );
+
+            assertEquals(
+                    String.format(
+                            "omr-standard-ad-q%03d",
+                            questionCount
+                    ),
+                    four.getTemplateId()
+            );
+            assertEquals(4, four.getOptionCount());
+
+            assertEquals(
+                    String.format(
+                            "omr-standard-ae-q%03d",
+                            questionCount
+                    ),
+                    five.getTemplateId()
+            );
+            assertEquals(5, five.getOptionCount());
+        }
+    }
+
+    @Test
+    public void genericV2SelectorRejectsUnsupportedOptionCounts() {
+        expectIllegalArgument(() ->
+                OmrSheetTemplateCatalog
+                        .standardOptionsV2(10, 3)
+        );
+
+        expectIllegalArgument(() ->
+                OmrSheetTemplateCatalog
+                        .standardOptionsV2(10, 6)
+        );
+    }
+
+    @Test
     public void v2CatalogRejectsCountsOutsideOneToNinety() {
         expectIllegalArgument(() ->
                 OmrSheetTemplateCatalog

@@ -10,7 +10,7 @@
     </string>
 
     <string name="omr_sheet_export_subtitle">
-        Crie um cartão padronizado com alternativas A–D para inserir e imprimir junto da avaliação.
+        Crie um cartão padronizado com alternativas A–D ou A–E para inserir e imprimir junto da avaliação.
     </string>
 
     <string name="omr_sheet_export_count_title">
@@ -25,14 +25,27 @@
         Quantidade de questões do cartão-resposta
     </string>
 
+    <string name="omr_sheet_export_option_count_title">
+        Quantidade de alternativas por questão
+    </string>
+
+    <string name="omr_sheet_export_option_count_content_description">
+        Quantidade de alternativas de cada questão
+    </string>
+
+    <string-array name="omr_sheet_export_option_count_entries">
+        <item>4 alternativas (A–D)</item>
+        <item>5 alternativas (A–E)</item>
+    </string-array>
+
     <plurals name="omr_sheet_export_question_count">
         <item quantity="one">%1$d questão</item>
         <item quantity="other">%1$d questões</item>
     </plurals>
 
     <plurals name="omr_sheet_export_selected_summary">
-        <item quantity="one">Cartão preparado para %1$d questão</item>
-        <item quantity="other">Cartão preparado para %1$d questões</item>
+        <item quantity="one">Cartão preparado para %1$d questão, com %2$d alternativas</item>
+        <item quantity="other">Cartão preparado para %1$d questões, com %2$d alternativas</item>
     </plurals>
 
     <string name="omr_sheet_export_file_title">
@@ -44,7 +57,7 @@
     </string>
 
     <string name="omr_sheet_export_filename_format">
-        cartao-resposta-%1$03d-itens-4-alternativas-v2.svg
+        cartao-resposta-%1$03d-itens-%2$d-alternativas-v2.svg
     </string>
 
     <string name="omr_sheet_export_size_description">

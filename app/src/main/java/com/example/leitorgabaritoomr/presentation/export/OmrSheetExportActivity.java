@@ -23,8 +23,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 /**
- * Permite escolher de 1 a 90 questões e salvar o cartão padronizado v2
- * pelo seletor nativo.
+ * Permite escolher de 1 a 90 questões, quatro ou cinco alternativas e
+ * salvar o cartão padronizado v2 pelo seletor nativo.
  *
  * O Storage Access Framework concede acesso somente ao destino escolhido pelo
  * usuario. Por isso esta tela nao depende de permissao ampla de armazenamento.
@@ -37,14 +37,21 @@ public final class OmrSheetExportActivity
     private static final String STATE_QUESTION_COUNT =
             "omr.sheet_export.question_count";
 
+    private static final String STATE_OPTION_COUNT =
+            "omr.sheet_export.option_count";
+
     private static final String STATE_PENDING_QUESTION_COUNT =
             "omr.sheet_export.pending_question_count";
+
+    private static final String STATE_PENDING_OPTION_COUNT =
+            "omr.sheet_export.pending_option_count";
 
     private OmrSheetSvgGenerator svgGenerator;
     private OmrSheetExportViewState viewState;
     private OmrSheetExportViewBinder viewBinder;
 
     private int pendingQuestionCount;
+    private int pendingOptionCount;
 
     private final ActivityResultLauncher<String>
             createDocumentLauncher =
@@ -92,6 +99,14 @@ public final class OmrSheetExportActivity
                         0
                 );
 
+        pendingOptionCount =
+                savedInstanceState == null
+                        ? 0
+                        : savedInstanceState.getInt(
+                        STATE_PENDING_OPTION_COUNT,
+                        0
+                );
+
         View rootView = findViewById(
                 android.R.id.content
         );
@@ -109,7 +124,7 @@ public final class OmrSheetExportActivity
     }
 
     private void configureBinder() {
-        viewBinder.setOnQuestionCountChangedListener(
+        viewBinder.setOnSelectionChangedListener(
                 changedViewState ->
                         viewState = changedViewState
         );
@@ -129,11 +144,15 @@ public final class OmrSheetExportActivity
         try {
             OmrSheetSvgDocument document =
                     generateDocument(
-                            viewState.getQuestionCount()
+                            viewState.getQuestionCount(),
+                            viewState.getOptionCount()
                     );
 
             pendingQuestionCount =
                     document.getQuestionCount();
+
+            pendingOptionCount =
+                    viewState.getOptionCount();
 
             viewBinder.setExportInProgress(true);
 
@@ -143,6 +162,7 @@ public final class OmrSheetExportActivity
 
         } catch (RuntimeException exception) {
             pendingQuestionCount = 0;
+            pendingOptionCount = 0;
             viewBinder.setExportInProgress(false);
 
             Log.e(
@@ -166,6 +186,7 @@ public final class OmrSheetExportActivity
 
         if (destinationUri == null) {
             pendingQuestionCount = 0;
+            pendingOptionCount = 0;
 
             showMessage(
                     R.string.omr_sheet_export_cancelled
@@ -175,14 +196,22 @@ public final class OmrSheetExportActivity
         }
 
         int questionCount = pendingQuestionCount;
+        int optionCount = pendingOptionCount;
 
         if (questionCount <= 0 && viewState != null) {
             questionCount = viewState.getQuestionCount();
         }
 
+        if (optionCount <= 0 && viewState != null) {
+            optionCount = viewState.getOptionCount();
+        }
+
         try {
             OmrSheetSvgDocument document =
-                    generateDocument(questionCount);
+                    generateDocument(
+                            questionCount,
+                            optionCount
+                    );
 
             writeDocument(
                     destinationUri,
@@ -213,14 +242,19 @@ public final class OmrSheetExportActivity
 
         } finally {
             pendingQuestionCount = 0;
+            pendingOptionCount = 0;
         }
     }
 
     private OmrSheetSvgDocument generateDocument(
-            int questionCount
+            int questionCount,
+            int optionCount
     ) {
         OmrSheetTemplateSpec spec =
-                createExportTemplate(questionCount);
+                createExportTemplate(
+                        questionCount,
+                        optionCount
+                );
 
         return svgGenerator.generate(spec);
     }
@@ -233,8 +267,21 @@ public final class OmrSheetExportActivity
     static OmrSheetTemplateSpec createExportTemplate(
             int questionCount
     ) {
+        return createExportTemplate(
+                questionCount,
+                OmrSheetExportViewState.DEFAULT_OPTION_COUNT
+        );
+    }
+
+    static OmrSheetTemplateSpec createExportTemplate(
+            int questionCount,
+            int optionCount
+    ) {
         return OmrSheetTemplateCatalog
-                .standardFourOptionsV2(questionCount);
+                .standardOptionsV2(
+                        questionCount,
+                        optionCount
+                );
     }
 
     private void writeDocument(
@@ -271,9 +318,18 @@ public final class OmrSheetExportActivity
                         .DEFAULT_QUESTION_COUNT
         );
 
+        int optionCount = savedInstanceState.getInt(
+                STATE_OPTION_COUNT,
+                OmrSheetExportViewState
+                        .DEFAULT_OPTION_COUNT
+        );
+
         try {
             return OmrSheetExportViewState
-                    .fromQuestionCount(questionCount);
+                    .fromSelection(
+                            questionCount,
+                            optionCount
+                    );
 
         } catch (IllegalArgumentException exception) {
             Log.w(
@@ -299,11 +355,21 @@ public final class OmrSheetExportActivity
                     STATE_QUESTION_COUNT,
                     viewState.getQuestionCount()
             );
+
+            outState.putInt(
+                    STATE_OPTION_COUNT,
+                    viewState.getOptionCount()
+            );
         }
 
         outState.putInt(
                 STATE_PENDING_QUESTION_COUNT,
                 pendingQuestionCount
+        );
+
+        outState.putInt(
+                STATE_PENDING_OPTION_COUNT,
+                pendingOptionCount
         );
 
         super.onSaveInstanceState(outState);

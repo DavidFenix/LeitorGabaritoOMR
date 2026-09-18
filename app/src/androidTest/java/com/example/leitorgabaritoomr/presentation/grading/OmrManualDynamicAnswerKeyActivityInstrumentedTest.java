@@ -199,6 +199,81 @@ OmrManualDynamicAnswerKeyActivityInstrumentedTest {
     }
 
     @Test
+    public void fiveOptionModelRendersAlternativeEAndReturnsMatchingAnswerKey() {
+        try (ActivityScenario<OmrManualAnswerKeyActivity>
+                     scenario =
+                     ActivityScenario.launchActivityForResult(
+                             createStandardV2Intent(2, 5)
+                     )) {
+
+            scenario.onActivity(
+                    activity -> {
+                        setAnswerKeyName(
+                                activity,
+                                "Avaliação A-E de duas questões"
+                        );
+
+                        ChipGroup firstOptions =
+                                getOptionGroupAt(activity, 0);
+
+                        assertEquals(5, firstOptions.getChildCount());
+                        assertEquals(
+                                "E",
+                                ((Chip) firstOptions.getChildAt(4))
+                                        .getText()
+                                        .toString()
+                        );
+
+                        selectOptionAt(activity, 0, 4);
+                        selectOptionAt(activity, 1, 0);
+
+                        Button saveButton =
+                                activity.findViewById(
+                                        R.id.buttonOmrManualSave
+                                );
+
+                        assertNotNull(saveButton);
+                        assertTrue(saveButton.isEnabled());
+                        assertTrue(saveButton.performClick());
+                    }
+            );
+
+            Instrumentation.ActivityResult result =
+                    scenario.getResult();
+
+            assertEquals(
+                    Activity.RESULT_OK,
+                    result.getResultCode()
+            );
+
+            OmrAnswerKeyDefinition answerKey =
+                    OmrManualAnswerKeyActivity
+                            .extractCreatedAnswerKey(
+                                    result.getResultData()
+                            );
+
+            assertNotNull(answerKey);
+            assertEquals(
+                    "omr-standard-ae-q002",
+                    answerKey.getLayoutId()
+            );
+            assertEquals(2, answerKey.getLayoutVersion());
+            assertEquals(2, answerKey.getQuestionCount());
+
+            assertAcceptedOption(
+                    answerKey,
+                    "question-001",
+                    "question-001-option-05"
+            );
+            assertAcceptedOption(
+                    answerKey,
+                    "question-002",
+                    "question-002-option-01"
+            );
+        }
+    }
+
+    @Test
     public void standardV2NameAndSelectionsSurviveRecreation() {
         try (ActivityScenario<OmrManualAnswerKeyActivity>
                      scenario = ActivityScenario.launch(
@@ -267,6 +342,24 @@ OmrManualDynamicAnswerKeyActivityInstrumentedTest {
                 OmrManualAnswerKeyActivity
                         .createStandardV2Intent(null, 90)
         );
+
+        expectIllegalArgument(() ->
+                OmrManualAnswerKeyActivity
+                        .createStandardV2Intent(
+                                context,
+                                10,
+                                3
+                        )
+        );
+
+        expectIllegalArgument(() ->
+                OmrManualAnswerKeyActivity
+                        .createStandardV2Intent(
+                                context,
+                                10,
+                                6
+                        )
+        );
     }
 
     @Test
@@ -299,6 +392,21 @@ OmrManualDynamicAnswerKeyActivityInstrumentedTest {
                 .createStandardV2Intent(
                         context,
                         questionCount
+                );
+    }
+
+    private static Intent createStandardV2Intent(
+            int questionCount,
+            int optionCount
+    ) {
+        Context context =
+                ApplicationProvider.getApplicationContext();
+
+        return OmrManualAnswerKeyActivity
+                .createStandardV2Intent(
+                        context,
+                        questionCount,
+                        optionCount
                 );
     }
 

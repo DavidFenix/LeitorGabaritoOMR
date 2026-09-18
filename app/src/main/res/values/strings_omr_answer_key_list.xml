@@ -76,6 +76,18 @@
         <item quantity="other">%1$d questões</item>
     </plurals>
 
+    <string name="omr_answer_key_list_create_option_count_title">
+        Quantas alternativas terá cada questão?
+    </string>
+
+    <string name="omr_answer_key_list_create_four_options">
+        4 alternativas (A–D)
+    </string>
+
+    <string name="omr_answer_key_list_create_five_options">
+        5 alternativas (A–E)
+    </string>
+
     <string name="omr_answer_key_list_create_count_cancel">
         Cancelar
     </string>

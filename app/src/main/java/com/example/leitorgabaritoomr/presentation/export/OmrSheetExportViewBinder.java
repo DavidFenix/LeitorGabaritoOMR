@@ -19,15 +19,16 @@ import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateCata
  */
 public final class OmrSheetExportViewBinder {
 
-    public interface OnQuestionCountChangedListener {
+    public interface OnSelectionChangedListener {
 
-        void onQuestionCountChanged(
+        void onSelectionChanged(
                 OmrSheetExportViewState viewState
         );
     }
 
     private final Context context;
     private final Spinner questionCountSpinner;
+    private final Spinner optionCountSpinner;
     private final TextView selectedCountTextView;
     private final TextView fileNameTextView;
     private final ProgressBar progressBar;
@@ -35,8 +36,8 @@ public final class OmrSheetExportViewBinder {
     private final Button saveButton;
 
     private OmrSheetExportViewState currentViewState;
-    private OnQuestionCountChangedListener
-            questionCountChangedListener;
+    private OnSelectionChangedListener
+            selectionChangedListener;
 
     private boolean rendering;
     private boolean released;
@@ -55,6 +56,12 @@ public final class OmrSheetExportViewBinder {
         questionCountSpinner = requireView(
                 rootView,
                 R.id.spinnerOmrSheetQuestionCount,
+                Spinner.class
+        );
+
+        optionCountSpinner = requireView(
+                rootView,
+                R.id.spinnerOmrSheetOptionCount,
                 Spinner.class
         );
 
@@ -89,6 +96,7 @@ public final class OmrSheetExportViewBinder {
         );
 
         configureQuestionCountSpinner();
+        configureOptionCountSpinner();
 
         currentViewState =
                 OmrSheetExportViewState.defaultState();
@@ -103,6 +111,27 @@ public final class OmrSheetExportViewBinder {
                             long id
                     ) {
                         handleQuestionCountSelected(position);
+                    }
+
+                    @Override
+                    public void onNothingSelected(
+                            AdapterView<?> parent
+                    ) {
+                        // O adaptador sempre mantem uma opcao selecionada.
+                    }
+                }
+        );
+
+        optionCountSpinner.setOnItemSelectedListener(
+                new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(
+                            AdapterView<?> parent,
+                            View view,
+                            int position,
+                            long id
+                    ) {
+                        handleOptionCountSelected(position);
                     }
 
                     @Override
@@ -144,6 +173,19 @@ public final class OmrSheetExportViewBinder {
                 );
             }
 
+            int optionSelectionIndex =
+                    viewState.getOptionSelectionIndex();
+
+            if (optionCountSpinner
+                    .getSelectedItemPosition()
+                    != optionSelectionIndex) {
+
+                optionCountSpinner.setSelection(
+                        optionSelectionIndex,
+                        false
+                );
+            }
+
             renderSelectionSummary(viewState);
 
         } finally {
@@ -158,8 +200,15 @@ public final class OmrSheetExportViewBinder {
                 questionCountSpinner
                         .getSelectedItemPosition();
 
+        int optionSelectionIndex =
+                optionCountSpinner
+                        .getSelectedItemPosition();
+
         return OmrSheetExportViewState
-                .fromSelectionIndex(selectionIndex);
+                .fromSelectionIndexes(
+                        selectionIndex,
+                        optionSelectionIndex
+                );
     }
 
     public void setExportInProgress(
@@ -168,6 +217,7 @@ public final class OmrSheetExportViewBinder {
         ensureNotReleased();
 
         questionCountSpinner.setEnabled(!exportInProgress);
+        optionCountSpinner.setEnabled(!exportInProgress);
         backButton.setEnabled(!exportInProgress);
         saveButton.setEnabled(!exportInProgress);
 
@@ -184,11 +234,11 @@ public final class OmrSheetExportViewBinder {
         );
     }
 
-    public void setOnQuestionCountChangedListener(
-            OnQuestionCountChangedListener listener
+    public void setOnSelectionChangedListener(
+            OnSelectionChangedListener listener
     ) {
         ensureNotReleased();
-        questionCountChangedListener = listener;
+        selectionChangedListener = listener;
     }
 
     public void setOnBackClickListener(
@@ -211,9 +261,10 @@ public final class OmrSheetExportViewBinder {
         }
 
         released = true;
-        questionCountChangedListener = null;
+        selectionChangedListener = null;
 
         questionCountSpinner.setOnItemSelectedListener(null);
+        optionCountSpinner.setOnItemSelectedListener(null);
         backButton.setOnClickListener(null);
         saveButton.setOnClickListener(null);
     }
@@ -258,6 +309,23 @@ public final class OmrSheetExportViewBinder {
         questionCountSpinner.setAdapter(adapter);
     }
 
+    private void configureOptionCountSpinner() {
+        ArrayAdapter<CharSequence> adapter =
+                ArrayAdapter.createFromResource(
+                        context,
+                        R.array
+                                .omr_sheet_export_option_count_entries,
+                        android.R.layout.simple_spinner_item
+                );
+
+        adapter.setDropDownViewResource(
+                android.R.layout
+                        .simple_spinner_dropdown_item
+        );
+
+        optionCountSpinner.setAdapter(adapter);
+    }
+
     private void handleQuestionCountSelected(
             int selectionIndex
     ) {
@@ -266,16 +334,41 @@ public final class OmrSheetExportViewBinder {
         }
 
         currentViewState =
-                OmrSheetExportViewState
-                        .fromSelectionIndex(selectionIndex);
+                currentViewState.withQuestionCount(
+                        OmrSheetTemplateCatalog
+                                .MIN_QUESTION_COUNT
+                                + selectionIndex
+                );
+
+        notifySelectionChanged();
+    }
+
+    private void handleOptionCountSelected(
+            int selectionIndex
+    ) {
+        if (rendering || released) {
+            return;
+        }
+
+        currentViewState =
+                currentViewState.withOptionCount(
+                        OmrSheetTemplateCatalog
+                                .STANDARD_V2_FOUR_OPTION_COUNT
+                                + selectionIndex
+                );
+
+        notifySelectionChanged();
+    }
+
+    private void notifySelectionChanged() {
 
         renderSelectionSummary(currentViewState);
 
-        OnQuestionCountChangedListener listener =
-                questionCountChangedListener;
+        OnSelectionChangedListener listener =
+                selectionChangedListener;
 
         if (listener != null) {
-            listener.onQuestionCountChanged(
+            listener.onSelectionChanged(
                     currentViewState
             );
         }
@@ -285,13 +378,15 @@ public final class OmrSheetExportViewBinder {
             OmrSheetExportViewState viewState
     ) {
         int questionCount = viewState.getQuestionCount();
+        int optionCount = viewState.getOptionCount();
 
         selectedCountTextView.setText(
                 context.getResources().getQuantityString(
                         R.plurals
                                 .omr_sheet_export_selected_summary,
                         questionCount,
-                        questionCount
+                        questionCount,
+                        optionCount
                 )
         );
 
@@ -299,7 +394,8 @@ public final class OmrSheetExportViewBinder {
                 context.getString(
                         R.string
                                 .omr_sheet_export_filename_format,
-                        questionCount
+                        questionCount,
+                        optionCount
                 )
         );
     }

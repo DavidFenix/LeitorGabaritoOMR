@@ -28,6 +28,9 @@ public final class OmrSheetTemplateCatalog {
     public static final int EXTENDED_MIN_QUESTION_COUNT = 31;
     public static final int EXTENDED_MAX_QUESTION_COUNT = 90;
 
+    public static final int STANDARD_V2_FOUR_OPTION_COUNT = 4;
+    public static final int STANDARD_V2_FIVE_OPTION_COUNT = 5;
+
     private static final int COMPACT_TEMPLATE_VERSION = 1;
     private static final int COMPACT_CANONICAL_WIDTH = 1200;
     private static final int COMPACT_CANONICAL_HEIGHT = 500;
@@ -274,9 +277,8 @@ public final class OmrSheetTemplateCatalog {
     }
 
     /**
-     * Reserva a mesma malha fisica para a futura modalidade A-E. A camada
-     * de interface continuara oferecendo A-D ate que o fluxo completo de
-     * criacao, persistencia e leitura de cinco alternativas seja validado.
+     * Usa a mesma malha fisica para a modalidade A-E, validada pelo fluxo
+     * completo de criacao, persistencia, leitura e correcao.
      */
     public static OmrSheetTemplateSpec standardFiveOptionsV2(
             int questionCount
@@ -287,6 +289,28 @@ public final class OmrSheetTemplateCatalog {
                 "alternativas A-E",
                 FIVE_OPTION_LABELS,
                 STANDARD_V2_FIVE_OPTION_LOCAL_X
+        );
+    }
+
+    /**
+     * Seleciona explicitamente uma das duas modalidades padronizadas v2.
+     * Os metodos especificos A-D e A-E permanecem disponiveis para deixar
+     * claro o contrato de chamadas que ja conhecem previamente o modelo.
+     */
+    public static OmrSheetTemplateSpec standardOptionsV2(
+            int questionCount,
+            int optionCount
+    ) {
+        if (optionCount == STANDARD_V2_FOUR_OPTION_COUNT) {
+            return standardFourOptionsV2(questionCount);
+        }
+
+        if (optionCount == STANDARD_V2_FIVE_OPTION_COUNT) {
+            return standardFiveOptionsV2(questionCount);
+        }
+
+        throw new IllegalArgumentException(
+                "O modelo padronizado v2 aceita 4 ou 5 alternativas."
         );
     }
 
