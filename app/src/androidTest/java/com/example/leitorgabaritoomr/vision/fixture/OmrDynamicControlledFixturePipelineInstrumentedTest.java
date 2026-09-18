@@ -43,10 +43,10 @@ import java.util.Locale;
  * Regressao ponta a ponta dos cartoes controlados v1 e v2.
  *
  * As fixtures foram renderizadas a partir dos SVGs exportados pelo
- * aplicativo e repetem a sequencia de respostas A, B, C e D. Cada teste
- * usa o layout resolvido do proprio gabarito, atravessa o pipeline OpenCV
- * real, mapeia a leitura e executa o mesmo servico de correcao usado pela
- * tela de captura.
+ * aplicativo. Os cartoes A-D repetem A, B, C e D; o cartao A-E repete
+ * A, B, C, D e E. Cada teste usa o layout resolvido do proprio gabarito,
+ * atravessa o pipeline OpenCV real, mapeia a leitura e executa o mesmo
+ * servico de correcao usado pela tela de captura.
  */
 @RunWith(AndroidJUnit4.class)
 public final class
@@ -63,6 +63,9 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
 
     private static final String V2_Q090_ASSET_PATH =
             "omr/cartao_resposta_padronizado_090_controlado_v2.png";
+
+    private static final String V2_Q090_AE_ASSET_PATH =
+            "omr/cartao_resposta_padronizado_090_ae_controlado_v2.png";
 
     private static final int V1_EXPECTED_WIDTH = 1265;
     private static final int V1_EXPECTED_HEIGHT = 565;
@@ -201,6 +204,16 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
             "B"
     };
 
+    private static final String[] Q090_AE_EXPECTED_ANSWERS =
+            createRepeatingAnswers(
+                    Q090_QUESTION_COUNT,
+                    "A",
+                    "B",
+                    "C",
+                    "D",
+                    "E"
+            );
+
     @BeforeClass
     public static void initializeOpenCv() {
         assertTrue(
@@ -248,6 +261,17 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
 
         assertFixtureDimensions(
                 V2_Q090_ASSET_PATH,
+                V2_EXPECTED_WIDTH,
+                V2_Q090_EXPECTED_HEIGHT
+        );
+    }
+
+    @Test
+    public void controlledStandardV2FiveOptionFixtureLoadsWithExpectedDimensions()
+            throws IOException {
+
+        assertFixtureDimensions(
+                V2_Q090_AE_ASSET_PATH,
                 V2_EXPECTED_WIDTH,
                 V2_Q090_EXPECTED_HEIGHT
         );
@@ -324,6 +348,29 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
                 "standard-v2-q090-controlled-key",
                 "Gabarito controlado v2 de 90 questoes",
                 "standard-v2-q090-controlled-reading"
+        );
+    }
+
+    @Test
+    public void controlledStandardV2FiveOptionFixtureCrossesPipelineAndGradesOneHundredPercent()
+            throws IOException {
+
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .standardFiveOptionsV2(
+                                Q090_QUESTION_COUNT
+                        );
+
+        assertEquals(5, spec.getBlockCount());
+        assertEquals(5, spec.getOptionCount());
+
+        assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+                V2_Q090_AE_ASSET_PATH,
+                spec,
+                Q090_AE_EXPECTED_ANSWERS,
+                "standard-v2-ae-q090-controlled-key",
+                "Gabarito controlado v2 A-E de 90 questoes",
+                "standard-v2-ae-q090-controlled-reading"
         );
     }
 
@@ -612,12 +659,41 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
             case "D":
                 return 4;
 
+            case "E":
+                return 5;
+
             default:
                 throw new IllegalArgumentException(
                         "Alternativa inesperada: "
                                 + optionLabel
                 );
         }
+    }
+
+    private static String[] createRepeatingAnswers(
+            int questionCount,
+            String... optionLabels
+    ) {
+        if (questionCount <= 0) {
+            throw new IllegalArgumentException(
+                    "A quantidade de questoes deve ser positiva."
+            );
+        }
+
+        if (optionLabels == null || optionLabels.length == 0) {
+            throw new IllegalArgumentException(
+                    "As alternativas esperadas sao obrigatorias."
+            );
+        }
+
+        String[] answers = new String[questionCount];
+
+        for (int index = 0; index < questionCount; index++) {
+            answers[index] =
+                    optionLabels[index % optionLabels.length];
+        }
+
+        return answers;
     }
 
     private static void assertExpectedAnswers(
