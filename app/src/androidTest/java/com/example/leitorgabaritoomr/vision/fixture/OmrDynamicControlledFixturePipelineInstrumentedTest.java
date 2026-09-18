@@ -55,18 +55,45 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
     private static final String V1_ASSET_PATH =
             "omr/cartao_resposta_dinamico_007_controlado_v1.png";
 
-    private static final String V2_ASSET_PATH =
+    private static final String V2_Q007_ASSET_PATH =
             "omr/cartao_resposta_padronizado_007_controlado_v2.png";
+
+    private static final String V2_Q019_ASSET_PATH =
+            "omr/cartao_resposta_padronizado_019_controlado_v2.png";
 
     private static final int V1_EXPECTED_WIDTH = 1265;
     private static final int V1_EXPECTED_HEIGHT = 565;
 
     private static final int V2_EXPECTED_WIDTH = 1277;
-    private static final int V2_EXPECTED_HEIGHT = 649;
+    private static final int V2_Q007_EXPECTED_HEIGHT = 649;
+    private static final int V2_Q019_EXPECTED_HEIGHT = 1221;
 
-    private static final int QUESTION_COUNT = 7;
+    private static final int Q007_QUESTION_COUNT = 7;
+    private static final int Q019_QUESTION_COUNT = 19;
 
-    private static final String[] EXPECTED_ANSWERS = {
+    private static final String[] Q007_EXPECTED_ANSWERS = {
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C"
+    };
+
+    private static final String[] Q019_EXPECTED_ANSWERS = {
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
             "A",
             "B",
             "C",
@@ -100,9 +127,20 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
             throws IOException {
 
         assertFixtureDimensions(
-                V2_ASSET_PATH,
+                V2_Q007_ASSET_PATH,
                 V2_EXPECTED_WIDTH,
-                V2_EXPECTED_HEIGHT
+                V2_Q007_EXPECTED_HEIGHT
+        );
+    }
+
+    @Test
+    public void controlledStandardV2TwoColumnFixtureLoadsWithExpectedDimensions()
+            throws IOException {
+
+        assertFixtureDimensions(
+                V2_Q019_ASSET_PATH,
+                V2_EXPECTED_WIDTH,
+                V2_Q019_EXPECTED_HEIGHT
         );
     }
 
@@ -113,7 +151,8 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
         assertFixtureCrossesPipelineAndGradesOneHundredPercent(
                 V1_ASSET_PATH,
                 OmrSheetTemplateCatalog
-                        .compactFourOptions(QUESTION_COUNT),
+                        .compactFourOptions(Q007_QUESTION_COUNT),
+                Q007_EXPECTED_ANSWERS,
                 "dynamic-q007-controlled-key",
                 "Gabarito controlado v1 de 7 questoes",
                 "dynamic-q007-controlled-reading"
@@ -125,12 +164,35 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
             throws IOException {
 
         assertFixtureCrossesPipelineAndGradesOneHundredPercent(
-                V2_ASSET_PATH,
+                V2_Q007_ASSET_PATH,
                 OmrSheetTemplateCatalog
-                        .standardFourOptionsV2(QUESTION_COUNT),
+                        .standardFourOptionsV2(Q007_QUESTION_COUNT),
+                Q007_EXPECTED_ANSWERS,
                 "standard-v2-q007-controlled-key",
                 "Gabarito controlado v2 de 7 questoes",
                 "standard-v2-q007-controlled-reading"
+        );
+    }
+
+    @Test
+    public void controlledStandardV2TwoColumnFixtureCrossesPipelineAndGradesOneHundredPercent()
+            throws IOException {
+
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .standardFourOptionsV2(
+                                Q019_QUESTION_COUNT
+                        );
+
+        assertEquals(2, spec.getBlockCount());
+
+        assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+                V2_Q019_ASSET_PATH,
+                spec,
+                Q019_EXPECTED_ANSWERS,
+                "standard-v2-q019-controlled-key",
+                "Gabarito controlado v2 de 19 questoes",
+                "standard-v2-q019-controlled-reading"
         );
     }
 
@@ -163,6 +225,7 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
     assertFixtureCrossesPipelineAndGradesOneHundredPercent(
             String assetPath,
             OmrSheetTemplateSpec spec,
+            String[] expectedAnswers,
             String answerKeyId,
             String answerKeyName,
             String readingId
@@ -194,6 +257,7 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
             OmrAnswerKeyDefinition answerKey =
                     createAnswerKey(
                             spec,
+                            expectedAnswers,
                             answerKeyId,
                             answerKeyName
                     );
@@ -213,7 +277,7 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
             );
 
             assertEquals(
-                    QUESTION_COUNT,
+                    expectedAnswers.length,
                     layout.getQuestionCount()
             );
 
@@ -245,13 +309,13 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
 
             assertEquals(
                     "Quantidade de questoes | " + diagnostic,
-                    QUESTION_COUNT,
+                    expectedAnswers.length,
                     interpretation.getQuestionCount()
             );
 
             assertEquals(
                     "Marcacoes unicas | " + diagnostic,
-                    QUESTION_COUNT,
+                    expectedAnswers.length,
                     interpretation.getSingleMarkCount()
             );
 
@@ -281,6 +345,7 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
 
             assertExpectedAnswers(
                     interpretation,
+                    expectedAnswers,
                     diagnostic
             );
 
@@ -298,7 +363,10 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
                             readingResult
                     );
 
-            assertEquals(QUESTION_COUNT, gradingResult.getCorrectCount());
+            assertEquals(
+                    expectedAnswers.length,
+                    gradingResult.getCorrectCount()
+            );
             assertEquals(0, gradingResult.getIncorrectCount());
             assertEquals(0, gradingResult.getBlankCount());
             assertEquals(0, gradingResult.getReviewRequiredCount());
@@ -349,19 +417,20 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
     private static OmrAnswerKeyDefinition
     createAnswerKey(
             OmrSheetTemplateSpec spec,
+            String[] expectedAnswers,
             String answerKeyId,
             String answerKeyName
     ) {
         List<OmrAnswerKeyEntry> entries =
-                new ArrayList<>(QUESTION_COUNT);
+                new ArrayList<>(expectedAnswers.length);
 
         for (int index = 0;
-             index < QUESTION_COUNT;
+             index < expectedAnswers.length;
              index++) {
 
             int questionNumber = index + 1;
             int optionNumber = optionNumber(
-                    EXPECTED_ANSWERS[index]
+                    expectedAnswers[index]
             );
 
             String questionId = String.format(
@@ -422,10 +491,11 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
 
     private static void assertExpectedAnswers(
             SheetInterpretationResult interpretation,
+            String[] expectedAnswers,
             String diagnostic
     ) {
         for (int index = 0;
-             index < EXPECTED_ANSWERS.length;
+             index < expectedAnswers.length;
              index++) {
 
             String questionId = String.format(
@@ -462,7 +532,7 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
 
             assertEquals(
                     questionId + " | " + diagnostic,
-                    EXPECTED_ANSWERS[index],
+                    expectedAnswers[index],
                     question.getSelectedOption().getLabel()
             );
         }
