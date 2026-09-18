@@ -25,6 +25,15 @@ public final class OmrSheetSvgGenerator {
     private static final double MAXIMUM_MARKER_SIDE = 64.0;
     private static final double MARKER_MARGIN_SCALE = 0.90;
 
+    private static final int STANDARD_V2_TEMPLATE_VERSION = 2;
+    private static final String STANDARD_V2_TEMPLATE_ID_PREFIX =
+            "omr-standard-";
+    private static final double STANDARD_V2_MARKER_SIDE_MILLIMETERS =
+            6.0;
+    private static final double STANDARD_V2_TITLE_Y = 45.0;
+    private static final double STANDARD_V2_INSTRUCTION_Y = 72.0;
+    private static final double STANDARD_V2_HEADER_OFFSET_Y = 42.0;
+
     private static final double BUBBLE_RADIUS_SCALE = 0.78;
     private static final double BUBBLE_STROKE_WIDTH = 3.2;
 
@@ -40,7 +49,7 @@ public final class OmrSheetSvgGenerator {
         OmrLayoutDefinition layout =
                 OmrDynamicLayoutFactory.create(spec);
 
-        double markerSide = calculateMarkerSide(layout);
+        double markerSide = calculateMarkerSide(spec, layout);
         double outerMargin = markerSide * MARKER_MARGIN_SCALE;
 
         double viewWidth =
@@ -74,8 +83,8 @@ public final class OmrSheetSvgGenerator {
                 .append(format(outerMargin))
                 .append(")\">\n");
 
-        appendTitle(svg, layout);
-        appendBlocks(svg, layout);
+        appendTitle(svg, spec, layout);
+        appendBlocks(svg, spec, layout);
         appendFooter(svg, spec, layout);
         appendMarkers(svg, layout, markerSide);
 
@@ -120,7 +129,15 @@ public final class OmrSheetSvgGenerator {
                 .append("\"")
                 .append(" data-question-count=\"")
                 .append(spec.getQuestionCount())
-                .append("\">\n");
+                .append("\"");
+
+        if (isStandardV2(spec)) {
+            svg.append(" data-option-count=\"")
+                    .append(spec.getOptionCount())
+                    .append("\"");
+        }
+
+        svg.append(">\n");
 
         svg.append("  <title>")
                 .append(escapeXml(spec.getTemplateName()))
@@ -147,11 +164,18 @@ public final class OmrSheetSvgGenerator {
 
     private void appendTitle(
             StringBuilder svg,
+            OmrSheetTemplateSpec spec,
             OmrLayoutDefinition layout
     ) {
         double centerX = layout.getCanonicalWidth() / 2.0;
-        double titleY = layout.getCanonicalHeight() * 0.070;
-        double instructionY = layout.getCanonicalHeight() * 0.105;
+
+        double titleY = isStandardV2(spec)
+                ? STANDARD_V2_TITLE_Y
+                : layout.getCanonicalHeight() * 0.070;
+
+        double instructionY = isStandardV2(spec)
+                ? STANDARD_V2_INSTRUCTION_Y
+                : layout.getCanonicalHeight() * 0.105;
 
         svg.append("    <text class=\"omr-title\"")
                 .append(" x=\"")
@@ -177,6 +201,7 @@ public final class OmrSheetSvgGenerator {
 
     private void appendBlocks(
             StringBuilder svg,
+            OmrSheetTemplateSpec spec,
             OmrLayoutDefinition layout
     ) {
         int blockIndex = 0;
@@ -191,6 +216,7 @@ public final class OmrSheetSvgGenerator {
 
             appendOptionHeaders(
                     svg,
+                    spec,
                     layout,
                     block
             );
@@ -200,6 +226,7 @@ public final class OmrSheetSvgGenerator {
 
                 appendQuestion(
                         svg,
+                        spec,
                         layout,
                         blockIndex,
                         question
@@ -213,6 +240,7 @@ public final class OmrSheetSvgGenerator {
 
     private void appendOptionHeaders(
             StringBuilder svg,
+            OmrSheetTemplateSpec spec,
             OmrLayoutDefinition layout,
             OmrBlockDefinition block
     ) {
@@ -224,10 +252,13 @@ public final class OmrSheetSvgGenerator {
                         .getCenter().getY()
                         * layout.getCanonicalHeight();
 
-        double headerY = Math.max(
-                layout.getCanonicalHeight() * 0.125,
-                firstRowY - 42.0
-        );
+        double headerY = isStandardV2(spec)
+                ? firstRowY
+                - STANDARD_V2_HEADER_OFFSET_Y
+                : Math.max(
+                        layout.getCanonicalHeight() * 0.125,
+                        firstRowY - 42.0
+                );
 
         for (OmrOptionDefinition option
                 : firstQuestion.getOptions()) {
@@ -252,15 +283,18 @@ public final class OmrSheetSvgGenerator {
 
     private void appendQuestion(
             StringBuilder svg,
+            OmrSheetTemplateSpec spec,
             OmrLayoutDefinition layout,
             int blockIndex,
             OmrQuestionDefinition question
     ) {
         double blockWidth =
-                layout.getCanonicalWidth()
-                        / (double) layout.getBlockCount();
+                spec.getBlockWidth()
+                        * layout.getCanonicalWidth();
 
-        double blockLeft = blockIndex * blockWidth;
+        double blockLeft =
+                spec.getBlockLeft(blockIndex)
+                        * layout.getCanonicalWidth();
 
         OmrOptionDefinition firstOption =
                 question.getOptions().get(0);
@@ -424,8 +458,15 @@ public final class OmrSheetSvgGenerator {
     }
 
     private double calculateMarkerSide(
+            OmrSheetTemplateSpec spec,
             OmrLayoutDefinition layout
     ) {
+        if (isStandardV2(spec)) {
+            return calculateStandardV2MarkerSide(
+                    layout.getCanonicalWidth()
+            );
+        }
+
         double shortestSide = Math.min(
                 layout.getCanonicalWidth(),
                 layout.getCanonicalHeight()
@@ -438,9 +479,43 @@ public final class OmrSheetSvgGenerator {
         );
     }
 
+    private double calculateStandardV2MarkerSide(
+            double canonicalWidth
+    ) {
+        double availablePhysicalWidth =
+                OUTPUT_WIDTH_MILLIMETERS
+                        - 2.0
+                        * MARKER_MARGIN_SCALE
+                        * STANDARD_V2_MARKER_SIDE_MILLIMETERS;
+
+        return STANDARD_V2_MARKER_SIDE_MILLIMETERS
+                * canonicalWidth
+                / availablePhysicalWidth;
+    }
+
+    private boolean isStandardV2(
+            OmrSheetTemplateSpec spec
+    ) {
+        return spec.getTemplateVersion()
+                == STANDARD_V2_TEMPLATE_VERSION
+                && spec.getTemplateId().startsWith(
+                        STANDARD_V2_TEMPLATE_ID_PREFIX
+                );
+    }
+
     private String createSuggestedFileName(
             OmrSheetTemplateSpec spec
     ) {
+        if (isStandardV2(spec)) {
+            return String.format(
+                    Locale.US,
+                    "cartao-resposta-%03d-itens-%d-alternativas-v%d.svg",
+                    spec.getQuestionCount(),
+                    spec.getOptionCount(),
+                    spec.getTemplateVersion()
+            );
+        }
+
         return String.format(
                 Locale.US,
                 "cartao-resposta-%03d-itens-v%d.svg",
