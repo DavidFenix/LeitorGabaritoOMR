@@ -64,6 +64,39 @@ public final class OmrCaptureLayoutProviderTest {
     }
 
     @Test
+    public void captureUsesEveryStandardV2AnswerKeyFromOneToNinety() {
+        for (int questionCount =
+             OmrSheetTemplateCatalog.MIN_QUESTION_COUNT;
+             questionCount
+                     <= OmrSheetTemplateCatalog.MAX_QUESTION_COUNT;
+             questionCount++) {
+
+            OmrAnswerKeyDefinition answerKey =
+                    createStandardV2AnswerKey(questionCount);
+
+            OmrLayoutDefinition layout =
+                    provider.resolve(answerKey);
+
+            assertEquals(
+                    answerKey.getLayoutId(),
+                    layout.getId()
+            );
+            assertEquals(
+                    answerKey.getLayoutVersion(),
+                    layout.getVersion()
+            );
+            assertEquals(
+                    answerKey.getQuestionCount(),
+                    layout.getQuestionCount()
+            );
+            assertEquals(
+                    questionCount * 4,
+                    layout.getOptionCount()
+            );
+        }
+    }
+
+    @Test
     public void captureRejectsUnknownAnswerKeyLayout() {
         OmrAnswerKeyDefinition incompatible =
                 new OmrAnswerKeyDefinition(
@@ -129,6 +162,30 @@ public final class OmrCaptureLayoutProviderTest {
                         "answer-key-" + questionCount,
                         1,
                         "Gabarito " + questionCount,
+                        layout,
+                        answerLabels(questionCount),
+                        1.0
+                );
+    }
+
+    private OmrAnswerKeyDefinition createStandardV2AnswerKey(
+            int questionCount
+    ) {
+        OmrLayoutDefinition layout =
+                OmrDynamicLayoutFactory.create(
+                        OmrSheetTemplateCatalog
+                                .standardFourOptionsV2(
+                                        questionCount
+                                )
+                );
+
+        return new OmrAnswerKeyDefinitionFactory()
+                .createSingleAnswerKey(
+                        "answer-key-standard-v2-"
+                                + questionCount,
+                        1,
+                        "Gabarito padronizado "
+                                + questionCount,
                         layout,
                         answerLabels(questionCount),
                         1.0

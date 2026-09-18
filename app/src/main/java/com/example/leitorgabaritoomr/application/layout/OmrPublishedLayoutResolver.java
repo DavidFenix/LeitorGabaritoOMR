@@ -53,16 +53,44 @@ public final class OmrPublishedLayoutResolver {
             );
         }
 
-        OmrLayoutDefinition publishedLayout =
-                createPublishedCandidateOrNull(questionCount);
+        OmrLayoutDefinition standardFourOptionsV2 =
+                createStandardFourOptionsV2CandidateOrNull(
+                        questionCount
+                );
 
         if (hasIdentity(
-                publishedLayout,
+                standardFourOptionsV2,
                 normalizedLayoutId,
                 layoutVersion,
                 questionCount
         )) {
-            return publishedLayout;
+            return standardFourOptionsV2;
+        }
+
+        OmrLayoutDefinition standardFiveOptionsV2 =
+                createStandardFiveOptionsV2CandidateOrNull(
+                        questionCount
+                );
+
+        if (hasIdentity(
+                standardFiveOptionsV2,
+                normalizedLayoutId,
+                layoutVersion,
+                questionCount
+        )) {
+            return standardFiveOptionsV2;
+        }
+
+        OmrLayoutDefinition publishedV1Layout =
+                createPublishedV1CandidateOrNull(questionCount);
+
+        if (hasIdentity(
+                publishedV1Layout,
+                normalizedLayoutId,
+                layoutVersion,
+                questionCount
+        )) {
+            return publishedV1Layout;
         }
 
         OmrLayoutDefinition legacyLayout =
@@ -88,24 +116,60 @@ public final class OmrPublishedLayoutResolver {
         );
     }
 
-    private OmrLayoutDefinition createPublishedCandidateOrNull(
+    private OmrLayoutDefinition
+    createStandardFourOptionsV2CandidateOrNull(
             int questionCount
     ) {
-        if (questionCount
-                < OmrSheetTemplateCatalog
-                .MIN_QUESTION_COUNT
-                || questionCount
-                > OmrSheetTemplateCatalog
-                .MAX_QUESTION_COUNT) {
-
+        if (!isPublishedQuestionCount(questionCount)) {
             return null;
         }
 
-        OmrSheetTemplateSpec spec =
+        return createLayout(
                 OmrSheetTemplateCatalog
-                        .publishedFourOptions(questionCount);
+                        .standardFourOptionsV2(questionCount)
+        );
+    }
 
+    private OmrLayoutDefinition
+    createStandardFiveOptionsV2CandidateOrNull(
+            int questionCount
+    ) {
+        if (!isPublishedQuestionCount(questionCount)) {
+            return null;
+        }
+
+        return createLayout(
+                OmrSheetTemplateCatalog
+                        .standardFiveOptionsV2(questionCount)
+        );
+    }
+
+    private OmrLayoutDefinition createPublishedV1CandidateOrNull(
+            int questionCount
+    ) {
+        if (!isPublishedQuestionCount(questionCount)) {
+            return null;
+        }
+
+        return createLayout(
+                OmrSheetTemplateCatalog
+                        .publishedFourOptions(questionCount)
+        );
+    }
+
+    private OmrLayoutDefinition createLayout(
+            OmrSheetTemplateSpec spec
+    ) {
         return OmrDynamicLayoutFactory.create(spec);
+    }
+
+    private boolean isPublishedQuestionCount(
+            int questionCount
+    ) {
+        return questionCount
+                >= OmrSheetTemplateCatalog.MIN_QUESTION_COUNT
+                && questionCount
+                <= OmrSheetTemplateCatalog.MAX_QUESTION_COUNT;
     }
 
     private boolean hasIdentity(

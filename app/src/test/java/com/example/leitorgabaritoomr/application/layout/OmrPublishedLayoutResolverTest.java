@@ -85,6 +85,70 @@ public final class OmrPublishedLayoutResolverTest {
     }
 
     @Test
+    public void resolvesEveryStandardFourOptionV2LayoutFromOneToNinety() {
+        for (int questionCount =
+             OmrSheetTemplateCatalog.MIN_QUESTION_COUNT;
+             questionCount
+                     <= OmrSheetTemplateCatalog.MAX_QUESTION_COUNT;
+             questionCount++) {
+
+            String layoutId = String.format(
+                    "omr-standard-ad-q%03d",
+                    questionCount
+            );
+
+            OmrLayoutDefinition layout = resolver.resolve(
+                    layoutId,
+                    2,
+                    questionCount
+            );
+
+            assertEquals(layoutId, layout.getId());
+            assertEquals(2, layout.getVersion());
+            assertEquals(
+                    questionCount,
+                    layout.getQuestionCount()
+            );
+            assertEquals(
+                    questionCount * 4,
+                    layout.getOptionCount()
+            );
+        }
+    }
+
+    @Test
+    public void resolvesEveryStandardFiveOptionV2LayoutFromOneToNinety() {
+        for (int questionCount =
+             OmrSheetTemplateCatalog.MIN_QUESTION_COUNT;
+             questionCount
+                     <= OmrSheetTemplateCatalog.MAX_QUESTION_COUNT;
+             questionCount++) {
+
+            String layoutId = String.format(
+                    "omr-standard-ae-q%03d",
+                    questionCount
+            );
+
+            OmrLayoutDefinition layout = resolver.resolve(
+                    layoutId,
+                    2,
+                    questionCount
+            );
+
+            assertEquals(layoutId, layout.getId());
+            assertEquals(2, layout.getVersion());
+            assertEquals(
+                    questionCount,
+                    layout.getQuestionCount()
+            );
+            assertEquals(
+                    questionCount * 5,
+                    layout.getOptionCount()
+            );
+        }
+    }
+
+    @Test
     public void resolvedCompactLayoutEqualsCatalogGeometry() {
         OmrLayoutDefinition expected =
                 OmrDynamicLayoutFactory.create(
@@ -105,6 +169,78 @@ public final class OmrPublishedLayoutResolverTest {
         assertEquals(
                 expected.getCanonicalHeight(),
                 resolved.getCanonicalHeight()
+        );
+        assertEquals(
+                expected.getOptionCount(),
+                resolved.getOptionCount()
+        );
+
+        for (int index = 0;
+             index < expected.getOptionCount();
+             index++) {
+
+            OmrOptionDefinition expectedOption =
+                    expected.getAllOptions().get(index);
+
+            OmrOptionDefinition resolvedOption =
+                    resolved.getAllOptions().get(index);
+
+            assertEquals(
+                    expectedOption.getId(),
+                    resolvedOption.getId()
+            );
+            assertEquals(
+                    expectedOption.getLabel(),
+                    resolvedOption.getLabel()
+            );
+            assertEquals(
+                    expectedOption.getCenter().getX(),
+                    resolvedOption.getCenter().getX(),
+                    DELTA
+            );
+            assertEquals(
+                    expectedOption.getCenter().getY(),
+                    resolvedOption.getCenter().getY(),
+                    DELTA
+            );
+            assertEquals(
+                    expectedOption.getSamplingRadiusX(),
+                    resolvedOption.getSamplingRadiusX(),
+                    DELTA
+            );
+            assertEquals(
+                    expectedOption.getSamplingRadiusY(),
+                    resolvedOption.getSamplingRadiusY(),
+                    DELTA
+            );
+        }
+    }
+
+    @Test
+    public void resolvedStandardV2LayoutEqualsCatalogGeometry() {
+        OmrLayoutDefinition expected =
+                OmrDynamicLayoutFactory.create(
+                        OmrSheetTemplateCatalog
+                                .standardFourOptionsV2(90)
+                );
+
+        OmrLayoutDefinition resolved = resolver.resolve(
+                expected.getId(),
+                expected.getVersion(),
+                expected.getQuestionCount()
+        );
+
+        assertEquals(
+                expected.getCanonicalWidth(),
+                resolved.getCanonicalWidth()
+        );
+        assertEquals(
+                expected.getCanonicalHeight(),
+                resolved.getCanonicalHeight()
+        );
+        assertEquals(
+                expected.getBlockCount(),
+                resolved.getBlockCount()
         );
         assertEquals(
                 expected.getOptionCount(),
@@ -220,6 +356,38 @@ public final class OmrPublishedLayoutResolverTest {
     }
 
     @Test
+    public void resolvesStandardV2LayoutFromAnswerKeyIdentity() {
+        OmrLayoutDefinition layout =
+                OmrDynamicLayoutFactory.create(
+                        OmrSheetTemplateCatalog
+                                .standardFourOptionsV2(90)
+                );
+
+        OmrAnswerKeyDefinition answerKey =
+                new OmrAnswerKeyDefinitionFactory()
+                        .createSingleAnswerKey(
+                                "answer-key-standard-v2-90",
+                                1,
+                                "Avaliação padronizada de noventa questões",
+                                layout,
+                                answerLabels(90),
+                                1.0
+                        );
+
+        OmrLayoutDefinition resolved =
+                resolver.resolveForAnswerKey(answerKey);
+
+        assertEquals(
+                "omr-standard-ad-q090",
+                resolved.getId()
+        );
+        assertEquals(2, resolved.getVersion());
+        assertEquals(90, resolved.getQuestionCount());
+        assertEquals(5, resolved.getBlockCount());
+        assertEquals(360, resolved.getOptionCount());
+    }
+
+    @Test
     public void keepsLegacyFiftyTwoQuestionLayoutAvailable() {
         OmrLayoutDefinition legacy =
                 AvalieCeDevelopmentLayoutFactory.create();
@@ -266,6 +434,27 @@ public final class OmrPublishedLayoutResolverTest {
                 "omr-compact-ad-q010",
                 2,
                 10
+        ));
+    }
+
+    @Test
+    public void rejectsStandardV2IdentityThatDisagreesWithVersionOrCount() {
+        expectIllegalArgument(() -> resolver.resolve(
+                "omr-standard-ad-q090",
+                1,
+                90
+        ));
+
+        expectIllegalArgument(() -> resolver.resolve(
+                "omr-standard-ad-q090",
+                2,
+                89
+        ));
+
+        expectIllegalArgument(() -> resolver.resolve(
+                "omr-standard-ae-q090",
+                2,
+                89
         ));
     }
 
