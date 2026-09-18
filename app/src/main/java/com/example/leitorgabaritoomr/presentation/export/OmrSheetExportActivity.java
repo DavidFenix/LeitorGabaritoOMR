@@ -23,7 +23,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 /**
- * Permite escolher o modelo compacto e salvar seu SVG pelo seletor nativo.
+ * Permite escolher de 1 a 90 questões e salvar o cartão padronizado v2
+ * pelo seletor nativo.
  *
  * O Storage Access Framework concede acesso somente ao destino escolhido pelo
  * usuario. Por isso esta tela nao depende de permissao ampla de armazenamento.
@@ -219,10 +220,21 @@ public final class OmrSheetExportActivity
             int questionCount
     ) {
         OmrSheetTemplateSpec spec =
-                OmrSheetTemplateCatalog
-                        .publishedFourOptions(questionCount);
+                createExportTemplate(questionCount);
 
         return svgGenerator.generate(spec);
+    }
+
+    /**
+     * Mantém explícita e testável a geometria atualmente entregue ao usuário.
+     * Os modelos v1 continuam publicados apenas para leitura de gabaritos já
+     * persistidos.
+     */
+    static OmrSheetTemplateSpec createExportTemplate(
+            int questionCount
+    ) {
+        return OmrSheetTemplateCatalog
+                .standardFourOptionsV2(questionCount);
     }
 
     private void writeDocument(

@@ -10,7 +10,7 @@
     </string>
 
     <string name="omr_sheet_export_subtitle">
-        Crie um arquivo vetorial para inserir e imprimir junto da avaliação.
+        Crie um cartão padronizado com alternativas A–D para inserir e imprimir junto da avaliação.
     </string>
 
     <string name="omr_sheet_export_count_title">
@@ -44,7 +44,7 @@
     </string>
 
     <string name="omr_sheet_export_filename_format">
-        cartao-resposta-%1$03d-itens-v1.svg
+        cartao-resposta-%1$03d-itens-4-alternativas-v2.svg
     </string>
 
     <string name="omr_sheet_export_size_description">

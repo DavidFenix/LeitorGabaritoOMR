@@ -46,10 +46,10 @@ OmrAnswerKeyDynamicCreationFlowInstrumentedTest {
             "answer_key_dynamic_creation_flow_test";
 
     private static final long ACTIVITY_TIMEOUT_MILLIS =
-            5_000L;
+            10_000L;
 
     @Test
-    public void createActionShowsEveryCountFromOneToTen() {
+    public void createActionShowsPublishedRangeFromOneToNinety() {
         try (ActivityScenario<OmrAnswerKeyListActivity>
                      scenario = ActivityScenario.launch(
                              createActivityIntent()
@@ -72,9 +72,16 @@ OmrAnswerKeyDynamicCreationFlowInstrumentedTest {
             Context context =
                     ApplicationProvider.getApplicationContext();
 
-            for (int questionCount = 1;
-                 questionCount <= 10;
-                 questionCount++) {
+            int[] representativeCounts = {
+                    1,
+                    10,
+                    11,
+                    18,
+                    19,
+                    90
+            };
+
+            for (int questionCount : representativeCounts) {
 
                 String expectedLabel = context
                         .getResources()
@@ -91,19 +98,11 @@ OmrAnswerKeyDynamicCreationFlowInstrumentedTest {
                         .check(matches(withText(expectedLabel)));
             }
 
-            onData(anything())
-                    .inRoot(isDialog())
-                    .atPosition(9)
-                    .check(matches(withText("10 questões")));
-
-            onView(withText("11 questões"))
-                    .inRoot(isDialog())
-                    .check(doesNotExist());
         }
     }
 
     @Test
-    public void selectingSevenOpensEditorWithExactlySevenRows() {
+    public void selectingNinetyOpensStandardV2EditorWithNinetyRows() {
         Instrumentation instrumentation =
                 InstrumentationRegistry.getInstrumentation();
 
@@ -129,7 +128,7 @@ OmrAnswerKeyDynamicCreationFlowInstrumentedTest {
 
             onData(anything())
                     .inRoot(isDialog())
-                    .atPosition(6)
+                    .atPosition(89)
                     .perform(click());
 
             openedActivity =
@@ -159,7 +158,21 @@ OmrAnswerKeyDynamicCreationFlowInstrumentedTest {
                                 questionList.getAdapter();
 
                         assertNotNull(adapter);
-                        assertEquals(7, adapter.getCount());
+                        assertEquals(90, adapter.getCount());
+
+                        android.widget.TextView layoutText =
+                                activityToInspect.findViewById(
+                                        R.id.textOmrManualLayout
+                                );
+
+                        assertNotNull(layoutText);
+                        assertTrue(
+                                layoutText.getText()
+                                        .toString()
+                                        .contains(
+                                                "Cartao padronizado v2"
+                                        )
+                        );
                     }
             );
 

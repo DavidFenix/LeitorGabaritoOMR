@@ -35,16 +35,23 @@ public final class
 OmrManualDynamicAnswerKeyActivityInstrumentedTest {
 
     @Test
-    public void everyCompactCountFromOneToTenRendersExactRows() {
-        for (int questionCount = 1;
-             questionCount <= 10;
-             questionCount++) {
+    public void representativeStandardV2CountsRenderExactRows() {
+        int[] representativeCounts = {
+                1,
+                10,
+                11,
+                18,
+                19,
+                90
+        };
+
+        for (int questionCount : representativeCounts) {
 
             int expectedQuestionCount = questionCount;
 
             try (ActivityScenario<OmrManualAnswerKeyActivity>
                          scenario = ActivityScenario.launch(
-                                 createCompactIntent(
+                                 createStandardV2Intent(
                                          questionCount
                                  )
                          )) {
@@ -87,11 +94,11 @@ OmrManualDynamicAnswerKeyActivityInstrumentedTest {
     }
 
     @Test
-    public void completingThreeQuestionsReturnsDynamicAnswerKey() {
+    public void completingThreeQuestionsReturnsStandardV2AnswerKey() {
         try (ActivityScenario<OmrManualAnswerKeyActivity>
                      scenario =
                      ActivityScenario.launchActivityForResult(
-                             createCompactIntent(3)
+                             createStandardV2Intent(3)
                      )) {
 
             scenario.onActivity(
@@ -162,10 +169,10 @@ OmrManualDynamicAnswerKeyActivityInstrumentedTest {
                     answerKey.getName()
             );
             assertEquals(
-                    "omr-compact-ad-q003",
+                    "omr-standard-ad-q003",
                     answerKey.getLayoutId()
             );
-            assertEquals(1, answerKey.getLayoutVersion());
+            assertEquals(2, answerKey.getLayoutVersion());
             assertEquals(3, answerKey.getQuestionCount());
             assertEquals(
                     3.0,
@@ -192,10 +199,10 @@ OmrManualDynamicAnswerKeyActivityInstrumentedTest {
     }
 
     @Test
-    public void dynamicNameAndSelectionsSurviveRecreation() {
+    public void standardV2NameAndSelectionsSurviveRecreation() {
         try (ActivityScenario<OmrManualAnswerKeyActivity>
                      scenario = ActivityScenario.launch(
-                             createCompactIntent(7)
+                             createStandardV2Intent(7)
                      )) {
 
             scenario.onActivity(
@@ -242,34 +249,54 @@ OmrManualDynamicAnswerKeyActivityInstrumentedTest {
     }
 
     @Test
-    public void compactIntentRejectsCountsOutsidePublishedRange() {
+    public void standardV2IntentRejectsCountsOutsidePublishedRange() {
         Context context =
                 ApplicationProvider.getApplicationContext();
 
         expectIllegalArgument(() ->
                 OmrManualAnswerKeyActivity
-                        .createCompactIntent(context, 0)
+                        .createStandardV2Intent(context, 0)
+        );
+
+        expectIllegalArgument(() ->
+                OmrManualAnswerKeyActivity
+                        .createStandardV2Intent(context, 91)
+        );
+
+        expectIllegalArgument(() ->
+                OmrManualAnswerKeyActivity
+                        .createStandardV2Intent(null, 90)
+        );
+    }
+
+    @Test
+    public void compactV1IntentRemainsAvailableForLegacyRange() {
+        Context context =
+                ApplicationProvider.getApplicationContext();
+
+        assertNotNull(
+                OmrManualAnswerKeyActivity
+                        .createCompactIntent(context, 1)
+        );
+        assertNotNull(
+                OmrManualAnswerKeyActivity
+                        .createCompactIntent(context, 10)
         );
 
         expectIllegalArgument(() ->
                 OmrManualAnswerKeyActivity
                         .createCompactIntent(context, 11)
         );
-
-        expectIllegalArgument(() ->
-                OmrManualAnswerKeyActivity
-                        .createCompactIntent(null, 10)
-        );
     }
 
-    private static Intent createCompactIntent(
+    private static Intent createStandardV2Intent(
             int questionCount
     ) {
         Context context =
                 ApplicationProvider.getApplicationContext();
 
         return OmrManualAnswerKeyActivity
-                .createCompactIntent(
+                .createStandardV2Intent(
                         context,
                         questionCount
                 );

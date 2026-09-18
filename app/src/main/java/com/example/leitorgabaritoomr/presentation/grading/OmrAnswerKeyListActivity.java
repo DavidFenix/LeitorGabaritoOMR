@@ -263,10 +263,10 @@ public final class OmrAnswerKeyListActivity
         }
 
         int minimum = OmrSheetTemplateCatalog
-                .COMPACT_MIN_QUESTION_COUNT;
+                .MIN_QUESTION_COUNT;
 
         int maximum = OmrSheetTemplateCatalog
-                .COMPACT_MAX_QUESTION_COUNT;
+                .MAX_QUESTION_COUNT;
 
         String[] countLabels =
                 new String[maximum - minimum + 1];
@@ -325,7 +325,7 @@ public final class OmrAnswerKeyListActivity
     ) {
         manualAnswerKeyLauncher.launch(
                 OmrManualAnswerKeyActivity
-                        .createCompactIntent(
+                        .createStandardV2Intent(
                                 this,
                                 questionCount
                         )

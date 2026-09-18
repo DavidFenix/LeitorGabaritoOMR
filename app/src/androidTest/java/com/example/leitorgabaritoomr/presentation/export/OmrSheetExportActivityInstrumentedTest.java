@@ -22,6 +22,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.example.leitorgabaritoomr.R;
+import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateSpec;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -65,7 +66,7 @@ public final class OmrSheetExportActivityInstrumentedTest {
                         );
 
                         assertEquals(
-                                "cartao-resposta-010-itens-v1.svg",
+                                "cartao-resposta-010-itens-4-alternativas-v2.svg",
                                 textOf(
                                         activity,
                                         R.id.textOmrSheetExportFileName
@@ -140,7 +141,7 @@ public final class OmrSheetExportActivityInstrumentedTest {
 
                             assertEquals(
                                     String.format(
-                                            "cartao-resposta-%03d-itens-v1.svg",
+                                            "cartao-resposta-%03d-itens-4-alternativas-v2.svg",
                                             selectedCount
                                     ),
                                     textOf(
@@ -194,7 +195,7 @@ public final class OmrSheetExportActivityInstrumentedTest {
                         );
 
                         assertEquals(
-                                "cartao-resposta-090-itens-v1.svg",
+                                "cartao-resposta-090-itens-4-alternativas-v2.svg",
                                 textOf(
                                         activity,
                                         R.id.textOmrSheetExportFileName
@@ -202,6 +203,32 @@ public final class OmrSheetExportActivityInstrumentedTest {
                         );
                     }
             );
+        }
+    }
+
+    @Test
+    public void exportUsesStandardFourOptionV2ForEveryCount() {
+        for (int questionCount = 1;
+             questionCount <= 90;
+             questionCount++) {
+
+            OmrSheetTemplateSpec spec =
+                    OmrSheetExportActivity
+                            .createExportTemplate(questionCount);
+
+            assertEquals(
+                    String.format(
+                            "omr-standard-ad-q%03d",
+                            questionCount
+                    ),
+                    spec.getTemplateId()
+            );
+            assertEquals(2, spec.getTemplateVersion());
+            assertEquals(
+                    questionCount,
+                    spec.getQuestionCount()
+            );
+            assertEquals(4, spec.getOptionCount());
         }
     }
 
