@@ -10,6 +10,7 @@ import com.example.leitorgabaritoomr.vision.layout.OmrOptionDefinition;
 import com.example.leitorgabaritoomr.vision.layout.OmrQuestionDefinition;
 import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateCatalog;
 import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateSpec;
+import com.example.leitorgabaritoomr.vision.measurement.BubbleMeasurementConfig;
 
 import org.junit.Test;
 
@@ -169,7 +170,7 @@ public final class OmrPhysicalStandardLayoutV2Test {
                             .getQuestions().get(0)
                             .getOptions();
 
-            assertCenterSpacing(layout, options, 44.4);
+            assertCenterSpacing(layout, options, 43.2);
         }
     }
 
@@ -231,6 +232,25 @@ public final class OmrPhysicalStandardLayoutV2Test {
         assertEquals("D", options.get(3).getLabel());
         assertEquals("E", options.get(4).getLabel());
         assertCenterSpacing(layout, options, 37.2);
+    }
+
+    @Test
+    public void maximumCapacityV2KeepsLocalBackgroundInsideMarkerBounds() {
+        BubbleMeasurementConfig measurementConfig =
+                BubbleMeasurementConfig
+                        .developmentDefaults();
+
+        assertLocalBackgroundFitsHorizontally(
+                OmrSheetTemplateCatalog
+                        .standardFourOptionsV2(90),
+                measurementConfig
+        );
+
+        assertLocalBackgroundFitsHorizontally(
+                OmrSheetTemplateCatalog
+                        .standardFiveOptionsV2(90),
+                measurementConfig
+        );
     }
 
     @Test
@@ -358,6 +378,40 @@ public final class OmrPhysicalStandardLayoutV2Test {
                     expectedSpacing,
                     spacing,
                     DELTA
+            );
+        }
+    }
+
+    private void assertLocalBackgroundFitsHorizontally(
+            OmrSheetTemplateSpec spec,
+            BubbleMeasurementConfig measurementConfig
+    ) {
+        OmrLayoutDefinition layout =
+                OmrDynamicLayoutFactory.create(spec);
+
+        double width = layout.getCanonicalWidth();
+
+        for (OmrOptionDefinition option
+                : layout.getAllOptions()) {
+
+            double centerX =
+                    option.getCenter().getX()
+                            * width;
+
+            double backgroundRadiusX =
+                    option.getSamplingRadiusX()
+                            * width
+                            * measurementConfig
+                            .getBackgroundWidthScale();
+
+            assertTrue(
+                    option.getId(),
+                    centerX - backgroundRadiusX >= 0.0
+            );
+
+            assertTrue(
+                    option.getId(),
+                    centerX + backgroundRadiusX <= width
             );
         }
     }

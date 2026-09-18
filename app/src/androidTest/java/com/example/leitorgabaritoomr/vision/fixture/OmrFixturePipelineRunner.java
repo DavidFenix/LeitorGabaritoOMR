@@ -9,6 +9,8 @@ import com.example.leitorgabaritoomr.vision.geometry.ResolvedMarkerSet;
 import com.example.leitorgabaritoomr.vision.interpretation.SheetInterpretationResult;
 import com.example.leitorgabaritoomr.vision.layout.OmrLayoutDefinition;
 import com.example.leitorgabaritoomr.vision.layout.factory.AvalieCeDevelopmentLayoutFactory;
+import com.example.leitorgabaritoomr.vision.measurement.BubbleSamplingGeometrySet;
+import com.example.leitorgabaritoomr.vision.measurement.OmrSheetMeasurementResult;
 import com.example.leitorgabaritoomr.vision.model.MarkerDetectionResult;
 import com.example.leitorgabaritoomr.vision.model.MarkerDetectorMode;
 import com.example.leitorgabaritoomr.vision.processing.DefaultMarkerFrameProcessorFactory;
@@ -19,6 +21,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.imgproc.Imgproc;
 
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -291,6 +294,15 @@ public final class OmrFixturePipelineRunner {
         private boolean evidenceReadyObserved;
         private boolean interpretationObserved;
 
+        private int lastSamplingGeometryCount;
+        private int lastClippedBackgroundCount;
+
+        private boolean lastMeasurementComplete;
+        private int lastMeasuredOptionCount;
+        private int lastExpectedOptionCount;
+        private int lastMeasurementErrorCount;
+        private String lastMeasurementErrors = "NONE";
+
         private String lastStabilityState = "NONE";
         private String lastResolutionReason = "NONE";
         private String lastBestCandidate = "NONE";
@@ -420,14 +432,49 @@ public final class OmrFixturePipelineRunner {
                             .getLastRegisteredBubbleRegionSet()
                             != null;
 
-            samplingGeometryObserved |=
+            BubbleSamplingGeometrySet samplingGeometrySet =
                     processor
-                            .getLastBubbleSamplingGeometrySet()
-                            != null;
+                            .getLastBubbleSamplingGeometrySet();
+
+            samplingGeometryObserved |=
+                    samplingGeometrySet != null;
+
+            if (samplingGeometrySet != null) {
+                lastSamplingGeometryCount =
+                        samplingGeometrySet
+                                .getGeometryCount();
+
+                lastClippedBackgroundCount =
+                        samplingGeometrySet
+                                .getClippedBackgroundCount();
+            }
+
+            OmrSheetMeasurementResult measurementResult =
+                    processor.getLastMeasurementResult();
 
             measurementObserved |=
-                    processor.getLastMeasurementResult()
-                            != null;
+                    measurementResult != null;
+
+            if (measurementResult != null) {
+                lastMeasurementComplete =
+                        measurementResult.isComplete();
+
+                lastMeasuredOptionCount =
+                        measurementResult
+                                .getMeasuredOptionCount();
+
+                lastExpectedOptionCount =
+                        measurementResult
+                                .getExpectedOptionCount();
+
+                lastMeasurementErrorCount =
+                        measurementResult.getErrorCount();
+
+                lastMeasurementErrors =
+                        summarizeMeasurementErrors(
+                                measurementResult.getErrors()
+                        );
+            }
 
             questionMeasurementsObserved |=
                     processor.getLastQuestionMeasurements()
@@ -465,6 +512,13 @@ public final class OmrFixturePipelineRunner {
                     registeredRegionsObserved,
                     samplingGeometryObserved,
                     measurementObserved,
+                    lastSamplingGeometryCount,
+                    lastClippedBackgroundCount,
+                    lastMeasurementComplete,
+                    lastMeasuredOptionCount,
+                    lastExpectedOptionCount,
+                    lastMeasurementErrorCount,
+                    lastMeasurementErrors,
                     questionMeasurementsObserved,
                     evidenceReadyObserved,
                     interpretationObserved,
@@ -476,6 +530,44 @@ public final class OmrFixturePipelineRunner {
                     lastDifferingRoles,
                     lastStabilityState
             );
+        }
+
+        private String summarizeMeasurementErrors(
+                List<String> errors
+        ) {
+            if (errors == null || errors.isEmpty()) {
+                return "NONE";
+            }
+
+            int visibleCount = Math.min(
+                    errors.size(),
+                    8
+            );
+
+            StringBuilder builder =
+                    new StringBuilder("[");
+
+            for (int index = 0;
+                 index < visibleCount;
+                 index++) {
+
+                if (index > 0) {
+                    builder.append(" | ");
+                }
+
+                builder.append(errors.get(index));
+            }
+
+            if (errors.size() > visibleCount) {
+                builder.append(" | ... +")
+                        .append(
+                                errors.size()
+                                        - visibleCount
+                        )
+                        .append(" erro(s)");
+            }
+
+            return builder.append(']').toString();
         }
 
         private String formatEvaluation(
@@ -718,6 +810,15 @@ public final class OmrFixturePipelineRunner {
         private final boolean evidenceReadyObserved;
         private final boolean interpretationObserved;
 
+        private final int lastSamplingGeometryCount;
+        private final int lastClippedBackgroundCount;
+
+        private final boolean lastMeasurementComplete;
+        private final int lastMeasuredOptionCount;
+        private final int lastExpectedOptionCount;
+        private final int lastMeasurementErrorCount;
+        private final String lastMeasurementErrors;
+
         private final String lastStabilityState;
         private final String lastResolutionReason;
         private final String lastBestCandidate;
@@ -742,6 +843,13 @@ public final class OmrFixturePipelineRunner {
                 boolean registeredRegionsObserved,
                 boolean samplingGeometryObserved,
                 boolean measurementObserved,
+                int lastSamplingGeometryCount,
+                int lastClippedBackgroundCount,
+                boolean lastMeasurementComplete,
+                int lastMeasuredOptionCount,
+                int lastExpectedOptionCount,
+                int lastMeasurementErrorCount,
+                String lastMeasurementErrors,
                 boolean questionMeasurementsObserved,
                 boolean evidenceReadyObserved,
                 boolean interpretationObserved,
@@ -788,6 +896,27 @@ public final class OmrFixturePipelineRunner {
 
             this.measurementObserved =
                     measurementObserved;
+
+            this.lastSamplingGeometryCount =
+                    lastSamplingGeometryCount;
+
+            this.lastClippedBackgroundCount =
+                    lastClippedBackgroundCount;
+
+            this.lastMeasurementComplete =
+                    lastMeasurementComplete;
+
+            this.lastMeasuredOptionCount =
+                    lastMeasuredOptionCount;
+
+            this.lastExpectedOptionCount =
+                    lastExpectedOptionCount;
+
+            this.lastMeasurementErrorCount =
+                    lastMeasurementErrorCount;
+
+            this.lastMeasurementErrors =
+                    lastMeasurementErrors;
 
             this.questionMeasurementsObserved =
                     questionMeasurementsObserved;
@@ -933,8 +1062,24 @@ public final class OmrFixturePipelineRunner {
                     + registeredRegionsObserved
                     + ", sampling="
                     + samplingGeometryObserved
+                    + "(count="
+                    + lastSamplingGeometryCount
+                    + ", clippedBackgrounds="
+                    + lastClippedBackgroundCount
+                    + ")"
                     + ", measurement="
                     + measurementObserved
+                    + "(complete="
+                    + lastMeasurementComplete
+                    + ", measured="
+                    + lastMeasuredOptionCount
+                    + "/"
+                    + lastExpectedOptionCount
+                    + ", errors="
+                    + lastMeasurementErrorCount
+                    + ", details="
+                    + lastMeasurementErrors
+                    + ")"
                     + ", questions="
                     + questionMeasurementsObserved
                     + ", evidenceReady="

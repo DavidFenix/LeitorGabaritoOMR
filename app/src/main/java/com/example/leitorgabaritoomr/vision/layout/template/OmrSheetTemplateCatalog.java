@@ -101,11 +101,16 @@ public final class OmrSheetTemplateCatalog {
     private static final double STANDARD_V2_BOTTOM_RESERVE = 100.0;
     private static final double STANDARD_V2_SAMPLING_RADIUS = 18.0;
 
+    /*
+     * As posicoes mantem tambem o fundo local de medicao dentro da
+     * regiao delimitada pelos marcadores quando as cinco colunas estao
+     * ocupadas. Nao basta que apenas o contorno visivel da bolha caiba.
+     */
     private static final double[] STANDARD_V2_FOUR_OPTION_LOCAL_X = {
-            0.340,
-            0.525,
-            0.710,
-            0.895
+            0.300,
+            0.480,
+            0.660,
+            0.840
     };
 
     private static final String[] FIVE_OPTION_LABELS = {
@@ -117,11 +122,11 @@ public final class OmrSheetTemplateCatalog {
     };
 
     private static final double[] STANDARD_V2_FIVE_OPTION_LOCAL_X = {
-            0.300,
-            0.455,
-            0.610,
-            0.765,
-            0.920
+            0.220,
+            0.375,
+            0.530,
+            0.685,
+            0.840
     };
 
     private OmrSheetTemplateCatalog() {

@@ -222,7 +222,7 @@ public final class OmrSheetSvgPhysicalStandardV2Test {
         );
 
         assertEquals(
-                6.2604,
+                6.0912,
                 (readDouble(fourB, "cx")
                         - readDouble(fourA, "cx"))
                         * fourScale,

@@ -43,10 +43,10 @@ import java.util.Locale;
  * Regressao ponta a ponta dos cartoes controlados v1 e v2.
  *
  * As fixtures foram renderizadas a partir dos SVGs exportados pelo
- * aplicativo e possuem as respostas A, B, C, D, A, B e C. Cada teste usa o
- * layout resolvido do proprio gabarito, atravessa o pipeline OpenCV real,
- * mapeia a leitura e executa o mesmo servico de correcao usado pela tela de
- * captura.
+ * aplicativo e repetem a sequencia de respostas A, B, C e D. Cada teste
+ * usa o layout resolvido do proprio gabarito, atravessa o pipeline OpenCV
+ * real, mapeia a leitura e executa o mesmo servico de correcao usado pela
+ * tela de captura.
  */
 @RunWith(AndroidJUnit4.class)
 public final class
@@ -61,15 +61,20 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
     private static final String V2_Q019_ASSET_PATH =
             "omr/cartao_resposta_padronizado_019_controlado_v2.png";
 
+    private static final String V2_Q090_ASSET_PATH =
+            "omr/cartao_resposta_padronizado_090_controlado_v2.png";
+
     private static final int V1_EXPECTED_WIDTH = 1265;
     private static final int V1_EXPECTED_HEIGHT = 565;
 
     private static final int V2_EXPECTED_WIDTH = 1277;
     private static final int V2_Q007_EXPECTED_HEIGHT = 649;
     private static final int V2_Q019_EXPECTED_HEIGHT = 1221;
+    private static final int V2_Q090_EXPECTED_HEIGHT = 1221;
 
     private static final int Q007_QUESTION_COUNT = 7;
     private static final int Q019_QUESTION_COUNT = 19;
+    private static final int Q090_QUESTION_COUNT = 90;
 
     private static final String[] Q007_EXPECTED_ANSWERS = {
             "A",
@@ -101,6 +106,99 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
             "A",
             "B",
             "C"
+    };
+
+    private static final String[] Q090_EXPECTED_ANSWERS = {
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B"
     };
 
     @BeforeClass
@@ -141,6 +239,17 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
                 V2_Q019_ASSET_PATH,
                 V2_EXPECTED_WIDTH,
                 V2_Q019_EXPECTED_HEIGHT
+        );
+    }
+
+    @Test
+    public void controlledStandardV2FiveColumnFixtureLoadsWithExpectedDimensions()
+            throws IOException {
+
+        assertFixtureDimensions(
+                V2_Q090_ASSET_PATH,
+                V2_EXPECTED_WIDTH,
+                V2_Q090_EXPECTED_HEIGHT
         );
     }
 
@@ -193,6 +302,28 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
                 "standard-v2-q019-controlled-key",
                 "Gabarito controlado v2 de 19 questoes",
                 "standard-v2-q019-controlled-reading"
+        );
+    }
+
+    @Test
+    public void controlledStandardV2FiveColumnFixtureCrossesPipelineAndGradesOneHundredPercent()
+            throws IOException {
+
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .standardFourOptionsV2(
+                                Q090_QUESTION_COUNT
+                        );
+
+        assertEquals(5, spec.getBlockCount());
+
+        assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+                V2_Q090_ASSET_PATH,
+                spec,
+                Q090_EXPECTED_ANSWERS,
+                "standard-v2-q090-controlled-key",
+                "Gabarito controlado v2 de 90 questoes",
+                "standard-v2-q090-controlled-reading"
         );
     }
 
