@@ -40,22 +40,30 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Regressao ponta a ponta do primeiro cartao compacto publicado.
+ * Regressao ponta a ponta dos cartoes controlados v1 e v2.
  *
- * A fixture foi renderizada a partir do SVG exportado pelo aplicativo e
- * possui as respostas A, B, C, D, A, B e C. O teste usa o layout resolvido
- * do proprio gabarito, atravessa o pipeline OpenCV real, mapeia a leitura e
- * executa o mesmo servico de correcao usado pela tela de captura.
+ * As fixtures foram renderizadas a partir dos SVGs exportados pelo
+ * aplicativo e possuem as respostas A, B, C, D, A, B e C. Cada teste usa o
+ * layout resolvido do proprio gabarito, atravessa o pipeline OpenCV real,
+ * mapeia a leitura e executa o mesmo servico de correcao usado pela tela de
+ * captura.
  */
 @RunWith(AndroidJUnit4.class)
 public final class
 OmrDynamicControlledFixturePipelineInstrumentedTest {
 
-    private static final String ASSET_PATH =
+    private static final String V1_ASSET_PATH =
             "omr/cartao_resposta_dinamico_007_controlado_v1.png";
 
-    private static final int EXPECTED_WIDTH = 1265;
-    private static final int EXPECTED_HEIGHT = 565;
+    private static final String V2_ASSET_PATH =
+            "omr/cartao_resposta_padronizado_007_controlado_v2.png";
+
+    private static final int V1_EXPECTED_WIDTH = 1265;
+    private static final int V1_EXPECTED_HEIGHT = 565;
+
+    private static final int V2_EXPECTED_WIDTH = 1277;
+    private static final int V2_EXPECTED_HEIGHT = 649;
+
     private static final int QUESTION_COUNT = 7;
 
     private static final String[] EXPECTED_ANSWERS = {
@@ -80,16 +88,69 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
     public void controlledDynamicFixtureLoadsWithExpectedDimensions()
             throws IOException {
 
-        Bitmap bitmap = loadBitmap();
+        assertFixtureDimensions(
+                V1_ASSET_PATH,
+                V1_EXPECTED_WIDTH,
+                V1_EXPECTED_HEIGHT
+        );
+    }
+
+    @Test
+    public void controlledStandardV2FixtureLoadsWithExpectedDimensions()
+            throws IOException {
+
+        assertFixtureDimensions(
+                V2_ASSET_PATH,
+                V2_EXPECTED_WIDTH,
+                V2_EXPECTED_HEIGHT
+        );
+    }
+
+    @Test
+    public void controlledDynamicFixtureCrossesPipelineAndGradesOneHundredPercent()
+            throws IOException {
+
+        assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+                V1_ASSET_PATH,
+                OmrSheetTemplateCatalog
+                        .compactFourOptions(QUESTION_COUNT),
+                "dynamic-q007-controlled-key",
+                "Gabarito controlado v1 de 7 questoes",
+                "dynamic-q007-controlled-reading"
+        );
+    }
+
+    @Test
+    public void controlledStandardV2FixtureCrossesPipelineAndGradesOneHundredPercent()
+            throws IOException {
+
+        assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+                V2_ASSET_PATH,
+                OmrSheetTemplateCatalog
+                        .standardFourOptionsV2(QUESTION_COUNT),
+                "standard-v2-q007-controlled-key",
+                "Gabarito controlado v2 de 7 questoes",
+                "standard-v2-q007-controlled-reading"
+        );
+    }
+
+    private void assertFixtureDimensions(
+            String assetPath,
+            int expectedWidth,
+            int expectedHeight
+    ) throws IOException {
+
+        Bitmap bitmap = loadBitmap(assetPath);
 
         try {
             assertNotNull(
-                    "O PNG dinamico nao foi decodificado.",
+                    "O PNG controlado nao foi decodificado: "
+                            + assetPath,
                     bitmap
             );
 
-            assertEquals(EXPECTED_WIDTH, bitmap.getWidth());
-            assertEquals(EXPECTED_HEIGHT, bitmap.getHeight());
+            assertEquals(expectedWidth, bitmap.getWidth());
+            assertEquals(expectedHeight, bitmap.getHeight());
 
         } finally {
             if (bitmap != null) {
@@ -98,14 +159,20 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
         }
     }
 
-    @Test
-    public void controlledDynamicFixtureCrossesPipelineAndGradesOneHundredPercent()
-            throws IOException {
+    private void
+    assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+            String assetPath,
+            OmrSheetTemplateSpec spec,
+            String answerKeyId,
+            String answerKeyName,
+            String readingId
+    ) throws IOException {
 
-        Bitmap decodedBitmap = loadBitmap();
+        Bitmap decodedBitmap = loadBitmap(assetPath);
 
         assertNotNull(
-                "O PNG dinamico nao foi decodificado.",
+                "O PNG controlado nao foi decodificado: "
+                        + assetPath,
                 decodedBitmap
         );
 
@@ -125,7 +192,11 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
             Utils.bitmapToMat(rgbaBitmap, sourceRgba);
 
             OmrAnswerKeyDefinition answerKey =
-                    createAnswerKey();
+                    createAnswerKey(
+                            spec,
+                            answerKeyId,
+                            answerKeyName
+                    );
 
             OmrLayoutDefinition layout =
                     new OmrCaptureLayoutProvider()
@@ -216,7 +287,7 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
             OmrReadingResult readingResult =
                     new OmrReadingResultMapper().map(
                             interpretation,
-                            "dynamic-q007-controlled-reading",
+                            readingId,
                             1_800_000_000_000L
                     );
 
@@ -248,7 +319,9 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
         }
     }
 
-    private static Bitmap loadBitmap()
+    private static Bitmap loadBitmap(
+            String assetPath
+    )
             throws IOException {
 
         Context testContext =
@@ -263,7 +336,7 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
                 Bitmap.Config.ARGB_8888;
 
         try (InputStream inputStream =
-                     testContext.getAssets().open(ASSET_PATH)) {
+                     testContext.getAssets().open(assetPath)) {
 
             return BitmapFactory.decodeStream(
                     inputStream,
@@ -274,11 +347,11 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
     }
 
     private static OmrAnswerKeyDefinition
-    createAnswerKey() {
-        OmrSheetTemplateSpec spec =
-                OmrSheetTemplateCatalog
-                        .compactFourOptions(QUESTION_COUNT);
-
+    createAnswerKey(
+            OmrSheetTemplateSpec spec,
+            String answerKeyId,
+            String answerKeyName
+    ) {
         List<OmrAnswerKeyEntry> entries =
                 new ArrayList<>(QUESTION_COUNT);
 
@@ -314,9 +387,9 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
         }
 
         return new OmrAnswerKeyDefinition(
-                "dynamic-q007-controlled-key",
+                answerKeyId,
                 1,
-                "Gabarito controlado de 7 questoes",
+                answerKeyName,
                 spec.getTemplateId(),
                 spec.getTemplateVersion(),
                 entries

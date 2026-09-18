@@ -129,6 +129,67 @@ MarkerSetResolverCornerRoleInstrumentedTest {
     }
 
     @Test
+    public void standardV2SubpixelRectangleHasOnlyOneVisualOrientation() {
+        DetectedMarker topLeft = marker(38.0, 37.8, 42.5);
+        DetectedMarker topRight = marker(1238.3, 38.0, 42.5);
+        DetectedMarker bottomRight = marker(1238.0, 610.3, 42.5);
+        DetectedMarker bottomLeft = marker(37.8, 610.0, 42.5);
+
+        DetectedMarker interiorDistractor =
+                marker(600.0, 160.0, 28.0);
+
+        MarkerSetResolutionResult result =
+                new MarkerSetResolver().resolve(
+                        Arrays.asList(
+                                interiorDistractor,
+                                bottomRight,
+                                topLeft,
+                                bottomLeft,
+                                topRight
+                        ),
+                        1277,
+                        649
+                );
+
+        assertTrue(result.getReason(), result.isAccepted());
+
+        assertResolvedMarker(
+                result,
+                CornerRole.TOP_LEFT,
+                topLeft
+        );
+
+        assertResolvedMarker(
+                result,
+                CornerRole.TOP_RIGHT,
+                topRight
+        );
+
+        assertResolvedMarker(
+                result,
+                CornerRole.BOTTOM_RIGHT,
+                bottomRight
+        );
+
+        assertResolvedMarker(
+                result,
+                CornerRole.BOTTOM_LEFT,
+                bottomLeft
+        );
+
+        MarkerSetCandidateEvaluation secondBest =
+                result.getSecondBestCandidateEvaluation();
+
+        if (secondBest != null) {
+            assertTrue(
+                    result.getBestScore()
+                            - result.getSecondBestScore()
+                            >= 0.02
+            );
+        }
+    }
+
+    @Test
     public void perspectiveAndInteriorDistractorsPreserveOuterFrame() {
         DetectedMarker topLeft = marker(82.0, 58.0, 38.0);
         DetectedMarker topRight = marker(1168.0, 86.0, 37.0);
