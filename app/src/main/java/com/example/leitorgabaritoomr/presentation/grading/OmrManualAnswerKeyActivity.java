@@ -127,6 +127,45 @@ public final class OmrManualAnswerKeyActivity
         return createLayoutIntent(context, spec);
     }
 
+    /**
+     * Abre o editor usando a distribuicao automatica do modelo flexivel v3.
+     */
+    public static Intent createFlexibleV3Intent(
+            Context context,
+            int questionCount,
+            int optionCount
+    ) {
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .flexibleOptionsV3(
+                                questionCount,
+                                optionCount
+                        );
+
+        return createLayoutIntent(context, spec);
+    }
+
+    /**
+     * Abre o editor usando uma quantidade explicita de itens por coluna no
+     * modelo flexivel v3.
+     */
+    public static Intent createFlexibleV3Intent(
+            Context context,
+            int questionCount,
+            int optionCount,
+            int questionsPerColumn
+    ) {
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .flexibleOptionsV3(
+                                questionCount,
+                                optionCount,
+                                questionsPerColumn
+                        );
+
+        return createLayoutIntent(context, spec);
+    }
+
     private static Intent createLayoutIntent(
             Context context,
             OmrSheetTemplateSpec spec

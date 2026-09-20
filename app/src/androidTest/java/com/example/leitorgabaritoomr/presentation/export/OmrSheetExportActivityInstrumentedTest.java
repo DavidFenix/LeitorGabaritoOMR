@@ -72,14 +72,30 @@ public final class OmrSheetExportActivityInstrumentedTest {
                         );
                         assertEquals(2, optionSpinner.getCount());
 
-                        assertSelectionSummary(
+                        Spinner distributionSpinner = requireView(
                                 activity,
-                                10,
-                                4
+                                R.id.spinnerOmrSheetQuestionsPerColumn,
+                                Spinner.class
                         );
 
                         assertEquals(
-                                "cartao-resposta-010-itens-4-alternativas-v2.svg",
+                                0,
+                                distributionSpinner
+                                        .getSelectedItemPosition()
+                        );
+                        assertEquals(10, distributionSpinner.getCount());
+
+                        assertSelectionSummary(
+                                activity,
+                                10,
+                                4,
+                                true,
+                                10,
+                                1
+                        );
+
+                        assertEquals(
+                                "cartao-resposta-010-itens-4-alternativas-010-por-coluna-v3.svg",
                                 textOf(
                                         activity,
                                         R.id.textOmrSheetExportFileName
@@ -121,6 +137,11 @@ public final class OmrSheetExportActivityInstrumentedTest {
 
                 int selectedCount = questionCount;
                 int selectionIndex = questionCount - 1;
+                int expectedRows = Math.min(questionCount, 18);
+                int expectedColumns = (questionCount
+                        + expectedRows
+                        - 1)
+                        / expectedRows;
 
                 scenario.onActivity(
                         activity -> requireView(
@@ -150,13 +171,17 @@ public final class OmrSheetExportActivityInstrumentedTest {
                             assertSelectionSummary(
                                     activity,
                                     selectedCount,
-                                    4
+                                    4,
+                                    true,
+                                    expectedRows,
+                                    expectedColumns
                             );
 
                             assertEquals(
                                     String.format(
-                                            "cartao-resposta-%03d-itens-4-alternativas-v2.svg",
-                                            selectedCount
+                                            "cartao-resposta-%03d-itens-4-alternativas-%03d-por-coluna-v3.svg",
+                                            selectedCount,
+                                            expectedRows
                                     ),
                                     textOf(
                                             activity,
@@ -196,6 +221,18 @@ public final class OmrSheetExportActivityInstrumentedTest {
                     .getInstrumentation()
                     .waitForIdleSync();
 
+            scenario.onActivity(
+                    activity -> requireView(
+                            activity,
+                            R.id.spinnerOmrSheetQuestionsPerColumn,
+                            Spinner.class
+                    ).setSelection(13)
+            );
+
+            InstrumentationRegistry
+                    .getInstrumentation()
+                    .waitForIdleSync();
+
             scenario.recreate();
 
             scenario.onActivity(
@@ -222,14 +259,30 @@ public final class OmrSheetExportActivityInstrumentedTest {
                                 optionSpinner.getSelectedItemPosition()
                         );
 
-                        assertSelectionSummary(
+                        Spinner distributionSpinner = requireView(
                                 activity,
-                                90,
-                                5
+                                R.id.spinnerOmrSheetQuestionsPerColumn,
+                                Spinner.class
                         );
 
                         assertEquals(
-                                "cartao-resposta-090-itens-5-alternativas-v2.svg",
+                                13,
+                                distributionSpinner
+                                        .getSelectedItemPosition()
+                        );
+                        assertEquals(14, distributionSpinner.getCount());
+
+                        assertSelectionSummary(
+                                activity,
+                                90,
+                                5,
+                                false,
+                                30,
+                                3
+                        );
+
+                        assertEquals(
+                                "cartao-resposta-090-itens-5-alternativas-030-por-coluna-v3.svg",
                                 textOf(
                                         activity,
                                         R.id.textOmrSheetExportFileName
@@ -241,7 +294,7 @@ public final class OmrSheetExportActivityInstrumentedTest {
     }
 
     @Test
-    public void exportUsesSelectedStandardV2ModelForEveryCount() {
+    public void exportUsesSelectedFlexibleV3ModelForEveryCount() {
         assertEquals(
                 4,
                 OmrSheetExportActivity
@@ -264,16 +317,22 @@ public final class OmrSheetExportActivityInstrumentedTest {
                                         optionCount
                                 );
 
+                int expectedRows = Math.min(
+                        questionCount,
+                        18
+                );
+
                 assertEquals(
                         String.format(
                                 optionCount == 4
-                                        ? "omr-standard-ad-q%03d"
-                                        : "omr-standard-ae-q%03d",
-                                questionCount
+                                        ? "omr-flex-ad-q%03d-r%03d"
+                                        : "omr-flex-ae-q%03d-r%03d",
+                                questionCount,
+                                expectedRows
                         ),
                         spec.getTemplateId()
                 );
-                assertEquals(2, spec.getTemplateVersion());
+                assertEquals(3, spec.getTemplateVersion());
                 assertEquals(
                         questionCount,
                         spec.getQuestionCount()
@@ -282,7 +341,149 @@ public final class OmrSheetExportActivityInstrumentedTest {
                         optionCount,
                         spec.getOptionCount()
                 );
+                assertEquals(
+                        expectedRows,
+                        spec.getQuestionsPerBlock()
+                );
             }
+        }
+
+        OmrSheetTemplateSpec manual =
+                OmrSheetExportActivity.createExportTemplate(
+                        45,
+                        5,
+                        15
+                );
+
+        assertEquals(
+                "omr-flex-ae-q045-r015",
+                manual.getTemplateId()
+        );
+        assertEquals(3, manual.getBlockCount());
+        assertEquals(720, manual.getCanonicalWidth());
+    }
+
+    @Test
+    public void manualDistributionUpdatesSummaryAndFileName() {
+        try (ActivityScenario<OmrSheetExportActivity> scenario =
+                     ActivityScenario.launch(
+                             createActivityIntent()
+                     )) {
+
+            scenario.onActivity(
+                    activity -> requireView(
+                            activity,
+                            R.id.spinnerOmrSheetQuestionCount,
+                            Spinner.class
+                    ).setSelection(44)
+            );
+
+            InstrumentationRegistry
+                    .getInstrumentation()
+                    .waitForIdleSync();
+
+            scenario.onActivity(
+                    activity -> requireView(
+                            activity,
+                            R.id.spinnerOmrSheetQuestionsPerColumn,
+                            Spinner.class
+                    ).setSelection(7)
+            );
+
+            InstrumentationRegistry
+                    .getInstrumentation()
+                    .waitForIdleSync();
+
+            scenario.onActivity(
+                    activity -> {
+                        assertSelectionSummary(
+                                activity,
+                                45,
+                                4,
+                                false,
+                                15,
+                                3
+                        );
+
+                        assertEquals(
+                                "cartao-resposta-045-itens-4-alternativas-015-por-coluna-v3.svg",
+                                textOf(
+                                        activity,
+                                        R.id.textOmrSheetExportFileName
+                                )
+                        );
+                    }
+            );
+        }
+    }
+
+    @Test
+    public void invalidManualDistributionReturnsToAutomaticAfterCountChange() {
+        try (ActivityScenario<OmrSheetExportActivity> scenario =
+                     ActivityScenario.launch(
+                             createActivityIntent()
+                     )) {
+
+            scenario.onActivity(
+                    activity -> requireView(
+                            activity,
+                            R.id.spinnerOmrSheetQuestionCount,
+                            Spinner.class
+                    ).setSelection(44)
+            );
+
+            InstrumentationRegistry
+                    .getInstrumentation()
+                    .waitForIdleSync();
+
+            scenario.onActivity(
+                    activity -> requireView(
+                            activity,
+                            R.id.spinnerOmrSheetQuestionsPerColumn,
+                            Spinner.class
+                    ).setSelection(7)
+            );
+
+            InstrumentationRegistry
+                    .getInstrumentation()
+                    .waitForIdleSync();
+
+            scenario.onActivity(
+                    activity -> requireView(
+                            activity,
+                            R.id.spinnerOmrSheetQuestionCount,
+                            Spinner.class
+                    ).setSelection(89)
+            );
+
+            InstrumentationRegistry
+                    .getInstrumentation()
+                    .waitForIdleSync();
+
+            scenario.onActivity(
+                    activity -> {
+                        Spinner distributionSpinner = requireView(
+                                activity,
+                                R.id.spinnerOmrSheetQuestionsPerColumn,
+                                Spinner.class
+                        );
+
+                        assertEquals(
+                                0,
+                                distributionSpinner
+                                        .getSelectedItemPosition()
+                        );
+
+                        assertSelectionSummary(
+                                activity,
+                                90,
+                                4,
+                                true,
+                                18,
+                                5
+                        );
+                    }
+            );
         }
     }
 
@@ -347,15 +548,43 @@ public final class OmrSheetExportActivityInstrumentedTest {
     private void assertSelectionSummary(
             Activity activity,
             int questionCount,
-            int optionCount
+            int optionCount,
+            boolean automatic,
+            int questionsPerColumn,
+            int columnCount
     ) {
+        String rowText = activity.getResources()
+                .getQuantityString(
+                        R.plurals
+                                .omr_sheet_export_items_per_column,
+                        questionsPerColumn,
+                        questionsPerColumn
+                );
+
+        String distributionText = automatic
+                ? activity.getString(
+                R.string
+                        .omr_sheet_export_distribution_automatic,
+                rowText
+        )
+                : rowText;
+
+        String columnText = activity.getResources()
+                .getQuantityString(
+                        R.plurals.omr_sheet_export_column_count,
+                        columnCount,
+                        columnCount
+                );
+
         assertEquals(
                 activity.getResources().getQuantityString(
                         R.plurals
                                 .omr_sheet_export_selected_summary,
                         questionCount,
                         questionCount,
-                        optionCount
+                        optionCount,
+                        distributionText,
+                        columnText
                 ),
                 textOf(
                         activity,

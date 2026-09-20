@@ -100,6 +100,31 @@
                     android:spinnerMode="dropdown" />
 
                 <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/omr_sheet_export_questions_per_column_title"
+                    android:textColor="#FF111827"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/omr_sheet_export_questions_per_column_message"
+                    android:textColor="#FF6B7280"
+                    android:textSize="13sp" />
+
+                <Spinner
+                    android:id="@+id/spinnerOmrSheetQuestionsPerColumn"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="6dp"
+                    android:contentDescription="@string/omr_sheet_export_questions_per_column_content_description"
+                    android:spinnerMode="dropdown" />
+
+                <TextView
                     android:id="@+id/textOmrSheetExportSelected"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -107,7 +132,7 @@
                     android:textColor="#FF166534"
                     android:textSize="15sp"
                     android:textStyle="bold"
-                    tools:text="Cartão preparado para 10 questões" />
+                    tools:text="Cartão preparado para 10 questões, com 4 alternativas • Automático: 10 itens por coluna • 1 coluna" />
 
             </LinearLayout>
 
@@ -145,7 +170,7 @@
                     android:textColor="#FF111827"
                     android:textIsSelectable="true"
                     android:textSize="14sp"
-                    tools:text="cartao-resposta-010-itens-v1.svg" />
+                    tools:text="cartao-resposta-010-itens-4-alternativas-010-por-coluna-v3.svg" />
 
                 <TextView
                     android:layout_width="match_parent"

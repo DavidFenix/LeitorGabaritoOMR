@@ -56,10 +56,13 @@ public final class OmrAnswerKeyListActivity
     private static final String TAG =
             "OmrAnswerKeyList";
 
+    private static final int AUTOMATIC_QUESTIONS_PER_COLUMN = 0;
+
     private OmrAnswerKeyRepository repository;
     private OmrAnswerKeyListViewBinder viewBinder;
     private AlertDialog questionCountDialog;
     private AlertDialog optionCountDialog;
+    private AlertDialog questionsPerColumnDialog;
     private boolean repositoryChanged;
 
     private final ActivityResultLauncher<Intent>
@@ -350,7 +353,7 @@ public final class OmrAnswerKeyListActivity
                         .setItems(
                                 optionLabels,
                                 (dialogInterface, selectedIndex) ->
-                                        openDynamicAnswerKeyEditor(
+                                        showQuestionsPerColumnDialog(
                                                 questionCount,
                                                 selectedIndex == 0
                                                         ? OmrSheetTemplateCatalog
@@ -379,17 +382,153 @@ public final class OmrAnswerKeyListActivity
         dialog.show();
     }
 
-    private void openDynamicAnswerKeyEditor(
+    private void showQuestionsPerColumnDialog(
             int questionCount,
             int optionCount
     ) {
-        manualAnswerKeyLauncher.launch(
-                OmrManualAnswerKeyActivity
-                        .createStandardV2Intent(
-                                this,
-                                questionCount,
-                                optionCount
+        if (questionsPerColumnDialog != null
+                && questionsPerColumnDialog.isShowing()) {
+
+            return;
+        }
+
+        int minimum = OmrSheetTemplateCatalog
+                .getFlexibleV3MinimumQuestionsPerColumn(
+                        questionCount
+                );
+
+        int maximum = OmrSheetTemplateCatalog
+                .getFlexibleV3MaximumQuestionsPerColumn(
+                        questionCount
+                );
+
+        String[] distributionLabels =
+                new String[maximum - minimum + 2];
+
+        int automaticRows = OmrSheetTemplateCatalog
+                .getFlexibleV3AutomaticQuestionsPerColumn(
+                        questionCount
+                );
+
+        distributionLabels[0] = formatDistributionLabel(
+                questionCount,
+                automaticRows,
+                true
+        );
+
+        for (int rows = minimum;
+             rows <= maximum;
+             rows++) {
+
+            distributionLabels[rows - minimum + 1] =
+                    formatDistributionLabel(
+                            questionCount,
+                            rows,
+                            false
+                    );
+        }
+
+        AlertDialog dialog =
+                new AlertDialog.Builder(this)
+                        .setTitle(
+                                R.string
+                                        .omr_answer_key_list_create_questions_per_column_title
                         )
+                        .setItems(
+                                distributionLabels,
+                                (dialogInterface, selectedIndex) -> {
+                                    int configuredQuestionsPerColumn =
+                                            selectedIndex == 0
+                                                    ? AUTOMATIC_QUESTIONS_PER_COLUMN
+                                                    : minimum
+                                                    + selectedIndex
+                                                    - 1;
+
+                                    openDynamicAnswerKeyEditor(
+                                            questionCount,
+                                            optionCount,
+                                            configuredQuestionsPerColumn
+                                    );
+                                }
+                        )
+                        .setNegativeButton(
+                                R.string
+                                        .omr_answer_key_list_create_count_cancel,
+                                null
+                        )
+                        .create();
+
+        questionsPerColumnDialog = dialog;
+
+        dialog.setOnDismissListener(
+                dialogInterface -> {
+                    if (questionsPerColumnDialog == dialog) {
+                        questionsPerColumnDialog = null;
+                    }
+                }
+        );
+
+        dialog.show();
+    }
+
+    private String formatDistributionLabel(
+            int questionCount,
+            int questionsPerColumn,
+            boolean automatic
+    ) {
+        String rowText = getResources().getQuantityString(
+                R.plurals
+                        .omr_answer_key_list_create_items_per_column,
+                questionsPerColumn,
+                questionsPerColumn
+        );
+
+        int columnCount = (questionCount
+                + questionsPerColumn
+                - 1)
+                / questionsPerColumn;
+
+        String columnText = getResources().getQuantityString(
+                R.plurals
+                        .omr_answer_key_list_create_column_count,
+                columnCount,
+                columnCount
+        );
+
+        return getString(
+                automatic
+                        ? R.string
+                        .omr_answer_key_list_create_distribution_automatic
+                        : R.string
+                        .omr_answer_key_list_create_distribution_manual,
+                rowText,
+                columnText
+        );
+    }
+
+    private void openDynamicAnswerKeyEditor(
+            int questionCount,
+            int optionCount,
+            int configuredQuestionsPerColumn
+    ) {
+        Intent intent = configuredQuestionsPerColumn
+                == AUTOMATIC_QUESTIONS_PER_COLUMN
+                ? OmrManualAnswerKeyActivity
+                .createFlexibleV3Intent(
+                        this,
+                        questionCount,
+                        optionCount
+                )
+                : OmrManualAnswerKeyActivity
+                .createFlexibleV3Intent(
+                        this,
+                        questionCount,
+                        optionCount,
+                        configuredQuestionsPerColumn
+                );
+
+        manualAnswerKeyLauncher.launch(
+                intent
         );
     }
 
@@ -737,6 +876,15 @@ public final class OmrAnswerKeyListActivity
         if (optionDialog != null) {
             optionDialog.setOnDismissListener(null);
             optionDialog.dismiss();
+        }
+
+        AlertDialog distributionDialog =
+                questionsPerColumnDialog;
+        questionsPerColumnDialog = null;
+
+        if (distributionDialog != null) {
+            distributionDialog.setOnDismissListener(null);
+            distributionDialog.dismiss();
         }
 
         if (viewBinder != null) {

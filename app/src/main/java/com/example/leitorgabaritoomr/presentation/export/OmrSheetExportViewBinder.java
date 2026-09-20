@@ -29,6 +29,7 @@ public final class OmrSheetExportViewBinder {
     private final Context context;
     private final Spinner questionCountSpinner;
     private final Spinner optionCountSpinner;
+    private final Spinner questionsPerColumnSpinner;
     private final TextView selectedCountTextView;
     private final TextView fileNameTextView;
     private final ProgressBar progressBar;
@@ -65,6 +66,12 @@ public final class OmrSheetExportViewBinder {
                 Spinner.class
         );
 
+        questionsPerColumnSpinner = requireView(
+                rootView,
+                R.id.spinnerOmrSheetQuestionsPerColumn,
+                Spinner.class
+        );
+
         selectedCountTextView = requireView(
                 rootView,
                 R.id.textOmrSheetExportSelected,
@@ -95,11 +102,14 @@ public final class OmrSheetExportViewBinder {
                 Button.class
         );
 
-        configureQuestionCountSpinner();
-        configureOptionCountSpinner();
-
         currentViewState =
                 OmrSheetExportViewState.defaultState();
+
+        configureQuestionCountSpinner();
+        configureOptionCountSpinner();
+        configureQuestionsPerColumnSpinner(
+                currentViewState
+        );
 
         questionCountSpinner.setOnItemSelectedListener(
                 new AdapterView.OnItemSelectedListener() {
@@ -132,6 +142,29 @@ public final class OmrSheetExportViewBinder {
                             long id
                     ) {
                         handleOptionCountSelected(position);
+                    }
+
+                    @Override
+                    public void onNothingSelected(
+                            AdapterView<?> parent
+                    ) {
+                        // O adaptador sempre mantem uma opcao selecionada.
+                    }
+                }
+        );
+
+        questionsPerColumnSpinner.setOnItemSelectedListener(
+                new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(
+                            AdapterView<?> parent,
+                            View view,
+                            int position,
+                            long id
+                    ) {
+                        handleQuestionsPerColumnSelected(
+                                position
+                        );
                     }
 
                     @Override
@@ -186,6 +219,24 @@ public final class OmrSheetExportViewBinder {
                 );
             }
 
+            configureQuestionsPerColumnSpinner(
+                    viewState
+            );
+
+            int questionsPerColumnSelectionIndex =
+                    viewState
+                            .getQuestionsPerColumnSelectionIndex();
+
+            if (questionsPerColumnSpinner
+                    .getSelectedItemPosition()
+                    != questionsPerColumnSelectionIndex) {
+
+                questionsPerColumnSpinner.setSelection(
+                        questionsPerColumnSelectionIndex,
+                        false
+                );
+            }
+
             renderSelectionSummary(viewState);
 
         } finally {
@@ -204,10 +255,15 @@ public final class OmrSheetExportViewBinder {
                 optionCountSpinner
                         .getSelectedItemPosition();
 
+        int questionsPerColumnSelectionIndex =
+                questionsPerColumnSpinner
+                        .getSelectedItemPosition();
+
         return OmrSheetExportViewState
                 .fromSelectionIndexes(
                         selectionIndex,
-                        optionSelectionIndex
+                        optionSelectionIndex,
+                        questionsPerColumnSelectionIndex
                 );
     }
 
@@ -218,6 +274,7 @@ public final class OmrSheetExportViewBinder {
 
         questionCountSpinner.setEnabled(!exportInProgress);
         optionCountSpinner.setEnabled(!exportInProgress);
+        questionsPerColumnSpinner.setEnabled(!exportInProgress);
         backButton.setEnabled(!exportInProgress);
         saveButton.setEnabled(!exportInProgress);
 
@@ -265,6 +322,7 @@ public final class OmrSheetExportViewBinder {
 
         questionCountSpinner.setOnItemSelectedListener(null);
         optionCountSpinner.setOnItemSelectedListener(null);
+        questionsPerColumnSpinner.setOnItemSelectedListener(null);
         backButton.setOnClickListener(null);
         saveButton.setOnClickListener(null);
     }
@@ -326,6 +384,74 @@ public final class OmrSheetExportViewBinder {
         optionCountSpinner.setAdapter(adapter);
     }
 
+    private void configureQuestionsPerColumnSpinner(
+            OmrSheetExportViewState viewState
+    ) {
+        int questionCount = viewState.getQuestionCount();
+
+        int minimum = OmrSheetTemplateCatalog
+                .getFlexibleV3MinimumQuestionsPerColumn(
+                        questionCount
+                );
+
+        int maximum = OmrSheetTemplateCatalog
+                .getFlexibleV3MaximumQuestionsPerColumn(
+                        questionCount
+                );
+
+        String[] labels =
+                new String[maximum - minimum + 2];
+
+        int automaticRows = OmrSheetTemplateCatalog
+                .getFlexibleV3AutomaticQuestionsPerColumn(
+                        questionCount
+                );
+
+        labels[0] = context.getString(
+                R.string
+                        .omr_sheet_export_questions_per_column_automatic,
+                formatItemsPerColumn(automaticRows),
+                formatColumnCount(
+                        calculateColumnCount(
+                                questionCount,
+                                automaticRows
+                        )
+                )
+        );
+
+        for (int rows = minimum;
+             rows <= maximum;
+             rows++) {
+
+            labels[rows - minimum + 1] =
+                    context.getString(
+                            R.string
+                                    .omr_sheet_export_questions_per_column_manual,
+                            formatItemsPerColumn(rows),
+                            formatColumnCount(
+                                    calculateColumnCount(
+                                            questionCount,
+                                            rows
+                                    )
+                            )
+                    );
+        }
+
+        ArrayAdapter<String> adapter =
+                new ArrayAdapter<>(
+                        context,
+                        android.R.layout.simple_spinner_item,
+                        labels
+                );
+
+        adapter.setDropDownViewResource(
+                android.R.layout
+                        .simple_spinner_dropdown_item
+        );
+
+        questionsPerColumnSpinner.setAdapter(adapter);
+    }
+
     private void handleQuestionCountSelected(
             int selectionIndex
     ) {
@@ -339,6 +465,23 @@ public final class OmrSheetExportViewBinder {
                                 .MIN_QUESTION_COUNT
                                 + selectionIndex
                 );
+
+        rendering = true;
+
+        try {
+            configureQuestionsPerColumnSpinner(
+                    currentViewState
+            );
+
+            questionsPerColumnSpinner.setSelection(
+                    currentViewState
+                            .getQuestionsPerColumnSelectionIndex(),
+                    false
+            );
+
+        } finally {
+            rendering = false;
+        }
 
         notifySelectionChanged();
     }
@@ -355,6 +498,21 @@ public final class OmrSheetExportViewBinder {
                         OmrSheetTemplateCatalog
                                 .STANDARD_V2_FOUR_OPTION_COUNT
                                 + selectionIndex
+                );
+
+        notifySelectionChanged();
+    }
+
+    private void handleQuestionsPerColumnSelected(
+            int selectionIndex
+    ) {
+        if (rendering || released) {
+            return;
+        }
+
+        currentViewState = currentViewState
+                .withQuestionsPerColumnSelectionIndex(
+                        selectionIndex
                 );
 
         notifySelectionChanged();
@@ -379,6 +537,21 @@ public final class OmrSheetExportViewBinder {
     ) {
         int questionCount = viewState.getQuestionCount();
         int optionCount = viewState.getOptionCount();
+        int questionsPerColumn =
+                viewState.getEffectiveQuestionsPerColumn();
+        int columnCount = viewState.getColumnCount();
+
+        String questionsPerColumnText =
+                formatItemsPerColumn(questionsPerColumn);
+
+        String distributionText =
+                viewState.isAutomaticQuestionsPerColumn()
+                        ? context.getString(
+                        R.string
+                                .omr_sheet_export_distribution_automatic,
+                        questionsPerColumnText
+                )
+                        : questionsPerColumnText;
 
         selectedCountTextView.setText(
                 context.getResources().getQuantityString(
@@ -386,7 +559,9 @@ public final class OmrSheetExportViewBinder {
                                 .omr_sheet_export_selected_summary,
                         questionCount,
                         questionCount,
-                        optionCount
+                        optionCount,
+                        distributionText,
+                        formatColumnCount(columnCount)
                 )
         );
 
@@ -395,9 +570,41 @@ public final class OmrSheetExportViewBinder {
                         R.string
                                 .omr_sheet_export_filename_format,
                         questionCount,
-                        optionCount
+                        optionCount,
+                        questionsPerColumn
                 )
         );
+    }
+
+    private String formatItemsPerColumn(
+            int questionsPerColumn
+    ) {
+        return context.getResources().getQuantityString(
+                R.plurals
+                        .omr_sheet_export_items_per_column,
+                questionsPerColumn,
+                questionsPerColumn
+        );
+    }
+
+    private String formatColumnCount(
+            int columnCount
+    ) {
+        return context.getResources().getQuantityString(
+                R.plurals.omr_sheet_export_column_count,
+                columnCount,
+                columnCount
+        );
+    }
+
+    private int calculateColumnCount(
+            int questionCount,
+            int questionsPerColumn
+    ) {
+        return (questionCount
+                + questionsPerColumn
+                - 1)
+                / questionsPerColumn;
     }
 
     private void ensureNotReleased() {

@@ -104,7 +104,7 @@ OmrAnswerKeyDynamicCreationFlowInstrumentedTest {
     }
 
     @Test
-    public void selectingNinetyOpensStandardV2EditorWithNinetyRows() {
+    public void selectingNinetyAndAutomaticOpensFlexibleV3Editor() {
         Instrumentation instrumentation =
                 InstrumentationRegistry.getInstrumentation();
 
@@ -137,6 +137,21 @@ OmrAnswerKeyDynamicCreationFlowInstrumentedTest {
                     withText(
                             R.string
                                     .omr_answer_key_list_create_four_options
+                    )
+            ).inRoot(isDialog())
+                    .perform(click());
+
+            Context context =
+                    ApplicationProvider.getApplicationContext();
+
+            onView(
+                    withText(
+                            distributionLabel(
+                                    context,
+                                    90,
+                                    18,
+                                    true
+                            )
                     )
             ).inRoot(isDialog())
                     .perform(click());
@@ -180,7 +195,14 @@ OmrAnswerKeyDynamicCreationFlowInstrumentedTest {
                                 layoutText.getText()
                                         .toString()
                                         .contains(
-                                                "Cartao padronizado v2"
+                                                "Cartao flexivel v3"
+                                        )
+                        );
+                        assertTrue(
+                                layoutText.getText()
+                                        .toString()
+                                        .contains(
+                                                "18 itens por coluna"
                                         )
                         );
                     }
@@ -234,6 +256,21 @@ OmrAnswerKeyDynamicCreationFlowInstrumentedTest {
             ).inRoot(isDialog())
                     .perform(click());
 
+            Context context =
+                    ApplicationProvider.getApplicationContext();
+
+            onView(
+                    withText(
+                            distributionLabel(
+                                    context,
+                                    2,
+                                    2,
+                                    true
+                            )
+                    )
+            ).inRoot(isDialog())
+                    .perform(click());
+
             openedActivity =
                     instrumentation.waitForMonitorWithTimeout(
                             monitor,
@@ -280,6 +317,167 @@ OmrAnswerKeyDynamicCreationFlowInstrumentedTest {
                                 );
 
                         assertNotNull(layoutText);
+                        assertTrue(
+                                layoutText.getText()
+                                        .toString()
+                                        .contains("A-E")
+                        );
+                    }
+            );
+
+        } finally {
+            finishActivity(
+                    instrumentation,
+                    openedActivity
+            );
+
+            instrumentation.removeMonitor(monitor);
+        }
+    }
+
+    @Test
+    public void distributionDialogShowsAutomaticAndValidManualRange() {
+        try (ActivityScenario<OmrAnswerKeyListActivity>
+                     scenario = ActivityScenario.launch(
+                             createActivityIntent()
+                     )) {
+
+            onView(
+                    withId(
+                            R.id.buttonOmrAnswerKeyListCreate
+                    )
+            ).perform(click());
+
+            onData(anything())
+                    .inRoot(isDialog())
+                    .atPosition(89)
+                    .perform(click());
+
+            onView(
+                    withText(
+                            R.string
+                                    .omr_answer_key_list_create_five_options
+                    )
+            ).inRoot(isDialog())
+                    .perform(click());
+
+            onView(
+                    withText(
+                            R.string
+                                    .omr_answer_key_list_create_questions_per_column_title
+                    )
+            ).inRoot(isDialog())
+                    .check(matches(isDisplayed()));
+
+            Context context =
+                    ApplicationProvider.getApplicationContext();
+
+            onData(anything())
+                    .inRoot(isDialog())
+                    .atPosition(0)
+                    .check(matches(withText(
+                            distributionLabel(
+                                    context,
+                                    90,
+                                    18,
+                                    true
+                            )
+                    )));
+
+            onData(anything())
+                    .inRoot(isDialog())
+                    .atPosition(13)
+                    .check(matches(withText(
+                            distributionLabel(
+                                    context,
+                                    90,
+                                    30,
+                                    false
+                            )
+                    )));
+        }
+    }
+
+    @Test
+    public void selectingManualRowsOpensMatchingFlexibleV3Editor() {
+        Instrumentation instrumentation =
+                InstrumentationRegistry.getInstrumentation();
+
+        Instrumentation.ActivityMonitor monitor =
+                instrumentation.addMonitor(
+                        OmrManualAnswerKeyActivity.class.getName(),
+                        null,
+                        false
+                );
+
+        Activity openedActivity = null;
+
+        try (ActivityScenario<OmrAnswerKeyListActivity>
+                     scenario = ActivityScenario.launch(
+                             createActivityIntent()
+                     )) {
+
+            onView(
+                    withId(
+                            R.id.buttonOmrAnswerKeyListCreate
+                    )
+            ).perform(click());
+
+            onData(anything())
+                    .inRoot(isDialog())
+                    .atPosition(44)
+                    .perform(click());
+
+            onView(
+                    withText(
+                            R.string
+                                    .omr_answer_key_list_create_five_options
+                    )
+            ).inRoot(isDialog())
+                    .perform(click());
+
+            onData(anything())
+                    .inRoot(isDialog())
+                    .atPosition(7)
+                    .perform(click());
+
+            openedActivity =
+                    instrumentation.waitForMonitorWithTimeout(
+                            monitor,
+                            ACTIVITY_TIMEOUT_MILLIS
+                    );
+
+            assertNotNull(openedActivity);
+
+            Activity activityToInspect = openedActivity;
+
+            instrumentation.runOnMainSync(
+                    () -> {
+                        ListView questionList =
+                                activityToInspect.findViewById(
+                                        R.id.listOmrManualQuestions
+                                );
+
+                        assertNotNull(questionList);
+                        assertNotNull(questionList.getAdapter());
+                        assertEquals(
+                                45,
+                                questionList.getAdapter().getCount()
+                        );
+
+                        android.widget.TextView layoutText =
+                                activityToInspect.findViewById(
+                                        R.id.textOmrManualLayout
+                                );
+
+                        assertNotNull(layoutText);
+                        assertTrue(
+                                layoutText.getText()
+                                        .toString()
+                                        .contains(
+                                                "15 itens por coluna"
+                                        )
+                        );
                         assertTrue(
                                 layoutText.getText()
                                         .toString()
@@ -368,6 +566,44 @@ OmrAnswerKeyDynamicCreationFlowInstrumentedTest {
                         context,
                         TEST_STORAGE_NAMESPACE
                 );
+    }
+
+    private static String distributionLabel(
+            Context context,
+            int questionCount,
+            int questionsPerColumn,
+            boolean automatic
+    ) {
+        String rowText = context.getResources()
+                .getQuantityString(
+                        R.plurals
+                                .omr_answer_key_list_create_items_per_column,
+                        questionsPerColumn,
+                        questionsPerColumn
+                );
+
+        int columnCount = (questionCount
+                + questionsPerColumn
+                - 1)
+                / questionsPerColumn;
+
+        String columnText = context.getResources()
+                .getQuantityString(
+                        R.plurals
+                                .omr_answer_key_list_create_column_count,
+                        columnCount,
+                        columnCount
+                );
+
+        return context.getString(
+                automatic
+                        ? R.string
+                        .omr_answer_key_list_create_distribution_automatic
+                        : R.string
+                        .omr_answer_key_list_create_distribution_manual,
+                rowText,
+                columnText
+        );
     }
 
     private static void finishActivity(

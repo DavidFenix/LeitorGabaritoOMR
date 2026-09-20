@@ -88,6 +88,28 @@
         5 alternativas (A–E)
     </string>
 
+    <string name="omr_answer_key_list_create_questions_per_column_title">
+        Quantos itens deverá ter cada coluna?
+    </string>
+
+    <string name="omr_answer_key_list_create_distribution_automatic">
+        Automático — %1$s • %2$s
+    </string>
+
+    <string name="omr_answer_key_list_create_distribution_manual">
+        %1$s • %2$s
+    </string>
+
+    <plurals name="omr_answer_key_list_create_items_per_column">
+        <item quantity="one">%1$d item por coluna</item>
+        <item quantity="other">%1$d itens por coluna</item>
+    </plurals>
+
+    <plurals name="omr_answer_key_list_create_column_count">
+        <item quantity="one">%1$d coluna</item>
+        <item quantity="other">%1$d colunas</item>
+    </plurals>
+
     <string name="omr_answer_key_list_create_count_cancel">
         Cancelar
     </string>

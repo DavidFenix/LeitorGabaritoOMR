@@ -18,7 +18,7 @@
     </string>
 
     <string name="omr_sheet_export_count_message">
-        Escolha qualquer quantidade inteira de 1 a 90. O formato do cartão será ajustado automaticamente.
+        Escolha qualquer quantidade inteira de 1 a 90 e ajuste a distribuição das colunas, se desejar.
     </string>
 
     <string name="omr_sheet_export_count_content_description">
@@ -38,14 +38,48 @@
         <item>5 alternativas (A–E)</item>
     </string-array>
 
+    <string name="omr_sheet_export_questions_per_column_title">
+        Itens por coluna
+    </string>
+
+    <string name="omr_sheet_export_questions_per_column_message">
+        Use o modo automático ou escolha quantos itens cada coluna deverá comportar.
+    </string>
+
+    <string name="omr_sheet_export_questions_per_column_content_description">
+        Quantidade de itens em cada coluna do cartão-resposta
+    </string>
+
+    <string name="omr_sheet_export_questions_per_column_automatic">
+        Automático — %1$s • %2$s
+    </string>
+
+    <string name="omr_sheet_export_questions_per_column_manual">
+        %1$s • %2$s
+    </string>
+
+    <string name="omr_sheet_export_distribution_automatic">
+        Automático: %1$s
+    </string>
+
+    <plurals name="omr_sheet_export_items_per_column">
+        <item quantity="one">%1$d item por coluna</item>
+        <item quantity="other">%1$d itens por coluna</item>
+    </plurals>
+
+    <plurals name="omr_sheet_export_column_count">
+        <item quantity="one">%1$d coluna</item>
+        <item quantity="other">%1$d colunas</item>
+    </plurals>
+
     <plurals name="omr_sheet_export_question_count">
         <item quantity="one">%1$d questão</item>
         <item quantity="other">%1$d questões</item>
     </plurals>
 
     <plurals name="omr_sheet_export_selected_summary">
-        <item quantity="one">Cartão preparado para %1$d questão, com %2$d alternativas</item>
-        <item quantity="other">Cartão preparado para %1$d questões, com %2$d alternativas</item>
+        <item quantity="one">Cartão preparado para %1$d questão, com %2$d alternativas • %3$s • %4$s</item>
+        <item quantity="other">Cartão preparado para %1$d questões, com %2$d alternativas • %3$s • %4$s</item>
     </plurals>
 
     <string name="omr_sheet_export_file_title">
@@ -57,11 +91,11 @@
     </string>
 
     <string name="omr_sheet_export_filename_format">
-        cartao-resposta-%1$03d-itens-%2$d-alternativas-v2.svg
+        cartao-resposta-%1$03d-itens-%2$d-alternativas-%3$03d-por-coluna-v3.svg
     </string>
 
     <string name="omr_sheet_export_size_description">
-        Tamanho original: 18 cm de largura, com altura ajustada à quantidade de questões.
+        A largura original acompanha as colunas utilizadas, até o máximo de 18 cm. A altura acompanha os itens por coluna.
     </string>
 
     <string name="omr_sheet_export_proportion_title">

@@ -324,6 +324,173 @@ OmrManualDynamicAnswerKeyActivityInstrumentedTest {
     }
 
     @Test
+    public void flexibleV3AutomaticIntentRendersExactRowsAndIdentity() {
+        try (ActivityScenario<OmrManualAnswerKeyActivity>
+                     scenario = ActivityScenario.launch(
+                             createFlexibleV3Intent(
+                                     19,
+                                     5
+                             )
+                     )) {
+
+            scenario.onActivity(
+                    activity -> {
+                        assertEquals(
+                                19,
+                                getQuestionList(activity)
+                                        .getAdapter()
+                                        .getCount()
+                        );
+
+                        TextView layoutText =
+                                activity.findViewById(
+                                        R.id.textOmrManualLayout
+                                );
+
+                        assertNotNull(layoutText);
+                        assertTrue(
+                                layoutText.getText()
+                                        .toString()
+                                        .contains(
+                                                "Cartao flexivel v3"
+                                        )
+                        );
+                        assertTrue(
+                                layoutText.getText()
+                                        .toString()
+                                        .contains(
+                                                "18 itens por coluna"
+                                        )
+                        );
+                        assertTrue(
+                                layoutText.getText()
+                                        .toString()
+                                        .contains("A-E")
+                        );
+                    }
+            );
+        }
+    }
+
+    @Test
+    public void completingManualFlexibleV3ReturnsMatchingAnswerKey() {
+        try (ActivityScenario<OmrManualAnswerKeyActivity>
+                     scenario =
+                     ActivityScenario.launchActivityForResult(
+                             createFlexibleV3Intent(
+                                     3,
+                                     5,
+                                     2
+                             )
+                     )) {
+
+            scenario.onActivity(
+                    activity -> {
+                        setAnswerKeyName(
+                                activity,
+                                "Avaliação flexível em duas colunas"
+                        );
+
+                        selectOptionAt(activity, 0, 4);
+                        selectOptionAt(activity, 1, 3);
+                        selectOptionAt(activity, 2, 2);
+
+                        Button saveButton =
+                                activity.findViewById(
+                                        R.id.buttonOmrManualSave
+                                );
+
+                        assertNotNull(saveButton);
+                        assertTrue(saveButton.isEnabled());
+                        assertTrue(saveButton.performClick());
+                    }
+            );
+
+            Instrumentation.ActivityResult result =
+                    scenario.getResult();
+
+            assertEquals(
+                    Activity.RESULT_OK,
+                    result.getResultCode()
+            );
+
+            OmrAnswerKeyDefinition answerKey =
+                    OmrManualAnswerKeyActivity
+                            .extractCreatedAnswerKey(
+                                    result.getResultData()
+                            );
+
+            assertNotNull(answerKey);
+            assertEquals(
+                    "omr-flex-ae-q003-r002",
+                    answerKey.getLayoutId()
+            );
+            assertEquals(3, answerKey.getLayoutVersion());
+            assertEquals(3, answerKey.getQuestionCount());
+
+            assertAcceptedOption(
+                    answerKey,
+                    "question-001",
+                    "question-001-option-05"
+            );
+            assertAcceptedOption(
+                    answerKey,
+                    "question-002",
+                    "question-002-option-04"
+            );
+            assertAcceptedOption(
+                    answerKey,
+                    "question-003",
+                    "question-003-option-03"
+            );
+        }
+    }
+
+    @Test
+    public void flexibleV3IntentRejectsInvalidGeometry() {
+        Context context =
+                ApplicationProvider.getApplicationContext();
+
+        expectIllegalArgument(() ->
+                OmrManualAnswerKeyActivity
+                        .createFlexibleV3Intent(
+                                context,
+                                45,
+                                5,
+                                8
+                        )
+        );
+
+        expectIllegalArgument(() ->
+                OmrManualAnswerKeyActivity
+                        .createFlexibleV3Intent(
+                                context,
+                                45,
+                                5,
+                                31
+                        )
+        );
+
+        expectIllegalArgument(() ->
+                OmrManualAnswerKeyActivity
+                        .createFlexibleV3Intent(
+                                context,
+                                45,
+                                3
+                        )
+        );
+
+        expectIllegalArgument(() ->
+                OmrManualAnswerKeyActivity
+                        .createFlexibleV3Intent(
+                                null,
+                                45,
+                                5
+                        )
+        );
+    }
+
+    @Test
     public void standardV2IntentRejectsCountsOutsidePublishedRange() {
         Context context =
                 ApplicationProvider.getApplicationContext();
@@ -392,6 +559,38 @@ OmrManualDynamicAnswerKeyActivityInstrumentedTest {
                 .createStandardV2Intent(
                         context,
                         questionCount
+                );
+    }
+
+    private static Intent createFlexibleV3Intent(
+            int questionCount,
+            int optionCount
+    ) {
+        Context context =
+                ApplicationProvider.getApplicationContext();
+
+        return OmrManualAnswerKeyActivity
+                .createFlexibleV3Intent(
+                        context,
+                        questionCount,
+                        optionCount
+                );
+    }
+
+    private static Intent createFlexibleV3Intent(
+            int questionCount,
+            int optionCount,
+            int questionsPerColumn
+    ) {
+        Context context =
+                ApplicationProvider.getApplicationContext();
+
+        return OmrManualAnswerKeyActivity
+                .createFlexibleV3Intent(
+                        context,
+                        questionCount,
+                        optionCount,
+                        questionsPerColumn
                 );
     }
 

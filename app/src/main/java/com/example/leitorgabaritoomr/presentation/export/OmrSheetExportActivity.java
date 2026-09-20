@@ -23,8 +23,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 /**
- * Permite escolher de 1 a 90 questões, quatro ou cinco alternativas e
- * salvar o cartão padronizado v2 pelo seletor nativo.
+ * Permite escolher de 1 a 90 questões, quatro ou cinco alternativas, a
+ * quantidade de itens por coluna e salvar o cartão flexível v3 pelo seletor
+ * nativo.
  *
  * O Storage Access Framework concede acesso somente ao destino escolhido pelo
  * usuario. Por isso esta tela nao depende de permissao ampla de armazenamento.
@@ -40,11 +41,18 @@ public final class OmrSheetExportActivity
     private static final String STATE_OPTION_COUNT =
             "omr.sheet_export.option_count";
 
+    private static final String STATE_QUESTIONS_PER_COLUMN =
+            "omr.sheet_export.questions_per_column";
+
     private static final String STATE_PENDING_QUESTION_COUNT =
             "omr.sheet_export.pending_question_count";
 
     private static final String STATE_PENDING_OPTION_COUNT =
             "omr.sheet_export.pending_option_count";
+
+    private static final String
+            STATE_PENDING_QUESTIONS_PER_COLUMN =
+            "omr.sheet_export.pending_questions_per_column";
 
     private OmrSheetSvgGenerator svgGenerator;
     private OmrSheetExportViewState viewState;
@@ -52,6 +60,7 @@ public final class OmrSheetExportActivity
 
     private int pendingQuestionCount;
     private int pendingOptionCount;
+    private int pendingQuestionsPerColumn;
 
     private final ActivityResultLauncher<String>
             createDocumentLauncher =
@@ -107,6 +116,16 @@ public final class OmrSheetExportActivity
                         0
                 );
 
+        pendingQuestionsPerColumn =
+                savedInstanceState == null
+                        ? OmrSheetExportViewState
+                        .AUTOMATIC_QUESTIONS_PER_COLUMN
+                        : savedInstanceState.getInt(
+                        STATE_PENDING_QUESTIONS_PER_COLUMN,
+                        OmrSheetExportViewState
+                                .AUTOMATIC_QUESTIONS_PER_COLUMN
+                );
+
         View rootView = findViewById(
                 android.R.id.content
         );
@@ -145,7 +164,9 @@ public final class OmrSheetExportActivity
             OmrSheetSvgDocument document =
                     generateDocument(
                             viewState.getQuestionCount(),
-                            viewState.getOptionCount()
+                            viewState.getOptionCount(),
+                            viewState
+                                    .getConfiguredQuestionsPerColumn()
                     );
 
             pendingQuestionCount =
@@ -153,6 +174,9 @@ public final class OmrSheetExportActivity
 
             pendingOptionCount =
                     viewState.getOptionCount();
+
+            pendingQuestionsPerColumn =
+                    viewState.getConfiguredQuestionsPerColumn();
 
             viewBinder.setExportInProgress(true);
 
@@ -163,6 +187,9 @@ public final class OmrSheetExportActivity
         } catch (RuntimeException exception) {
             pendingQuestionCount = 0;
             pendingOptionCount = 0;
+            pendingQuestionsPerColumn =
+                    OmrSheetExportViewState
+                            .AUTOMATIC_QUESTIONS_PER_COLUMN;
             viewBinder.setExportInProgress(false);
 
             Log.e(
@@ -187,6 +214,9 @@ public final class OmrSheetExportActivity
         if (destinationUri == null) {
             pendingQuestionCount = 0;
             pendingOptionCount = 0;
+            pendingQuestionsPerColumn =
+                    OmrSheetExportViewState
+                            .AUTOMATIC_QUESTIONS_PER_COLUMN;
 
             showMessage(
                     R.string.omr_sheet_export_cancelled
@@ -197,20 +227,22 @@ public final class OmrSheetExportActivity
 
         int questionCount = pendingQuestionCount;
         int optionCount = pendingOptionCount;
+        int configuredQuestionsPerColumn =
+                pendingQuestionsPerColumn;
 
         if (questionCount <= 0 && viewState != null) {
             questionCount = viewState.getQuestionCount();
-        }
-
-        if (optionCount <= 0 && viewState != null) {
             optionCount = viewState.getOptionCount();
+            configuredQuestionsPerColumn =
+                    viewState.getConfiguredQuestionsPerColumn();
         }
 
         try {
             OmrSheetSvgDocument document =
                     generateDocument(
                             questionCount,
-                            optionCount
+                            optionCount,
+                            configuredQuestionsPerColumn
                     );
 
             writeDocument(
@@ -243,17 +275,22 @@ public final class OmrSheetExportActivity
         } finally {
             pendingQuestionCount = 0;
             pendingOptionCount = 0;
+            pendingQuestionsPerColumn =
+                    OmrSheetExportViewState
+                            .AUTOMATIC_QUESTIONS_PER_COLUMN;
         }
     }
 
     private OmrSheetSvgDocument generateDocument(
             int questionCount,
-            int optionCount
+            int optionCount,
+            int configuredQuestionsPerColumn
     ) {
         OmrSheetTemplateSpec spec =
                 createExportTemplate(
                         questionCount,
-                        optionCount
+                        optionCount,
+                        configuredQuestionsPerColumn
                 );
 
         return svgGenerator.generate(spec);
@@ -261,7 +298,7 @@ public final class OmrSheetExportActivity
 
     /**
      * Mantém explícita e testável a geometria atualmente entregue ao usuário.
-     * Os modelos v1 continuam publicados apenas para leitura de gabaritos já
+     * Os modelos v1 e v2 continuam publicados para leitura de gabaritos já
      * persistidos.
      */
     static OmrSheetTemplateSpec createExportTemplate(
@@ -277,10 +314,35 @@ public final class OmrSheetExportActivity
             int questionCount,
             int optionCount
     ) {
+        return createExportTemplate(
+                questionCount,
+                optionCount,
+                OmrSheetExportViewState
+                        .AUTOMATIC_QUESTIONS_PER_COLUMN
+        );
+    }
+
+    static OmrSheetTemplateSpec createExportTemplate(
+            int questionCount,
+            int optionCount,
+            int configuredQuestionsPerColumn
+    ) {
+        if (configuredQuestionsPerColumn
+                == OmrSheetExportViewState
+                .AUTOMATIC_QUESTIONS_PER_COLUMN) {
+
+            return OmrSheetTemplateCatalog
+                    .flexibleOptionsV3(
+                            questionCount,
+                            optionCount
+                    );
+        }
+
         return OmrSheetTemplateCatalog
-                .standardOptionsV2(
+                .flexibleOptionsV3(
                         questionCount,
-                        optionCount
+                        optionCount,
+                        configuredQuestionsPerColumn
                 );
     }
 
@@ -324,11 +386,19 @@ public final class OmrSheetExportActivity
                         .DEFAULT_OPTION_COUNT
         );
 
+        int configuredQuestionsPerColumn =
+                savedInstanceState.getInt(
+                        STATE_QUESTIONS_PER_COLUMN,
+                        OmrSheetExportViewState
+                                .AUTOMATIC_QUESTIONS_PER_COLUMN
+                );
+
         try {
             return OmrSheetExportViewState
                     .fromSelection(
                             questionCount,
-                            optionCount
+                            optionCount,
+                            configuredQuestionsPerColumn
                     );
 
         } catch (IllegalArgumentException exception) {
@@ -360,6 +430,11 @@ public final class OmrSheetExportActivity
                     STATE_OPTION_COUNT,
                     viewState.getOptionCount()
             );
+
+            outState.putInt(
+                    STATE_QUESTIONS_PER_COLUMN,
+                    viewState.getConfiguredQuestionsPerColumn()
+            );
         }
 
         outState.putInt(
@@ -370,6 +445,11 @@ public final class OmrSheetExportActivity
         outState.putInt(
                 STATE_PENDING_OPTION_COUNT,
                 pendingOptionCount
+        );
+
+        outState.putInt(
+                STATE_PENDING_QUESTIONS_PER_COLUMN,
+                pendingQuestionsPerColumn
         );
 
         super.onSaveInstanceState(outState);
