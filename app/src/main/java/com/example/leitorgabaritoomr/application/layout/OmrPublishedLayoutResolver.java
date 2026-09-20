@@ -7,6 +7,9 @@ import com.example.leitorgabaritoomr.vision.layout.factory.OmrDynamicLayoutFacto
 import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateCatalog;
 import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateSpec;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Reconstrói um layout publicado a partir de sua identidade persistida.
  *
@@ -16,6 +19,13 @@ import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateSpec
  * geometria diferente daquela registrada no gabarito.
  */
 public final class OmrPublishedLayoutResolver {
+
+    private static final int FLEXIBLE_V3_LAYOUT_VERSION = 3;
+
+    private static final Pattern FLEXIBLE_V3_LAYOUT_ID_PATTERN =
+            Pattern.compile(
+                    "^omr-flex-(ad|ae)-q(\\d{3})-r(\\d{3})$"
+            );
 
     public OmrLayoutDefinition resolveForAnswerKey(
             OmrAnswerKeyDefinition answerKeyDefinition
@@ -51,6 +61,22 @@ public final class OmrPublishedLayoutResolver {
             throw new IllegalArgumentException(
                     "A quantidade de questões deve ser positiva."
             );
+        }
+
+        OmrLayoutDefinition flexibleV3 =
+                createFlexibleV3CandidateOrNull(
+                        normalizedLayoutId,
+                        layoutVersion,
+                        questionCount
+                );
+
+        if (hasIdentity(
+                flexibleV3,
+                normalizedLayoutId,
+                layoutVersion,
+                questionCount
+        )) {
+            return flexibleV3;
         }
 
         OmrLayoutDefinition standardFourOptionsV2 =
@@ -114,6 +140,54 @@ public final class OmrPublishedLayoutResolver {
                         + questionCount
                         + " questões."
         );
+    }
+
+    private OmrLayoutDefinition
+    createFlexibleV3CandidateOrNull(
+            String layoutId,
+            int layoutVersion,
+            int questionCount
+    ) {
+        if (layoutVersion != FLEXIBLE_V3_LAYOUT_VERSION
+                || !isPublishedQuestionCount(questionCount)) {
+            return null;
+        }
+
+        Matcher matcher =
+                FLEXIBLE_V3_LAYOUT_ID_PATTERN.matcher(layoutId);
+
+        if (!matcher.matches()) {
+            return null;
+        }
+
+        int encodedQuestionCount =
+                Integer.parseInt(matcher.group(2));
+
+        if (encodedQuestionCount != questionCount) {
+            return null;
+        }
+
+        int optionCount = "ad".equals(matcher.group(1))
+                ? OmrSheetTemplateCatalog
+                .STANDARD_V2_FOUR_OPTION_COUNT
+                : OmrSheetTemplateCatalog
+                .STANDARD_V2_FIVE_OPTION_COUNT;
+
+        int questionsPerColumn =
+                Integer.parseInt(matcher.group(3));
+
+        try {
+            return createLayout(
+                    OmrSheetTemplateCatalog.flexibleOptionsV3(
+                            questionCount,
+                            optionCount,
+                            questionsPerColumn
+                    )
+            );
+
+        } catch (IllegalArgumentException invalidGeometry) {
+            return null;
+        }
     }
 
     private OmrLayoutDefinition

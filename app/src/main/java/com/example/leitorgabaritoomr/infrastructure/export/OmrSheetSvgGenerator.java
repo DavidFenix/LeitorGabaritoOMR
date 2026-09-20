@@ -30,9 +30,19 @@ public final class OmrSheetSvgGenerator {
             "omr-standard-";
     private static final double STANDARD_V2_MARKER_SIDE_MILLIMETERS =
             6.0;
+    private static final double STANDARD_PHYSICAL_SCALE_MILLIMETERS_PER_UNIT =
+            (OUTPUT_WIDTH_MILLIMETERS
+                    - 2.0
+                    * MARKER_MARGIN_SCALE
+                    * STANDARD_V2_MARKER_SIDE_MILLIMETERS)
+                    / 1200.0;
     private static final double STANDARD_V2_TITLE_Y = 45.0;
     private static final double STANDARD_V2_INSTRUCTION_Y = 72.0;
     private static final double STANDARD_V2_HEADER_OFFSET_Y = 42.0;
+
+    private static final int FLEXIBLE_V3_TEMPLATE_VERSION = 3;
+    private static final String FLEXIBLE_V3_TEMPLATE_ID_PREFIX =
+            "omr-flex-";
 
     private static final double BUBBLE_RADIUS_SCALE = 0.78;
     private static final double BUBBLE_STROKE_WIDTH = 3.2;
@@ -60,8 +70,14 @@ public final class OmrSheetSvgGenerator {
                 layout.getCanonicalHeight()
                         + outerMargin * 2.0;
 
+        double outputWidthMillimeters =
+                calculateOutputWidthMillimeters(
+                        spec,
+                        viewWidth
+                );
+
         double outputHeightMillimeters =
-                OUTPUT_WIDTH_MILLIMETERS
+                outputWidthMillimeters
                         * viewHeight
                         / viewWidth;
 
@@ -72,6 +88,7 @@ public final class OmrSheetSvgGenerator {
                 spec,
                 viewWidth,
                 viewHeight,
+                outputWidthMillimeters,
                 outputHeightMillimeters
         );
 
@@ -105,12 +122,13 @@ public final class OmrSheetSvgGenerator {
             OmrSheetTemplateSpec spec,
             double viewWidth,
             double viewHeight,
+            double outputWidthMillimeters,
             double outputHeightMillimeters
     ) {
         svg.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         svg.append("<svg xmlns=\"http://www.w3.org/2000/svg\"")
                 .append(" width=\"")
-                .append(format(OUTPUT_WIDTH_MILLIMETERS))
+                .append(format(outputWidthMillimeters))
                 .append("mm\"")
                 .append(" height=\"")
                 .append(format(outputHeightMillimeters))
@@ -131,9 +149,15 @@ public final class OmrSheetSvgGenerator {
                 .append(spec.getQuestionCount())
                 .append("\"");
 
-        if (isStandardV2(spec)) {
+        if (isPhysicalStandard(spec)) {
             svg.append(" data-option-count=\"")
                     .append(spec.getOptionCount())
+                    .append("\"");
+        }
+
+        if (isFlexibleV3(spec)) {
+            svg.append(" data-questions-per-column=\"")
+                    .append(spec.getQuestionsPerBlock())
                     .append("\"");
         }
 
@@ -169,13 +193,17 @@ public final class OmrSheetSvgGenerator {
     ) {
         double centerX = layout.getCanonicalWidth() / 2.0;
 
-        double titleY = isStandardV2(spec)
+        double titleY = isPhysicalStandard(spec)
                 ? STANDARD_V2_TITLE_Y
                 : layout.getCanonicalHeight() * 0.070;
 
-        double instructionY = isStandardV2(spec)
+        double instructionY = isPhysicalStandard(spec)
                 ? STANDARD_V2_INSTRUCTION_Y
                 : layout.getCanonicalHeight() * 0.105;
+
+        String instruction = isSingleColumnFlexibleV3(spec)
+                ? "Marque apenas uma alternativa"
+                : "Preencha completamente apenas uma alternativa por questão";
 
         svg.append("    <text class=\"omr-title\"")
                 .append(" x=\"")
@@ -195,7 +223,7 @@ public final class OmrSheetSvgGenerator {
                 .append("\" text-anchor=\"middle\"")
                 .append(" font-family=\"Arial, sans-serif\"")
                 .append(" font-size=\"15\" fill=\"#222222\">")
-                .append("Preencha completamente apenas uma alternativa por questão")
+                .append(instruction)
                 .append("</text>\n");
     }
 
@@ -252,7 +280,7 @@ public final class OmrSheetSvgGenerator {
                         .getCenter().getY()
                         * layout.getCanonicalHeight();
 
-        double headerY = isStandardV2(spec)
+        double headerY = isPhysicalStandard(spec)
                 ? firstRowY
                 - STANDARD_V2_HEADER_OFFSET_Y
                 : Math.max(
@@ -461,10 +489,8 @@ public final class OmrSheetSvgGenerator {
             OmrSheetTemplateSpec spec,
             OmrLayoutDefinition layout
     ) {
-        if (isStandardV2(spec)) {
-            return calculateStandardV2MarkerSide(
-                    layout.getCanonicalWidth()
-            );
+        if (isPhysicalStandard(spec)) {
+            return calculatePhysicalStandardMarkerSide();
         }
 
         double shortestSide = Math.min(
@@ -479,18 +505,21 @@ public final class OmrSheetSvgGenerator {
         );
     }
 
-    private double calculateStandardV2MarkerSide(
-            double canonicalWidth
-    ) {
-        double availablePhysicalWidth =
-                OUTPUT_WIDTH_MILLIMETERS
-                        - 2.0
-                        * MARKER_MARGIN_SCALE
-                        * STANDARD_V2_MARKER_SIDE_MILLIMETERS;
-
+    private double calculatePhysicalStandardMarkerSide() {
         return STANDARD_V2_MARKER_SIDE_MILLIMETERS
-                * canonicalWidth
-                / availablePhysicalWidth;
+                / STANDARD_PHYSICAL_SCALE_MILLIMETERS_PER_UNIT;
+    }
+
+    private double calculateOutputWidthMillimeters(
+            OmrSheetTemplateSpec spec,
+            double viewWidth
+    ) {
+        if (isFlexibleV3(spec)) {
+            return viewWidth
+                    * STANDARD_PHYSICAL_SCALE_MILLIMETERS_PER_UNIT;
+        }
+
+        return OUTPUT_WIDTH_MILLIMETERS;
     }
 
     private boolean isStandardV2(
@@ -503,6 +532,29 @@ public final class OmrSheetSvgGenerator {
                 );
     }
 
+    private boolean isFlexibleV3(
+            OmrSheetTemplateSpec spec
+    ) {
+        return spec.getTemplateVersion()
+                == FLEXIBLE_V3_TEMPLATE_VERSION
+                && spec.getTemplateId().startsWith(
+                        FLEXIBLE_V3_TEMPLATE_ID_PREFIX
+                );
+    }
+
+    private boolean isPhysicalStandard(
+            OmrSheetTemplateSpec spec
+    ) {
+        return isStandardV2(spec) || isFlexibleV3(spec);
+    }
+
+    private boolean isSingleColumnFlexibleV3(
+            OmrSheetTemplateSpec spec
+    ) {
+        return isFlexibleV3(spec)
+                && spec.getBlockCount() == 1;
+    }
+
     private String createSuggestedFileName(
             OmrSheetTemplateSpec spec
     ) {
@@ -512,6 +564,18 @@ public final class OmrSheetSvgGenerator {
                     "cartao-resposta-%03d-itens-%d-alternativas-v%d.svg",
                     spec.getQuestionCount(),
                     spec.getOptionCount(),
+                    spec.getTemplateVersion()
+            );
+        }
+
+        if (isFlexibleV3(spec)) {
+            return String.format(
+                    Locale.US,
+                    "cartao-resposta-%03d-itens-%d-alternativas-"
+                            + "%03d-por-coluna-v%d.svg",
+                    spec.getQuestionCount(),
+                    spec.getOptionCount(),
+                    spec.getQuestionsPerBlock(),
                     spec.getTemplateVersion()
             );
         }

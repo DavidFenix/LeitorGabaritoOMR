@@ -31,6 +31,11 @@ public final class OmrSheetTemplateCatalog {
     public static final int STANDARD_V2_FOUR_OPTION_COUNT = 4;
     public static final int STANDARD_V2_FIVE_OPTION_COUNT = 5;
 
+    public static final int FLEXIBLE_V3_AUTOMATIC_QUESTIONS_PER_COLUMN =
+            18;
+    public static final int FLEXIBLE_V3_MAX_QUESTIONS_PER_COLUMN = 30;
+    public static final int FLEXIBLE_V3_MAX_COLUMN_COUNT = 5;
+
     private static final int COMPACT_TEMPLATE_VERSION = 1;
     private static final int COMPACT_CANONICAL_WIDTH = 1200;
     private static final int COMPACT_CANONICAL_HEIGHT = 500;
@@ -131,6 +136,11 @@ public final class OmrSheetTemplateCatalog {
             0.685,
             0.840
     };
+
+    private static final int FLEXIBLE_V3_TEMPLATE_VERSION = 3;
+    private static final int FLEXIBLE_V3_COLUMN_WIDTH =
+            STANDARD_V2_CANONICAL_WIDTH
+                    / STANDARD_V2_LAYOUT_COLUMN_COUNT;
 
     private OmrSheetTemplateCatalog() {
     }
@@ -314,6 +324,101 @@ public final class OmrSheetTemplateCatalog {
         );
     }
 
+    /**
+     * Cria a geometria flexivel v3 usando a distribuicao automatica
+     * publicada. A capacidade efetiva nunca excede a quantidade real de
+     * questoes, evitando identidades diferentes para a mesma geometria.
+     */
+    public static OmrSheetTemplateSpec flexibleOptionsV3(
+            int questionCount,
+            int optionCount
+    ) {
+        return flexibleOptionsV3(
+                questionCount,
+                optionCount,
+                getFlexibleV3AutomaticQuestionsPerColumn(
+                        questionCount
+                )
+        );
+    }
+
+    /**
+     * Cria a geometria flexivel v3 com uma quantidade explicita de
+     * questoes por coluna. O identificador inclui essa capacidade, pois ela
+     * altera tanto a largura quanto a altura do cartao e precisa ser
+     * reconstruida exatamente durante a captura.
+     */
+    public static OmrSheetTemplateSpec flexibleOptionsV3(
+            int questionCount,
+            int optionCount,
+            int questionsPerColumn
+    ) {
+        validatePublishedQuestionCount(questionCount);
+        validateFlexibleV3QuestionsPerColumn(
+                questionCount,
+                questionsPerColumn
+        );
+
+        if (optionCount == STANDARD_V2_FOUR_OPTION_COUNT) {
+            return createFlexibleV3(
+                    questionCount,
+                    questionsPerColumn,
+                    "ad",
+                    "alternativas A-D",
+                    FOUR_OPTION_LABELS,
+                    STANDARD_V2_FOUR_OPTION_LOCAL_X
+            );
+        }
+
+        if (optionCount == STANDARD_V2_FIVE_OPTION_COUNT) {
+            return createFlexibleV3(
+                    questionCount,
+                    questionsPerColumn,
+                    "ae",
+                    "alternativas A-E",
+                    FIVE_OPTION_LABELS,
+                    STANDARD_V2_FIVE_OPTION_LOCAL_X
+            );
+        }
+
+        throw new IllegalArgumentException(
+                "O modelo flexivel v3 aceita 4 ou 5 alternativas."
+        );
+    }
+
+    public static int getFlexibleV3AutomaticQuestionsPerColumn(
+            int questionCount
+    ) {
+        validatePublishedQuestionCount(questionCount);
+
+        return Math.min(
+                questionCount,
+                FLEXIBLE_V3_AUTOMATIC_QUESTIONS_PER_COLUMN
+        );
+    }
+
+    public static int getFlexibleV3MinimumQuestionsPerColumn(
+            int questionCount
+    ) {
+        validatePublishedQuestionCount(questionCount);
+
+        return (questionCount
+                + FLEXIBLE_V3_MAX_COLUMN_COUNT
+                - 1)
+                / FLEXIBLE_V3_MAX_COLUMN_COUNT;
+    }
+
+    public static int getFlexibleV3MaximumQuestionsPerColumn(
+            int questionCount
+    ) {
+        validatePublishedQuestionCount(questionCount);
+
+        return Math.min(
+                questionCount,
+                FLEXIBLE_V3_MAX_QUESTIONS_PER_COLUMN
+        );
+    }
+
     private static OmrSheetTemplateSpec createStandardV2(
             int questionCount,
             String optionCode,
@@ -364,6 +469,61 @@ public final class OmrSheetTemplateCatalog {
         );
     }
 
+    private static OmrSheetTemplateSpec createFlexibleV3(
+            int questionCount,
+            int questionsPerColumn,
+            String optionCode,
+            String optionDescription,
+            String[] optionLabels,
+            double[] optionLocalX
+    ) {
+        int columnCount = (questionCount
+                + questionsPerColumn
+                - 1)
+                / questionsPerColumn;
+
+        int canonicalWidth =
+                columnCount * FLEXIBLE_V3_COLUMN_WIDTH;
+
+        int canonicalHeight = (int) Math.round(
+                STANDARD_V2_FIRST_ROW
+                        + (questionsPerColumn - 1)
+                        * STANDARD_V2_ROW_SPACING
+                        + STANDARD_V2_BOTTOM_RESERVE
+        );
+
+        return new OmrSheetTemplateSpec(
+                createFlexibleV3TemplateId(
+                        optionCode,
+                        questionCount,
+                        questionsPerColumn
+                ),
+                FLEXIBLE_V3_TEMPLATE_VERSION,
+                "Cartao flexivel v3 - "
+                        + questionCount
+                        + (questionCount == 1
+                        ? " questao - "
+                        : " questoes - ")
+                        + questionsPerColumn
+                        + (questionsPerColumn == 1
+                        ? " item por coluna - "
+                        : " itens por coluna - ")
+                        + optionDescription,
+                questionCount,
+                canonicalWidth,
+                canonicalHeight,
+                questionsPerColumn,
+                columnCount,
+                optionLabels,
+                optionLocalX,
+                STANDARD_V2_FIRST_ROW / canonicalHeight,
+                STANDARD_V2_ROW_SPACING / canonicalHeight,
+                STANDARD_V2_SAMPLING_RADIUS / canonicalWidth,
+                STANDARD_V2_SAMPLING_RADIUS / canonicalHeight,
+                1
+        );
+    }
+
     private static String createStandardV2TemplateId(
             String optionCode,
             int questionCount
@@ -373,6 +533,20 @@ public final class OmrSheetTemplateCatalog {
                 "omr-standard-%s-q%03d",
                 optionCode,
                 questionCount
+        );
+    }
+
+    private static String createFlexibleV3TemplateId(
+            String optionCode,
+            int questionCount,
+            int questionsPerColumn
+    ) {
+        return String.format(
+                Locale.US,
+                "omr-flex-%s-q%03d-r%03d",
+                optionCode,
+                questionCount,
+                questionsPerColumn
         );
     }
 
@@ -408,6 +582,35 @@ public final class OmrSheetTemplateCatalog {
                 MIN_QUESTION_COUNT,
                 MAX_QUESTION_COUNT
         );
+    }
+
+    private static void validateFlexibleV3QuestionsPerColumn(
+            int questionCount,
+            int questionsPerColumn
+    ) {
+        int minimum =
+                getFlexibleV3MinimumQuestionsPerColumn(
+                        questionCount
+                );
+
+        int maximum =
+                getFlexibleV3MaximumQuestionsPerColumn(
+                        questionCount
+                );
+
+        if (questionsPerColumn < minimum
+                || questionsPerColumn > maximum) {
+
+            throw new IllegalArgumentException(
+                    "Para "
+                            + questionCount
+                            + " questoes, o modelo flexivel v3 aceita entre "
+                            + minimum
+                            + " e "
+                            + maximum
+                            + " itens por coluna."
+            );
+        }
     }
 
     private static void validateFamilyQuestionCount(
