@@ -169,6 +169,13 @@ public final class OmrSheetSvgFlexibleV3Test {
                 "omr-instruction"
         );
 
+        Element warning = findByAttribute(
+                svg,
+                "text",
+                "class",
+                "omr-resize-warning"
+        );
+
         assertEquals(
                 "Marque apenas uma alternativa",
                 instruction.getTextContent()
@@ -177,6 +184,10 @@ public final class OmrSheetSvgFlexibleV3Test {
                 15.0,
                 readDouble(instruction, "font-size"),
                 DELTA
+        );
+        assertEquals(
+                "Mantenha a proporção",
+                warning.getTextContent()
         );
     }
 

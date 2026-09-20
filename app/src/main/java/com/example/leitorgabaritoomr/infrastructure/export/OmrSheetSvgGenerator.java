@@ -422,6 +422,10 @@ public final class OmrSheetSvgGenerator {
         double warningY = layout.getCanonicalHeight() - 34.0;
         double codeY = layout.getCanonicalHeight() - 12.0;
 
+        String warning = isSingleColumnFlexibleV3(spec)
+                ? "Mantenha a proporção"
+                : "Mantenha a proporção original ao redimensionar";
+
         svg.append("    <text class=\"omr-resize-warning\"")
                 .append(" x=\"")
                 .append(format(centerX))
@@ -430,7 +434,7 @@ public final class OmrSheetSvgGenerator {
                 .append("\" text-anchor=\"middle\"")
                 .append(" font-family=\"Arial, sans-serif\"")
                 .append(" font-size=\"13\" fill=\"#333333\">")
-                .append("Mantenha a proporção original ao redimensionar")
+                .append(warning)
                 .append("</text>\n");
 
         svg.append("    <text class=\"omr-template-code\"")

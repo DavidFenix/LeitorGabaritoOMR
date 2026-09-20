@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Regressao ponta a ponta dos cartoes controlados v1 e v2.
+ * Regressao ponta a ponta dos cartoes controlados v1, v2 e v3.
  *
  * As fixtures foram renderizadas a partir dos SVGs exportados pelo
  * aplicativo. Os cartoes A-D repetem A, B, C e D; o cartao A-E repete
@@ -67,6 +67,15 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
     private static final String V2_Q090_AE_ASSET_PATH =
             "omr/cartao_resposta_padronizado_090_ae_controlado_v2.png";
 
+    private static final String V3_Q002_AE_ASSET_PATH =
+            "omr/cartao_resposta_flexivel_002_ae_auto_controlado_v3.png";
+
+    private static final String V3_Q045_AE_R015_ASSET_PATH =
+            "omr/cartao_resposta_flexivel_045_ae_r015_controlado_v3.png";
+
+    private static final String V3_Q090_AE_R030_ASSET_PATH =
+            "omr/cartao_resposta_flexivel_090_ae_r030_controlado_v3.png";
+
     private static final int V1_EXPECTED_WIDTH = 1265;
     private static final int V1_EXPECTED_HEIGHT = 565;
 
@@ -75,8 +84,17 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
     private static final int V2_Q019_EXPECTED_HEIGHT = 1221;
     private static final int V2_Q090_EXPECTED_HEIGHT = 1221;
 
+    private static final int V3_Q002_EXPECTED_WIDTH = 316;
+    private static final int V3_Q002_EXPECTED_HEIGHT = 388;
+    private static final int V3_Q045_EXPECTED_WIDTH = 796;
+    private static final int V3_Q045_EXPECTED_HEIGHT = 1064;
+    private static final int V3_Q090_EXPECTED_WIDTH = 796;
+    private static final int V3_Q090_EXPECTED_HEIGHT = 1843;
+
+    private static final int Q002_QUESTION_COUNT = 2;
     private static final int Q007_QUESTION_COUNT = 7;
     private static final int Q019_QUESTION_COUNT = 19;
+    private static final int Q045_QUESTION_COUNT = 45;
     private static final int Q090_QUESTION_COUNT = 90;
 
     private static final String[] Q007_EXPECTED_ANSWERS = {
@@ -214,6 +232,26 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
                     "E"
             );
 
+    private static final String[] Q002_AE_EXPECTED_ANSWERS =
+            createRepeatingAnswers(
+                    Q002_QUESTION_COUNT,
+                    "A",
+                    "B",
+                    "C",
+                    "D",
+                    "E"
+            );
+
+    private static final String[] Q045_AE_EXPECTED_ANSWERS =
+            createRepeatingAnswers(
+                    Q045_QUESTION_COUNT,
+                    "A",
+                    "B",
+                    "C",
+                    "D",
+                    "E"
+            );
+
     @BeforeClass
     public static void initializeOpenCv() {
         assertTrue(
@@ -274,6 +312,39 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
                 V2_Q090_AE_ASSET_PATH,
                 V2_EXPECTED_WIDTH,
                 V2_Q090_EXPECTED_HEIGHT
+        );
+    }
+
+    @Test
+    public void controlledFlexibleV3OneColumnFixtureLoadsWithExpectedDimensions()
+            throws IOException {
+
+        assertFixtureDimensions(
+                V3_Q002_AE_ASSET_PATH,
+                V3_Q002_EXPECTED_WIDTH,
+                V3_Q002_EXPECTED_HEIGHT
+        );
+    }
+
+    @Test
+    public void controlledFlexibleV3ManualFixtureLoadsWithExpectedDimensions()
+            throws IOException {
+
+        assertFixtureDimensions(
+                V3_Q045_AE_R015_ASSET_PATH,
+                V3_Q045_EXPECTED_WIDTH,
+                V3_Q045_EXPECTED_HEIGHT
+        );
+    }
+
+    @Test
+    public void controlledFlexibleV3MaximumRowsFixtureLoadsWithExpectedDimensions()
+            throws IOException {
+
+        assertFixtureDimensions(
+                V3_Q090_AE_R030_ASSET_PATH,
+                V3_Q090_EXPECTED_WIDTH,
+                V3_Q090_EXPECTED_HEIGHT
         );
     }
 
@@ -371,6 +442,83 @@ OmrDynamicControlledFixturePipelineInstrumentedTest {
                 "standard-v2-ae-q090-controlled-key",
                 "Gabarito controlado v2 A-E de 90 questoes",
                 "standard-v2-ae-q090-controlled-reading"
+        );
+    }
+
+    @Test
+    public void controlledFlexibleV3OneColumnFixtureCrossesPipelineAndGradesOneHundredPercent()
+            throws IOException {
+
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .flexibleOptionsV3(
+                                Q002_QUESTION_COUNT,
+                                5
+                        );
+
+        assertEquals(1, spec.getBlockCount());
+        assertEquals(2, spec.getQuestionsPerBlock());
+        assertEquals(5, spec.getOptionCount());
+
+        assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+                V3_Q002_AE_ASSET_PATH,
+                spec,
+                Q002_AE_EXPECTED_ANSWERS,
+                "flex-v3-ae-q002-r002-controlled-key",
+                "Gabarito controlado v3 A-E de 2 questoes",
+                "flex-v3-ae-q002-r002-controlled-reading"
+        );
+    }
+
+    @Test
+    public void controlledFlexibleV3ManualFixtureCrossesPipelineAndGradesOneHundredPercent()
+            throws IOException {
+
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .flexibleOptionsV3(
+                                Q045_QUESTION_COUNT,
+                                5,
+                                15
+                        );
+
+        assertEquals(3, spec.getBlockCount());
+        assertEquals(15, spec.getQuestionsPerBlock());
+        assertEquals(5, spec.getOptionCount());
+
+        assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+                V3_Q045_AE_R015_ASSET_PATH,
+                spec,
+                Q045_AE_EXPECTED_ANSWERS,
+                "flex-v3-ae-q045-r015-controlled-key",
+                "Gabarito controlado v3 A-E de 45 questoes",
+                "flex-v3-ae-q045-r015-controlled-reading"
+        );
+    }
+
+    @Test
+    public void controlledFlexibleV3MaximumRowsFixtureCrossesPipelineAndGradesOneHundredPercent()
+            throws IOException {
+
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .flexibleOptionsV3(
+                                Q090_QUESTION_COUNT,
+                                5,
+                                30
+                        );
+
+        assertEquals(3, spec.getBlockCount());
+        assertEquals(30, spec.getQuestionsPerBlock());
+        assertEquals(5, spec.getOptionCount());
+
+        assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+                V3_Q090_AE_R030_ASSET_PATH,
+                spec,
+                Q090_AE_EXPECTED_ANSWERS,
+                "flex-v3-ae-q090-r030-controlled-key",
+                "Gabarito controlado v3 A-E de 90 questoes",
+                "flex-v3-ae-q090-r030-controlled-reading"
         );
     }
 
