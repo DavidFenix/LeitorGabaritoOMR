@@ -30,6 +30,10 @@
             android:screenOrientation="landscape" />
 
         <activity
+            android:name=".presentation.export.OmrSheetExportActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".presentation.result.OmrReadingResultActivity"
             android:exported="false" />
 

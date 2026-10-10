@@ -67,6 +67,53 @@
         Cadastrar novo
     </string>
 
+    <string name="omr_answer_key_list_create_count_title">
+        Quantas questões terá a avaliação?
+    </string>
+
+    <plurals name="omr_answer_key_list_create_question_count">
+        <item quantity="one">%1$d questão</item>
+        <item quantity="other">%1$d questões</item>
+    </plurals>
+
+    <string name="omr_answer_key_list_create_option_count_title">
+        Quantas alternativas terá cada questão?
+    </string>
+
+    <string name="omr_answer_key_list_create_four_options">
+        4 alternativas (A–D)
+    </string>
+
+    <string name="omr_answer_key_list_create_five_options">
+        5 alternativas (A–E)
+    </string>
+
+    <string name="omr_answer_key_list_create_questions_per_column_title">
+        Quantos itens deverá ter cada coluna?
+    </string>
+
+    <string name="omr_answer_key_list_create_distribution_automatic">
+        Automático — %1$s • %2$s
+    </string>
+
+    <string name="omr_answer_key_list_create_distribution_manual">
+        %1$s • %2$s
+    </string>
+
+    <plurals name="omr_answer_key_list_create_items_per_column">
+        <item quantity="one">%1$d item por coluna</item>
+        <item quantity="other">%1$d itens por coluna</item>
+    </plurals>
+
+    <plurals name="omr_answer_key_list_create_column_count">
+        <item quantity="one">%1$d coluna</item>
+        <item quantity="other">%1$d colunas</item>
+    </plurals>
+
+    <string name="omr_answer_key_list_create_count_cancel">
+        Cancelar
+    </string>
+
     <string name="omr_answer_key_list_action_back">
         Voltar
     </string>

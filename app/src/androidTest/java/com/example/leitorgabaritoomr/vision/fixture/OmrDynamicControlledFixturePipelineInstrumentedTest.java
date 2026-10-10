@@ -1,0 +1,944 @@
+package com.example.leitorgabaritoomr.vision.fixture;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+
+import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
+
+import com.example.leitorgabaritoomr.application.grading.OmrGradingService;
+import com.example.leitorgabaritoomr.application.layout.OmrCaptureLayoutProvider;
+import com.example.leitorgabaritoomr.application.reading.OmrReadingResultMapper;
+import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
+import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyEntry;
+import com.example.leitorgabaritoomr.domain.grading.OmrGradingResult;
+import com.example.leitorgabaritoomr.domain.reading.OmrReadingResult;
+import com.example.leitorgabaritoomr.vision.interpretation.QuestionInterpretation;
+import com.example.leitorgabaritoomr.vision.interpretation.QuestionMarkState;
+import com.example.leitorgabaritoomr.vision.interpretation.SheetInterpretationResult;
+import com.example.leitorgabaritoomr.vision.layout.OmrLayoutDefinition;
+import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateCatalog;
+import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateSpec;
+
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * Regressao ponta a ponta dos cartoes controlados v1, v2 e v3.
+ *
+ * As fixtures foram renderizadas a partir dos SVGs exportados pelo
+ * aplicativo. Os cartoes A-D repetem A, B, C e D; o cartao A-E repete
+ * A, B, C, D e E. Cada teste usa o layout resolvido do proprio gabarito,
+ * atravessa o pipeline OpenCV real, mapeia a leitura e executa o mesmo
+ * servico de correcao usado pela tela de captura.
+ */
+@RunWith(AndroidJUnit4.class)
+public final class
+OmrDynamicControlledFixturePipelineInstrumentedTest {
+
+    private static final String V1_ASSET_PATH =
+            "omr/cartao_resposta_dinamico_007_controlado_v1.png";
+
+    private static final String V2_Q007_ASSET_PATH =
+            "omr/cartao_resposta_padronizado_007_controlado_v2.png";
+
+    private static final String V2_Q019_ASSET_PATH =
+            "omr/cartao_resposta_padronizado_019_controlado_v2.png";
+
+    private static final String V2_Q090_ASSET_PATH =
+            "omr/cartao_resposta_padronizado_090_controlado_v2.png";
+
+    private static final String V2_Q090_AE_ASSET_PATH =
+            "omr/cartao_resposta_padronizado_090_ae_controlado_v2.png";
+
+    private static final String V3_Q002_AE_ASSET_PATH =
+            "omr/cartao_resposta_flexivel_002_ae_auto_controlado_v3.png";
+
+    private static final String V3_Q045_AE_R015_ASSET_PATH =
+            "omr/cartao_resposta_flexivel_045_ae_r015_controlado_v3.png";
+
+    private static final String V3_Q090_AE_R030_ASSET_PATH =
+            "omr/cartao_resposta_flexivel_090_ae_r030_controlado_v3.png";
+
+    private static final int V1_EXPECTED_WIDTH = 1265;
+    private static final int V1_EXPECTED_HEIGHT = 565;
+
+    private static final int V2_EXPECTED_WIDTH = 1277;
+    private static final int V2_Q007_EXPECTED_HEIGHT = 649;
+    private static final int V2_Q019_EXPECTED_HEIGHT = 1221;
+    private static final int V2_Q090_EXPECTED_HEIGHT = 1221;
+
+    private static final int V3_Q002_EXPECTED_WIDTH = 316;
+    private static final int V3_Q002_EXPECTED_HEIGHT = 388;
+    private static final int V3_Q045_EXPECTED_WIDTH = 796;
+    private static final int V3_Q045_EXPECTED_HEIGHT = 1064;
+    private static final int V3_Q090_EXPECTED_WIDTH = 796;
+    private static final int V3_Q090_EXPECTED_HEIGHT = 1843;
+
+    private static final int Q002_QUESTION_COUNT = 2;
+    private static final int Q007_QUESTION_COUNT = 7;
+    private static final int Q019_QUESTION_COUNT = 19;
+    private static final int Q045_QUESTION_COUNT = 45;
+    private static final int Q090_QUESTION_COUNT = 90;
+
+    private static final String[] Q007_EXPECTED_ANSWERS = {
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C"
+    };
+
+    private static final String[] Q019_EXPECTED_ANSWERS = {
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C"
+    };
+
+    private static final String[] Q090_EXPECTED_ANSWERS = {
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B",
+            "C",
+            "D",
+            "A",
+            "B"
+    };
+
+    private static final String[] Q090_AE_EXPECTED_ANSWERS =
+            createRepeatingAnswers(
+                    Q090_QUESTION_COUNT,
+                    "A",
+                    "B",
+                    "C",
+                    "D",
+                    "E"
+            );
+
+    private static final String[] Q002_AE_EXPECTED_ANSWERS =
+            createRepeatingAnswers(
+                    Q002_QUESTION_COUNT,
+                    "A",
+                    "B",
+                    "C",
+                    "D",
+                    "E"
+            );
+
+    private static final String[] Q045_AE_EXPECTED_ANSWERS =
+            createRepeatingAnswers(
+                    Q045_QUESTION_COUNT,
+                    "A",
+                    "B",
+                    "C",
+                    "D",
+                    "E"
+            );
+
+    @BeforeClass
+    public static void initializeOpenCv() {
+        assertTrue(
+                "OpenCV nao foi inicializado no ambiente de teste.",
+                OpenCVLoader.initDebug()
+        );
+    }
+
+    @Test
+    public void controlledDynamicFixtureLoadsWithExpectedDimensions()
+            throws IOException {
+
+        assertFixtureDimensions(
+                V1_ASSET_PATH,
+                V1_EXPECTED_WIDTH,
+                V1_EXPECTED_HEIGHT
+        );
+    }
+
+    @Test
+    public void controlledStandardV2FixtureLoadsWithExpectedDimensions()
+            throws IOException {
+
+        assertFixtureDimensions(
+                V2_Q007_ASSET_PATH,
+                V2_EXPECTED_WIDTH,
+                V2_Q007_EXPECTED_HEIGHT
+        );
+    }
+
+    @Test
+    public void controlledStandardV2TwoColumnFixtureLoadsWithExpectedDimensions()
+            throws IOException {
+
+        assertFixtureDimensions(
+                V2_Q019_ASSET_PATH,
+                V2_EXPECTED_WIDTH,
+                V2_Q019_EXPECTED_HEIGHT
+        );
+    }
+
+    @Test
+    public void controlledStandardV2FiveColumnFixtureLoadsWithExpectedDimensions()
+            throws IOException {
+
+        assertFixtureDimensions(
+                V2_Q090_ASSET_PATH,
+                V2_EXPECTED_WIDTH,
+                V2_Q090_EXPECTED_HEIGHT
+        );
+    }
+
+    @Test
+    public void controlledStandardV2FiveOptionFixtureLoadsWithExpectedDimensions()
+            throws IOException {
+
+        assertFixtureDimensions(
+                V2_Q090_AE_ASSET_PATH,
+                V2_EXPECTED_WIDTH,
+                V2_Q090_EXPECTED_HEIGHT
+        );
+    }
+
+    @Test
+    public void controlledFlexibleV3OneColumnFixtureLoadsWithExpectedDimensions()
+            throws IOException {
+
+        assertFixtureDimensions(
+                V3_Q002_AE_ASSET_PATH,
+                V3_Q002_EXPECTED_WIDTH,
+                V3_Q002_EXPECTED_HEIGHT
+        );
+    }
+
+    @Test
+    public void controlledFlexibleV3ManualFixtureLoadsWithExpectedDimensions()
+            throws IOException {
+
+        assertFixtureDimensions(
+                V3_Q045_AE_R015_ASSET_PATH,
+                V3_Q045_EXPECTED_WIDTH,
+                V3_Q045_EXPECTED_HEIGHT
+        );
+    }
+
+    @Test
+    public void controlledFlexibleV3MaximumRowsFixtureLoadsWithExpectedDimensions()
+            throws IOException {
+
+        assertFixtureDimensions(
+                V3_Q090_AE_R030_ASSET_PATH,
+                V3_Q090_EXPECTED_WIDTH,
+                V3_Q090_EXPECTED_HEIGHT
+        );
+    }
+
+    @Test
+    public void controlledDynamicFixtureCrossesPipelineAndGradesOneHundredPercent()
+            throws IOException {
+
+        assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+                V1_ASSET_PATH,
+                OmrSheetTemplateCatalog
+                        .compactFourOptions(Q007_QUESTION_COUNT),
+                Q007_EXPECTED_ANSWERS,
+                "dynamic-q007-controlled-key",
+                "Gabarito controlado v1 de 7 questoes",
+                "dynamic-q007-controlled-reading"
+        );
+    }
+
+    @Test
+    public void controlledStandardV2FixtureCrossesPipelineAndGradesOneHundredPercent()
+            throws IOException {
+
+        assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+                V2_Q007_ASSET_PATH,
+                OmrSheetTemplateCatalog
+                        .standardFourOptionsV2(Q007_QUESTION_COUNT),
+                Q007_EXPECTED_ANSWERS,
+                "standard-v2-q007-controlled-key",
+                "Gabarito controlado v2 de 7 questoes",
+                "standard-v2-q007-controlled-reading"
+        );
+    }
+
+    @Test
+    public void controlledStandardV2TwoColumnFixtureCrossesPipelineAndGradesOneHundredPercent()
+            throws IOException {
+
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .standardFourOptionsV2(
+                                Q019_QUESTION_COUNT
+                        );
+
+        assertEquals(2, spec.getBlockCount());
+
+        assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+                V2_Q019_ASSET_PATH,
+                spec,
+                Q019_EXPECTED_ANSWERS,
+                "standard-v2-q019-controlled-key",
+                "Gabarito controlado v2 de 19 questoes",
+                "standard-v2-q019-controlled-reading"
+        );
+    }
+
+    @Test
+    public void controlledStandardV2FiveColumnFixtureCrossesPipelineAndGradesOneHundredPercent()
+            throws IOException {
+
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .standardFourOptionsV2(
+                                Q090_QUESTION_COUNT
+                        );
+
+        assertEquals(5, spec.getBlockCount());
+
+        assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+                V2_Q090_ASSET_PATH,
+                spec,
+                Q090_EXPECTED_ANSWERS,
+                "standard-v2-q090-controlled-key",
+                "Gabarito controlado v2 de 90 questoes",
+                "standard-v2-q090-controlled-reading"
+        );
+    }
+
+    @Test
+    public void controlledStandardV2FiveOptionFixtureCrossesPipelineAndGradesOneHundredPercent()
+            throws IOException {
+
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .standardFiveOptionsV2(
+                                Q090_QUESTION_COUNT
+                        );
+
+        assertEquals(5, spec.getBlockCount());
+        assertEquals(5, spec.getOptionCount());
+
+        assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+                V2_Q090_AE_ASSET_PATH,
+                spec,
+                Q090_AE_EXPECTED_ANSWERS,
+                "standard-v2-ae-q090-controlled-key",
+                "Gabarito controlado v2 A-E de 90 questoes",
+                "standard-v2-ae-q090-controlled-reading"
+        );
+    }
+
+    @Test
+    public void controlledFlexibleV3OneColumnFixtureCrossesPipelineAndGradesOneHundredPercent()
+            throws IOException {
+
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .flexibleOptionsV3(
+                                Q002_QUESTION_COUNT,
+                                5
+                        );
+
+        assertEquals(1, spec.getBlockCount());
+        assertEquals(2, spec.getQuestionsPerBlock());
+        assertEquals(5, spec.getOptionCount());
+
+        assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+                V3_Q002_AE_ASSET_PATH,
+                spec,
+                Q002_AE_EXPECTED_ANSWERS,
+                "flex-v3-ae-q002-r002-controlled-key",
+                "Gabarito controlado v3 A-E de 2 questoes",
+                "flex-v3-ae-q002-r002-controlled-reading"
+        );
+    }
+
+    @Test
+    public void controlledFlexibleV3ManualFixtureCrossesPipelineAndGradesOneHundredPercent()
+            throws IOException {
+
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .flexibleOptionsV3(
+                                Q045_QUESTION_COUNT,
+                                5,
+                                15
+                        );
+
+        assertEquals(3, spec.getBlockCount());
+        assertEquals(15, spec.getQuestionsPerBlock());
+        assertEquals(5, spec.getOptionCount());
+
+        assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+                V3_Q045_AE_R015_ASSET_PATH,
+                spec,
+                Q045_AE_EXPECTED_ANSWERS,
+                "flex-v3-ae-q045-r015-controlled-key",
+                "Gabarito controlado v3 A-E de 45 questoes",
+                "flex-v3-ae-q045-r015-controlled-reading"
+        );
+    }
+
+    @Test
+    public void controlledFlexibleV3MaximumRowsFixtureCrossesPipelineAndGradesOneHundredPercent()
+            throws IOException {
+
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .flexibleOptionsV3(
+                                Q090_QUESTION_COUNT,
+                                5,
+                                30
+                        );
+
+        assertEquals(3, spec.getBlockCount());
+        assertEquals(30, spec.getQuestionsPerBlock());
+        assertEquals(5, spec.getOptionCount());
+
+        assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+                V3_Q090_AE_R030_ASSET_PATH,
+                spec,
+                Q090_AE_EXPECTED_ANSWERS,
+                "flex-v3-ae-q090-r030-controlled-key",
+                "Gabarito controlado v3 A-E de 90 questoes",
+                "flex-v3-ae-q090-r030-controlled-reading"
+        );
+    }
+
+    private void assertFixtureDimensions(
+            String assetPath,
+            int expectedWidth,
+            int expectedHeight
+    ) throws IOException {
+
+        Bitmap bitmap = loadBitmap(assetPath);
+
+        try {
+            assertNotNull(
+                    "O PNG controlado nao foi decodificado: "
+                            + assetPath,
+                    bitmap
+            );
+
+            assertEquals(expectedWidth, bitmap.getWidth());
+            assertEquals(expectedHeight, bitmap.getHeight());
+
+        } finally {
+            if (bitmap != null) {
+                bitmap.recycle();
+            }
+        }
+    }
+
+    private void
+    assertFixtureCrossesPipelineAndGradesOneHundredPercent(
+            String assetPath,
+            OmrSheetTemplateSpec spec,
+            String[] expectedAnswers,
+            String answerKeyId,
+            String answerKeyName,
+            String readingId
+    ) throws IOException {
+
+        Bitmap decodedBitmap = loadBitmap(assetPath);
+
+        assertNotNull(
+                "O PNG controlado nao foi decodificado: "
+                        + assetPath,
+                decodedBitmap
+        );
+
+        Bitmap rgbaBitmap = decodedBitmap.copy(
+                Bitmap.Config.ARGB_8888,
+                false
+        );
+
+        assertNotNull(
+                "Nao foi possivel obter Bitmap ARGB_8888.",
+                rgbaBitmap
+        );
+
+        Mat sourceRgba = new Mat();
+
+        try {
+            Utils.bitmapToMat(rgbaBitmap, sourceRgba);
+
+            OmrAnswerKeyDefinition answerKey =
+                    createAnswerKey(
+                            spec,
+                            expectedAnswers,
+                            answerKeyId,
+                            answerKeyName
+                    );
+
+            OmrLayoutDefinition layout =
+                    new OmrCaptureLayoutProvider()
+                            .resolve(answerKey);
+
+            assertEquals(
+                    answerKey.getLayoutId(),
+                    layout.getId()
+            );
+
+            assertEquals(
+                    answerKey.getLayoutVersion(),
+                    layout.getVersion()
+            );
+
+            assertEquals(
+                    expectedAnswers.length,
+                    layout.getQuestionCount()
+            );
+
+            OmrFixturePipelineRunner.Result runResult =
+                    OmrFixturePipelineRunner.run(
+                            sourceRgba,
+                            layout
+                    );
+
+            assertNotNull(
+                    "A execucao da fixture nao foi criada.",
+                    runResult
+            );
+
+            SheetInterpretationResult interpretation =
+                    runResult.getInterpretationResult();
+
+            String diagnostic = describe(runResult);
+
+            assertNotNull(
+                    "Interpretacao ausente | " + diagnostic,
+                    interpretation
+            );
+
+            assertTrue(
+                    "Interpretacao incompleta | " + diagnostic,
+                    interpretation.isComplete()
+            );
+
+            assertEquals(
+                    "Quantidade de questoes | " + diagnostic,
+                    expectedAnswers.length,
+                    interpretation.getQuestionCount()
+            );
+
+            assertEquals(
+                    "Marcacoes unicas | " + diagnostic,
+                    expectedAnswers.length,
+                    interpretation.getSingleMarkCount()
+            );
+
+            assertEquals(
+                    "Questoes em branco | " + diagnostic,
+                    0,
+                    interpretation.getBlankCount()
+            );
+
+            assertEquals(
+                    "Marcacoes multiplas | " + diagnostic,
+                    0,
+                    interpretation.getMultipleMarkCount()
+            );
+
+            assertEquals(
+                    "Questoes ambiguas | " + diagnostic,
+                    0,
+                    interpretation.getAmbiguousCount()
+            );
+
+            assertFalse(
+                    "A fixture nao deveria exigir revisao | "
+                            + diagnostic,
+                    interpretation.requiresReview()
+            );
+
+            assertExpectedAnswers(
+                    interpretation,
+                    expectedAnswers,
+                    diagnostic
+            );
+
+            OmrReadingResult readingResult =
+                    new OmrReadingResultMapper().map(
+                            interpretation,
+                            readingId,
+                            1_800_000_000_000L
+                    );
+
+            OmrGradingResult gradingResult =
+                    new OmrGradingService().grade(
+                            layout,
+                            answerKey,
+                            readingResult
+                    );
+
+            assertEquals(
+                    expectedAnswers.length,
+                    gradingResult.getCorrectCount()
+            );
+            assertEquals(0, gradingResult.getIncorrectCount());
+            assertEquals(0, gradingResult.getBlankCount());
+            assertEquals(0, gradingResult.getReviewRequiredCount());
+            assertEquals(
+                    100.0,
+                    gradingResult.getAwardedPercentage(),
+                    0.000001
+            );
+
+        } finally {
+            sourceRgba.release();
+
+            if (rgbaBitmap != decodedBitmap) {
+                rgbaBitmap.recycle();
+            }
+
+            decodedBitmap.recycle();
+        }
+    }
+
+    private static Bitmap loadBitmap(
+            String assetPath
+    )
+            throws IOException {
+
+        Context testContext =
+                InstrumentationRegistry
+                        .getInstrumentation()
+                        .getContext();
+
+        BitmapFactory.Options options =
+                new BitmapFactory.Options();
+
+        options.inPreferredConfig =
+                Bitmap.Config.ARGB_8888;
+
+        try (InputStream inputStream =
+                     testContext.getAssets().open(assetPath)) {
+
+            return BitmapFactory.decodeStream(
+                    inputStream,
+                    null,
+                    options
+            );
+        }
+    }
+
+    private static OmrAnswerKeyDefinition
+    createAnswerKey(
+            OmrSheetTemplateSpec spec,
+            String[] expectedAnswers,
+            String answerKeyId,
+            String answerKeyName
+    ) {
+        List<OmrAnswerKeyEntry> entries =
+                new ArrayList<>(expectedAnswers.length);
+
+        for (int index = 0;
+             index < expectedAnswers.length;
+             index++) {
+
+            int questionNumber = index + 1;
+            int optionNumber = optionNumber(
+                    expectedAnswers[index]
+            );
+
+            String questionId = String.format(
+                    Locale.US,
+                    "question-%03d",
+                    questionNumber
+            );
+
+            String optionId = String.format(
+                    Locale.US,
+                    "%s-option-%02d",
+                    questionId,
+                    optionNumber
+            );
+
+            entries.add(
+                    OmrAnswerKeyEntry.singleAnswer(
+                            questionId,
+                            optionId,
+                            1.0
+                    )
+            );
+        }
+
+        return new OmrAnswerKeyDefinition(
+                answerKeyId,
+                1,
+                answerKeyName,
+                spec.getTemplateId(),
+                spec.getTemplateVersion(),
+                entries
+        );
+    }
+
+    private static int optionNumber(
+            String optionLabel
+    ) {
+        switch (optionLabel) {
+            case "A":
+                return 1;
+
+            case "B":
+                return 2;
+
+            case "C":
+                return 3;
+
+            case "D":
+                return 4;
+
+            case "E":
+                return 5;
+
+            default:
+                throw new IllegalArgumentException(
+                        "Alternativa inesperada: "
+                                + optionLabel
+                );
+        }
+    }
+
+    private static String[] createRepeatingAnswers(
+            int questionCount,
+            String... optionLabels
+    ) {
+        if (questionCount <= 0) {
+            throw new IllegalArgumentException(
+                    "A quantidade de questoes deve ser positiva."
+            );
+        }
+
+        if (optionLabels == null || optionLabels.length == 0) {
+            throw new IllegalArgumentException(
+                    "As alternativas esperadas sao obrigatorias."
+            );
+        }
+
+        String[] answers = new String[questionCount];
+
+        for (int index = 0; index < questionCount; index++) {
+            answers[index] =
+                    optionLabels[index % optionLabels.length];
+        }
+
+        return answers;
+    }
+
+    private static void assertExpectedAnswers(
+            SheetInterpretationResult interpretation,
+            String[] expectedAnswers,
+            String diagnostic
+    ) {
+        for (int index = 0;
+             index < expectedAnswers.length;
+             index++) {
+
+            String questionId = String.format(
+                    Locale.US,
+                    "question-%03d",
+                    index + 1
+            );
+
+            QuestionInterpretation question =
+                    interpretation.findByQuestionId(
+                            questionId
+                    );
+
+            assertNotNull(
+                    "Questao ausente: "
+                            + questionId
+                            + " | "
+                            + diagnostic,
+                    question
+            );
+
+            assertEquals(
+                    questionId + " | " + diagnostic,
+                    QuestionMarkState.SINGLE_MARK,
+                    question.getState()
+            );
+
+            assertNotNull(
+                    questionId
+                            + " sem resposta selecionada | "
+                            + diagnostic,
+                    question.getSelectedOption()
+            );
+
+            assertEquals(
+                    questionId + " | " + diagnostic,
+                    expectedAnswers[index],
+                    question.getSelectedOption().getLabel()
+            );
+        }
+    }
+
+    private static String describe(
+            OmrFixturePipelineRunner.Result runResult
+    ) {
+        StringBuilder description =
+                new StringBuilder(runResult.toString());
+
+        SheetInterpretationResult interpretation =
+                runResult.getInterpretationResult();
+
+        if (interpretation == null) {
+            return description.toString();
+        }
+
+        description.append(" | answers=[");
+
+        List<QuestionInterpretation> questions =
+                interpretation.getQuestionInterpretations();
+
+        for (int index = 0;
+             index < questions.size();
+             index++) {
+
+            if (index > 0) {
+                description.append(", ");
+            }
+
+            QuestionInterpretation question =
+                    questions.get(index);
+
+            description.append(index + 1)
+                    .append(':')
+                    .append(question.getState())
+                    .append('/');
+
+            if (question.getSelectedOption() == null) {
+                description.append('-');
+            } else {
+                description.append(
+                        question
+                                .getSelectedOption()
+                                .getLabel()
+                );
+            }
+        }
+
+        description.append(']');
+        return description.toString();
+    }
+}

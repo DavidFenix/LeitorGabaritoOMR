@@ -7,6 +7,10 @@ import com.example.leitorgabaritoomr.vision.geometry.MarkerSetCandidateEvaluatio
 import com.example.leitorgabaritoomr.vision.geometry.MarkerSetResolutionResult;
 import com.example.leitorgabaritoomr.vision.geometry.ResolvedMarkerSet;
 import com.example.leitorgabaritoomr.vision.interpretation.SheetInterpretationResult;
+import com.example.leitorgabaritoomr.vision.layout.OmrLayoutDefinition;
+import com.example.leitorgabaritoomr.vision.layout.factory.AvalieCeDevelopmentLayoutFactory;
+import com.example.leitorgabaritoomr.vision.measurement.BubbleSamplingGeometrySet;
+import com.example.leitorgabaritoomr.vision.measurement.OmrSheetMeasurementResult;
 import com.example.leitorgabaritoomr.vision.model.MarkerDetectionResult;
 import com.example.leitorgabaritoomr.vision.model.MarkerDetectorMode;
 import com.example.leitorgabaritoomr.vision.processing.DefaultMarkerFrameProcessorFactory;
@@ -17,6 +21,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.imgproc.Imgproc;
 
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -40,6 +45,7 @@ public final class OmrFixturePipelineRunner {
     public static Result run(Mat sourceRgba) {
         return run(
                 sourceRgba,
+                AvalieCeDevelopmentLayoutFactory.create(),
                 DEFAULT_MAX_FRAME_COUNT
         );
     }
@@ -48,12 +54,37 @@ public final class OmrFixturePipelineRunner {
             Mat sourceRgba,
             int maximumFrameCount
     ) {
+        return run(
+                sourceRgba,
+                AvalieCeDevelopmentLayoutFactory.create(),
+                maximumFrameCount
+        );
+    }
+
+    public static Result run(
+            Mat sourceRgba,
+            OmrLayoutDefinition layoutDefinition
+    ) {
+        return run(
+                sourceRgba,
+                layoutDefinition,
+                DEFAULT_MAX_FRAME_COUNT
+        );
+    }
+
+    public static Result run(
+            Mat sourceRgba,
+            OmrLayoutDefinition layoutDefinition,
+            int maximumFrameCount
+    ) {
         validateRgbaFrame(sourceRgba);
+        validateLayoutDefinition(layoutDefinition);
         validateMaximumFrameCount(maximumFrameCount);
 
         return runFrames(
                 frameIndex -> sourceRgba.clone(),
-                maximumFrameCount
+                maximumFrameCount,
+                layoutDefinition
         );
     }
 
@@ -62,6 +93,7 @@ public final class OmrFixturePipelineRunner {
     ) {
         return run(
                 frameProvider,
+                AvalieCeDevelopmentLayoutFactory.create(),
                 DEFAULT_MAX_FRAME_COUNT
         );
     }
@@ -77,23 +109,49 @@ public final class OmrFixturePipelineRunner {
             OmrFixtureFrameProvider frameProvider,
             int maximumFrameCount
     ) {
+        return run(
+                frameProvider,
+                AvalieCeDevelopmentLayoutFactory.create(),
+                maximumFrameCount
+        );
+    }
+
+    public static Result run(
+            OmrFixtureFrameProvider frameProvider,
+            OmrLayoutDefinition layoutDefinition
+    ) {
+        return run(
+                frameProvider,
+                layoutDefinition,
+                DEFAULT_MAX_FRAME_COUNT
+        );
+    }
+
+    public static Result run(
+            OmrFixtureFrameProvider frameProvider,
+            OmrLayoutDefinition layoutDefinition,
+            int maximumFrameCount
+    ) {
         if (frameProvider == null) {
             throw new IllegalArgumentException(
                     "O provedor de frames e obrigatorio."
             );
         }
 
+        validateLayoutDefinition(layoutDefinition);
         validateMaximumFrameCount(maximumFrameCount);
 
         return runFrames(
                 frameProvider::createRgbaFrame,
-                maximumFrameCount
+                maximumFrameCount,
+                layoutDefinition
         );
     }
 
     private static Result runFrames(
             RgbaFrameFactory frameFactory,
-            int maximumFrameCount
+            int maximumFrameCount,
+            OmrLayoutDefinition layoutDefinition
     ) {
 
 
@@ -119,7 +177,8 @@ public final class OmrFixturePipelineRunner {
             processor =
                     DefaultMarkerFrameProcessorFactory.create(
                             MarkerDetectorMode.SOLID_SQUARE,
-                            debugController
+                            debugController,
+                            layoutDefinition
                     );
 
             for (int frameIndex = 0;
@@ -234,6 +293,15 @@ public final class OmrFixturePipelineRunner {
         private boolean questionMeasurementsObserved;
         private boolean evidenceReadyObserved;
         private boolean interpretationObserved;
+
+        private int lastSamplingGeometryCount;
+        private int lastClippedBackgroundCount;
+
+        private boolean lastMeasurementComplete;
+        private int lastMeasuredOptionCount;
+        private int lastExpectedOptionCount;
+        private int lastMeasurementErrorCount;
+        private String lastMeasurementErrors = "NONE";
 
         private String lastStabilityState = "NONE";
         private String lastResolutionReason = "NONE";
@@ -364,14 +432,49 @@ public final class OmrFixturePipelineRunner {
                             .getLastRegisteredBubbleRegionSet()
                             != null;
 
-            samplingGeometryObserved |=
+            BubbleSamplingGeometrySet samplingGeometrySet =
                     processor
-                            .getLastBubbleSamplingGeometrySet()
-                            != null;
+                            .getLastBubbleSamplingGeometrySet();
+
+            samplingGeometryObserved |=
+                    samplingGeometrySet != null;
+
+            if (samplingGeometrySet != null) {
+                lastSamplingGeometryCount =
+                        samplingGeometrySet
+                                .getGeometryCount();
+
+                lastClippedBackgroundCount =
+                        samplingGeometrySet
+                                .getClippedBackgroundCount();
+            }
+
+            OmrSheetMeasurementResult measurementResult =
+                    processor.getLastMeasurementResult();
 
             measurementObserved |=
-                    processor.getLastMeasurementResult()
-                            != null;
+                    measurementResult != null;
+
+            if (measurementResult != null) {
+                lastMeasurementComplete =
+                        measurementResult.isComplete();
+
+                lastMeasuredOptionCount =
+                        measurementResult
+                                .getMeasuredOptionCount();
+
+                lastExpectedOptionCount =
+                        measurementResult
+                                .getExpectedOptionCount();
+
+                lastMeasurementErrorCount =
+                        measurementResult.getErrorCount();
+
+                lastMeasurementErrors =
+                        summarizeMeasurementErrors(
+                                measurementResult.getErrors()
+                        );
+            }
 
             questionMeasurementsObserved |=
                     processor.getLastQuestionMeasurements()
@@ -409,6 +512,13 @@ public final class OmrFixturePipelineRunner {
                     registeredRegionsObserved,
                     samplingGeometryObserved,
                     measurementObserved,
+                    lastSamplingGeometryCount,
+                    lastClippedBackgroundCount,
+                    lastMeasurementComplete,
+                    lastMeasuredOptionCount,
+                    lastExpectedOptionCount,
+                    lastMeasurementErrorCount,
+                    lastMeasurementErrors,
                     questionMeasurementsObserved,
                     evidenceReadyObserved,
                     interpretationObserved,
@@ -420,6 +530,44 @@ public final class OmrFixturePipelineRunner {
                     lastDifferingRoles,
                     lastStabilityState
             );
+        }
+
+        private String summarizeMeasurementErrors(
+                List<String> errors
+        ) {
+            if (errors == null || errors.isEmpty()) {
+                return "NONE";
+            }
+
+            int visibleCount = Math.min(
+                    errors.size(),
+                    8
+            );
+
+            StringBuilder builder =
+                    new StringBuilder("[");
+
+            for (int index = 0;
+                 index < visibleCount;
+                 index++) {
+
+                if (index > 0) {
+                    builder.append(" | ");
+                }
+
+                builder.append(errors.get(index));
+            }
+
+            if (errors.size() > visibleCount) {
+                builder.append(" | ... +")
+                        .append(
+                                errors.size()
+                                        - visibleCount
+                        )
+                        .append(" erro(s)");
+            }
+
+            return builder.append(']').toString();
         }
 
         private String formatEvaluation(
@@ -557,6 +705,16 @@ public final class OmrFixturePipelineRunner {
         }
     }
 
+    private static void validateLayoutDefinition(
+            OmrLayoutDefinition layoutDefinition
+    ) {
+        if (layoutDefinition == null) {
+            throw new IllegalArgumentException(
+                    "O layout da fixture e obrigatorio."
+            );
+        }
+    }
+
     /**
      * Resultado imutavel de uma execucao da fixture.
      */
@@ -652,6 +810,15 @@ public final class OmrFixturePipelineRunner {
         private final boolean evidenceReadyObserved;
         private final boolean interpretationObserved;
 
+        private final int lastSamplingGeometryCount;
+        private final int lastClippedBackgroundCount;
+
+        private final boolean lastMeasurementComplete;
+        private final int lastMeasuredOptionCount;
+        private final int lastExpectedOptionCount;
+        private final int lastMeasurementErrorCount;
+        private final String lastMeasurementErrors;
+
         private final String lastStabilityState;
         private final String lastResolutionReason;
         private final String lastBestCandidate;
@@ -676,6 +843,13 @@ public final class OmrFixturePipelineRunner {
                 boolean registeredRegionsObserved,
                 boolean samplingGeometryObserved,
                 boolean measurementObserved,
+                int lastSamplingGeometryCount,
+                int lastClippedBackgroundCount,
+                boolean lastMeasurementComplete,
+                int lastMeasuredOptionCount,
+                int lastExpectedOptionCount,
+                int lastMeasurementErrorCount,
+                String lastMeasurementErrors,
                 boolean questionMeasurementsObserved,
                 boolean evidenceReadyObserved,
                 boolean interpretationObserved,
@@ -722,6 +896,27 @@ public final class OmrFixturePipelineRunner {
 
             this.measurementObserved =
                     measurementObserved;
+
+            this.lastSamplingGeometryCount =
+                    lastSamplingGeometryCount;
+
+            this.lastClippedBackgroundCount =
+                    lastClippedBackgroundCount;
+
+            this.lastMeasurementComplete =
+                    lastMeasurementComplete;
+
+            this.lastMeasuredOptionCount =
+                    lastMeasuredOptionCount;
+
+            this.lastExpectedOptionCount =
+                    lastExpectedOptionCount;
+
+            this.lastMeasurementErrorCount =
+                    lastMeasurementErrorCount;
+
+            this.lastMeasurementErrors =
+                    lastMeasurementErrors;
 
             this.questionMeasurementsObserved =
                     questionMeasurementsObserved;
@@ -867,8 +1062,24 @@ public final class OmrFixturePipelineRunner {
                     + registeredRegionsObserved
                     + ", sampling="
                     + samplingGeometryObserved
+                    + "(count="
+                    + lastSamplingGeometryCount
+                    + ", clippedBackgrounds="
+                    + lastClippedBackgroundCount
+                    + ")"
                     + ", measurement="
                     + measurementObserved
+                    + "(complete="
+                    + lastMeasurementComplete
+                    + ", measured="
+                    + lastMeasuredOptionCount
+                    + "/"
+                    + lastExpectedOptionCount
+                    + ", errors="
+                    + lastMeasurementErrorCount
+                    + ", details="
+                    + lastMeasurementErrors
+                    + ")"
                     + ", questions="
                     + questionMeasurementsObserved
                     + ", evidenceReady="

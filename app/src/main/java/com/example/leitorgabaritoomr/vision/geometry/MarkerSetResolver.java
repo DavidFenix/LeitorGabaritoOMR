@@ -15,6 +15,9 @@ import java.util.Set;
 
 public final class MarkerSetResolver {
 
+    private static final double
+            MINIMUM_CORNER_ROLE_SEPARATION_RATIO = 0.10;
+
     private final MarkerSetResolverConfig config;
 
     public MarkerSetResolver() {
@@ -309,6 +312,15 @@ public final class MarkerSetResolver {
             return null;
         }
 
+        if (!hasCoherentCornerRoles(
+                tl,
+                tr,
+                br,
+                bl
+        )) {
+            return null;
+        }
+
         double regionArea = polygonArea(polygon);
 
         if (regionArea <= 0) {
@@ -440,6 +452,86 @@ public final class MarkerSetResolver {
         }
 
         return true;
+    }
+
+    /**
+     * Impede que o mesmo quadrilatero seja avaliado novamente com os
+     * papeis dos cantos espelhados ou girados.
+     *
+     * Os marcadores solidos nao possuem identidade propria. Portanto,
+     * a orientacao usada pelo leitor e a orientacao visual do frame:
+     * a media do topo deve estar claramente acima da media da base e a
+     * media da esquerda deve estar claramente a esquerda da media da
+     * direita.
+     *
+     * Uma tolerancia proporcional e necessaria porque a rasterizacao e a
+     * deteccao produzem pequenas diferencas subpixel. Sem ela, uma rotacao
+     * ciclica de 90 graus pode parecer valida por poucos decimos de pixel e
+     * empatar com a atribuicao visual correta.
+     */
+    private boolean hasCoherentCornerRoles(
+            Point topLeft,
+            Point topRight,
+            Point bottomRight,
+            Point bottomLeft
+    ) {
+        double topCenterY =
+                (topLeft.y + topRight.y) / 2.0;
+
+        double bottomCenterY =
+                (bottomLeft.y + bottomRight.y) / 2.0;
+
+        double leftCenterX =
+                (topLeft.x + bottomLeft.x) / 2.0;
+
+        double rightCenterX =
+                (topRight.x + bottomRight.x) / 2.0;
+
+        double horizontalSpan = coordinateSpan(
+                topLeft.x,
+                topRight.x,
+                bottomRight.x,
+                bottomLeft.x
+        );
+
+        double verticalSpan = coordinateSpan(
+                topLeft.y,
+                topRight.y,
+                bottomRight.y,
+                bottomLeft.y
+        );
+
+        double minimumHorizontalSeparation =
+                horizontalSpan
+                        * MINIMUM_CORNER_ROLE_SEPARATION_RATIO;
+
+        double minimumVerticalSeparation =
+                verticalSpan
+                        * MINIMUM_CORNER_ROLE_SEPARATION_RATIO;
+
+        return bottomCenterY - topCenterY
+                > minimumVerticalSeparation
+                && rightCenterX - leftCenterX
+                > minimumHorizontalSeparation;
+    }
+
+    private double coordinateSpan(
+            double first,
+            double second,
+            double third,
+            double fourth
+    ) {
+        double minimum = Math.min(
+                Math.min(first, second),
+                Math.min(third, fourth)
+        );
+
+        double maximum = Math.max(
+                Math.max(first, second),
+                Math.max(third, fourth)
+        );
+
+        return Math.max(0, maximum - minimum);
     }
 
     private double crossProduct(

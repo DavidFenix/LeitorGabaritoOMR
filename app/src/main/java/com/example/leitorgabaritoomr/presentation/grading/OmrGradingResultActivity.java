@@ -12,6 +12,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.leitorgabaritoomr.R;
+import com.example.leitorgabaritoomr.application.layout.OmrPublishedLayoutResolver;
 import com.example.leitorgabaritoomr.domain.grading.OmrGradingResult;
 import com.example.leitorgabaritoomr.vision.layout.OmrLayoutDefinition;
 import com.example.leitorgabaritoomr.vision.layout.factory.AvalieCeDevelopmentLayoutFactory;
@@ -162,12 +163,12 @@ public final class OmrGradingResultActivity
             return;
         }
 
-        OmrLayoutDefinition layoutDefinition =
-                AvalieCeDevelopmentLayoutFactory.create();
-
         OmrGradingResultViewState viewState;
 
         try {
+            OmrLayoutDefinition layoutDefinition =
+                    resolveLayoutDefinition(gradingResult);
+
             viewState = OmrGradingResultViewState.from(
                     gradingResult,
                     layoutDefinition
@@ -193,6 +194,38 @@ public final class OmrGradingResultActivity
         bindActions(
                 isReadOnlyIntent(getIntent())
         );
+    }
+
+    /**
+     * Resultados históricos do laboratório podem conter somente um
+     * subconjunto das questões do layout legado. Para cartões compactos,
+     * a identidade publicada continua exigindo também a quantidade exata.
+     */
+    private OmrLayoutDefinition resolveLayoutDefinition(
+            OmrGradingResult gradingResult
+    ) {
+        OmrLayoutDefinition legacyLayout =
+                AvalieCeDevelopmentLayoutFactory.create();
+
+        boolean usesLegacyLayout =
+                legacyLayout.getId().equals(
+                        gradingResult
+                                .getReadingResult()
+                                .getLayoutId()
+                )
+                        && legacyLayout.getVersion()
+                        == gradingResult
+                        .getReadingResult()
+                        .getLayoutVersion();
+
+        if (usesLegacyLayout) {
+            return legacyLayout;
+        }
+
+        return new OmrPublishedLayoutResolver()
+                .resolveForAnswerKey(
+                        gradingResult.getAnswerKeyDefinition()
+                );
     }
 
     private void bindActions(

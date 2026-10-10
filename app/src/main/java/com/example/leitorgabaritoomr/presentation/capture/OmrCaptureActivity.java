@@ -23,6 +23,7 @@ import androidx.core.content.ContextCompat;
 import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.application.grading.OmrGradingService;
 import com.example.leitorgabaritoomr.application.history.OmrGradingHistoryRecorder;
+import com.example.leitorgabaritoomr.application.layout.OmrCaptureLayoutProvider;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.domain.grading.OmrGradingResult;
 import com.example.leitorgabaritoomr.domain.history.OmrGradingHistoryRecord;
@@ -32,7 +33,6 @@ import com.example.leitorgabaritoomr.infrastructure.history.OmrSQLiteGradingHist
 import com.example.leitorgabaritoomr.presentation.grading.OmrGradingResultActivity;
 import com.example.leitorgabaritoomr.presentation.result.OmrReadingResultActivity;
 import com.example.leitorgabaritoomr.vision.layout.OmrLayoutDefinition;
-import com.example.leitorgabaritoomr.vision.layout.factory.AvalieCeDevelopmentLayoutFactory;
 
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.OpenCVLoader;
@@ -74,6 +74,7 @@ public final class OmrCaptureActivity
 
     private CameraBridgeViewBase cameraBridgeView;
     private OmrCaptureController captureController;
+    private OmrLayoutDefinition captureLayoutDefinition;
     private OmrAnswerKeyDefinition activeAnswerKey;
     private OmrStudentIdentity activeStudentIdentity;
     private OmrSQLiteGradingHistoryRepository gradingHistoryRepository;
@@ -194,6 +195,11 @@ public final class OmrCaptureActivity
 
         logActiveAnswerKey();
         logActiveStudentIdentity();
+
+        if (!resolveCaptureLayout()) {
+            return;
+        }
+
         initializeGradingHistory();
 
         configureCameraView();
@@ -328,6 +334,47 @@ public final class OmrCaptureActivity
         }
     }
 
+    private boolean resolveCaptureLayout() {
+        try {
+            captureLayoutDefinition =
+                    new OmrCaptureLayoutProvider()
+                            .resolve(activeAnswerKey);
+
+            Log.i(
+                    TAG,
+                    "Layout da captura resolvido"
+                            + " | id="
+                            + captureLayoutDefinition.getId()
+                            + " | versao="
+                            + captureLayoutDefinition.getVersion()
+                            + " | questoes="
+                            + captureLayoutDefinition
+                            .getQuestionCount()
+            );
+
+            return true;
+
+        } catch (RuntimeException exception) {
+            captureLayoutDefinition = null;
+
+            Log.e(
+                    TAG,
+                    "O layout do gabarito nao e suportado.",
+                    exception
+            );
+
+            showLongMessage(
+                    "Este gabarito usa um modelo de folha"
+                            + " incompatível com esta versão do app."
+            );
+
+            setResult(Activity.RESULT_CANCELED);
+            finish();
+
+            return false;
+        }
+    }
+
     private void configureCameraView() {
         cameraBridgeView =
                 findViewById(
@@ -372,11 +419,18 @@ public final class OmrCaptureActivity
                 return;
             }
 
+            if (captureLayoutDefinition == null) {
+                throw new IllegalStateException(
+                        "O layout da captura nao foi resolvido."
+                );
+            }
+
             captureController =
-                    OmrCaptureController.createDefault(
+                    OmrCaptureController.create(
                             findViewById(
                                     android.R.id.content
                             ),
+                            captureLayoutDefinition,
                             this
                     );
 
@@ -532,14 +586,17 @@ public final class OmrCaptureActivity
         }
 
         try {
-            OmrLayoutDefinition layoutDefinition =
-                    AvalieCeDevelopmentLayoutFactory.create();
+            if (captureLayoutDefinition == null) {
+                throw new IllegalStateException(
+                        "O layout usado na captura nao esta disponivel."
+                );
+            }
 
             OmrGradingService gradingService =
                     new OmrGradingService();
 
             completedGradingResult = gradingService.grade(
-                    layoutDefinition,
+                    captureLayoutDefinition,
                     activeAnswerKey,
                     completedReadingResult
             );
@@ -916,6 +973,7 @@ public final class OmrCaptureActivity
 
         completedReadingResult = null;
         completedGradingResult = null;
+        captureLayoutDefinition = null;
         activeAnswerKey = null;
         activeStudentIdentity = null;
         resultScreenOpen = false;

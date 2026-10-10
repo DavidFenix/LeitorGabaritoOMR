@@ -70,6 +70,10 @@
         Informe um nome para o gabarito.
     </string>
 
+    <string name="omr_manual_key_error_layout">
+        Não foi possível abrir o modelo de cartão-resposta solicitado.
+    </string>
+
     <plurals name="omr_manual_key_error_incomplete">
         <item quantity="one">
             Responda a questão pendente antes de salvar.

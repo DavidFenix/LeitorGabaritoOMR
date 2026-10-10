@@ -21,6 +21,7 @@ import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyRepository;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesAnswerKeyRepository;
+import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateCatalog;
 
 import java.io.Serializable;
 import java.util.Collections;
@@ -55,8 +56,13 @@ public final class OmrAnswerKeyListActivity
     private static final String TAG =
             "OmrAnswerKeyList";
 
+    private static final int AUTOMATIC_QUESTIONS_PER_COLUMN = 0;
+
     private OmrAnswerKeyRepository repository;
     private OmrAnswerKeyListViewBinder viewBinder;
+    private AlertDialog questionCountDialog;
+    private AlertDialog optionCountDialog;
+    private AlertDialog questionsPerColumnDialog;
     private boolean repositoryChanged;
 
     private final ActivityResultLauncher<Intent>
@@ -245,15 +251,284 @@ public final class OmrAnswerKeyListActivity
         );
 
         viewBinder.setOnCreateClickListener(
-                view -> manualAnswerKeyLauncher.launch(
-                        OmrManualAnswerKeyActivity.createIntent(
-                                this
-                        )
-                )
+                view -> showQuestionCountDialog()
         );
 
         viewBinder.setOnBackClickListener(
                 view -> finish()
+        );
+    }
+
+    private void showQuestionCountDialog() {
+        if (questionCountDialog != null
+                && questionCountDialog.isShowing()) {
+
+            return;
+        }
+
+        int minimum = OmrSheetTemplateCatalog
+                .MIN_QUESTION_COUNT;
+
+        int maximum = OmrSheetTemplateCatalog
+                .MAX_QUESTION_COUNT;
+
+        String[] countLabels =
+                new String[maximum - minimum + 1];
+
+        for (int index = 0;
+             index < countLabels.length;
+             index++) {
+
+            int questionCount = minimum + index;
+
+            countLabels[index] = getResources()
+                    .getQuantityString(
+                            R.plurals
+                                    .omr_answer_key_list_create_question_count,
+                            questionCount,
+                            questionCount
+                    );
+        }
+
+        AlertDialog dialog =
+                new AlertDialog.Builder(this)
+                        .setTitle(
+                                R.string
+                                        .omr_answer_key_list_create_count_title
+                        )
+                        .setItems(
+                                countLabels,
+                                (dialogInterface, selectedIndex) ->
+                                        showOptionCountDialog(
+                                                minimum
+                                                        + selectedIndex
+                                        )
+                        )
+                        .setNegativeButton(
+                                R.string
+                                        .omr_answer_key_list_create_count_cancel,
+                                null
+                        )
+                        .create();
+
+        questionCountDialog = dialog;
+
+        dialog.setOnDismissListener(
+                dialogInterface -> {
+                    if (questionCountDialog == dialog) {
+                        questionCountDialog = null;
+                    }
+                }
+        );
+
+        dialog.show();
+    }
+
+    private void showOptionCountDialog(
+            int questionCount
+    ) {
+        if (optionCountDialog != null
+                && optionCountDialog.isShowing()) {
+
+            return;
+        }
+
+        String[] optionLabels = {
+                getString(
+                        R.string
+                                .omr_answer_key_list_create_four_options
+                ),
+                getString(
+                        R.string
+                                .omr_answer_key_list_create_five_options
+                )
+        };
+
+        AlertDialog dialog =
+                new AlertDialog.Builder(this)
+                        .setTitle(
+                                R.string
+                                        .omr_answer_key_list_create_option_count_title
+                        )
+                        .setItems(
+                                optionLabels,
+                                (dialogInterface, selectedIndex) ->
+                                        showQuestionsPerColumnDialog(
+                                                questionCount,
+                                                selectedIndex == 0
+                                                        ? OmrSheetTemplateCatalog
+                                                        .STANDARD_V2_FOUR_OPTION_COUNT
+                                                        : OmrSheetTemplateCatalog
+                                                        .STANDARD_V2_FIVE_OPTION_COUNT
+                                        )
+                        )
+                        .setNegativeButton(
+                                R.string
+                                        .omr_answer_key_list_create_count_cancel,
+                                null
+                        )
+                        .create();
+
+        optionCountDialog = dialog;
+
+        dialog.setOnDismissListener(
+                dialogInterface -> {
+                    if (optionCountDialog == dialog) {
+                        optionCountDialog = null;
+                    }
+                }
+        );
+
+        dialog.show();
+    }
+
+    private void showQuestionsPerColumnDialog(
+            int questionCount,
+            int optionCount
+    ) {
+        if (questionsPerColumnDialog != null
+                && questionsPerColumnDialog.isShowing()) {
+
+            return;
+        }
+
+        int minimum = OmrSheetTemplateCatalog
+                .getFlexibleV3MinimumQuestionsPerColumn(
+                        questionCount
+                );
+
+        int maximum = OmrSheetTemplateCatalog
+                .getFlexibleV3MaximumQuestionsPerColumn(
+                        questionCount
+                );
+
+        String[] distributionLabels =
+                new String[maximum - minimum + 2];
+
+        int automaticRows = OmrSheetTemplateCatalog
+                .getFlexibleV3AutomaticQuestionsPerColumn(
+                        questionCount
+                );
+
+        distributionLabels[0] = formatDistributionLabel(
+                questionCount,
+                automaticRows,
+                true
+        );
+
+        for (int rows = minimum;
+             rows <= maximum;
+             rows++) {
+
+            distributionLabels[rows - minimum + 1] =
+                    formatDistributionLabel(
+                            questionCount,
+                            rows,
+                            false
+                    );
+        }
+
+        AlertDialog dialog =
+                new AlertDialog.Builder(this)
+                        .setTitle(
+                                R.string
+                                        .omr_answer_key_list_create_questions_per_column_title
+                        )
+                        .setItems(
+                                distributionLabels,
+                                (dialogInterface, selectedIndex) -> {
+                                    int configuredQuestionsPerColumn =
+                                            selectedIndex == 0
+                                                    ? AUTOMATIC_QUESTIONS_PER_COLUMN
+                                                    : minimum
+                                                    + selectedIndex
+                                                    - 1;
+
+                                    openDynamicAnswerKeyEditor(
+                                            questionCount,
+                                            optionCount,
+                                            configuredQuestionsPerColumn
+                                    );
+                                }
+                        )
+                        .setNegativeButton(
+                                R.string
+                                        .omr_answer_key_list_create_count_cancel,
+                                null
+                        )
+                        .create();
+
+        questionsPerColumnDialog = dialog;
+
+        dialog.setOnDismissListener(
+                dialogInterface -> {
+                    if (questionsPerColumnDialog == dialog) {
+                        questionsPerColumnDialog = null;
+                    }
+                }
+        );
+
+        dialog.show();
+    }
+
+    private String formatDistributionLabel(
+            int questionCount,
+            int questionsPerColumn,
+            boolean automatic
+    ) {
+        String rowText = getResources().getQuantityString(
+                R.plurals
+                        .omr_answer_key_list_create_items_per_column,
+                questionsPerColumn,
+                questionsPerColumn
+        );
+
+        int columnCount = (questionCount
+                + questionsPerColumn
+                - 1)
+                / questionsPerColumn;
+
+        String columnText = getResources().getQuantityString(
+                R.plurals
+                        .omr_answer_key_list_create_column_count,
+                columnCount,
+                columnCount
+        );
+
+        return getString(
+                automatic
+                        ? R.string
+                        .omr_answer_key_list_create_distribution_automatic
+                        : R.string
+                        .omr_answer_key_list_create_distribution_manual,
+                rowText,
+                columnText
+        );
+    }
+
+    private void openDynamicAnswerKeyEditor(
+            int questionCount,
+            int optionCount,
+            int configuredQuestionsPerColumn
+    ) {
+        Intent intent = configuredQuestionsPerColumn
+                == AUTOMATIC_QUESTIONS_PER_COLUMN
+                ? OmrManualAnswerKeyActivity
+                .createFlexibleV3Intent(
+                        this,
+                        questionCount,
+                        optionCount
+                )
+                : OmrManualAnswerKeyActivity
+                .createFlexibleV3Intent(
+                        this,
+                        questionCount,
+                        optionCount,
+                        configuredQuestionsPerColumn
+                );
+
+        manualAnswerKeyLauncher.launch(
+                intent
         );
     }
 
@@ -587,6 +862,31 @@ public final class OmrAnswerKeyListActivity
 
     @Override
     protected void onDestroy() {
+        AlertDialog dialog = questionCountDialog;
+        questionCountDialog = null;
+
+        if (dialog != null) {
+            dialog.setOnDismissListener(null);
+            dialog.dismiss();
+        }
+
+        AlertDialog optionDialog = optionCountDialog;
+        optionCountDialog = null;
+
+        if (optionDialog != null) {
+            optionDialog.setOnDismissListener(null);
+            optionDialog.dismiss();
+        }
+
+        AlertDialog distributionDialog =
+                questionsPerColumnDialog;
+        questionsPerColumnDialog = null;
+
+        if (distributionDialog != null) {
+            distributionDialog.setOnDismissListener(null);
+            distributionDialog.dismiss();
+        }
+
         if (viewBinder != null) {
             viewBinder.release();
             viewBinder = null;

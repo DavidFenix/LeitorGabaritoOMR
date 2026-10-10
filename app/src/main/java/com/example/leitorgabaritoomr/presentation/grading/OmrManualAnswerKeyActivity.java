@@ -12,9 +12,12 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.application.grading.OmrManualAnswerKeyDraft;
+import com.example.leitorgabaritoomr.application.layout.OmrPublishedLayoutResolver;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.vision.layout.OmrLayoutDefinition;
 import com.example.leitorgabaritoomr.vision.layout.factory.AvalieCeDevelopmentLayoutFactory;
+import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateCatalog;
+import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateSpec;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -31,6 +34,18 @@ public final class OmrManualAnswerKeyActivity
 
     public static final String EXTRA_CREATED_ANSWER_KEY =
             "com.example.leitorgabaritoomr.extra.CREATED_ANSWER_KEY";
+
+    private static final String EXTRA_LAYOUT_ID =
+            "com.example.leitorgabaritoomr.extra."
+                    + "MANUAL_ANSWER_KEY_LAYOUT_ID";
+
+    private static final String EXTRA_LAYOUT_VERSION =
+            "com.example.leitorgabaritoomr.extra."
+                    + "MANUAL_ANSWER_KEY_LAYOUT_VERSION";
+
+    private static final String EXTRA_QUESTION_COUNT =
+            "com.example.leitorgabaritoomr.extra."
+                    + "MANUAL_ANSWER_KEY_QUESTION_COUNT";
 
     private static final String STATE_DRAFT =
             "omr.manual_answer_key.draft";
@@ -61,6 +76,113 @@ public final class OmrManualAnswerKeyActivity
                 context,
                 OmrManualAnswerKeyActivity.class
         );
+    }
+
+    /**
+     * Abre o editor usando um dos modelos compactos publicados de 1 a 10.
+     */
+    public static Intent createCompactIntent(
+            Context context,
+            int questionCount
+    ) {
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .compactFourOptions(questionCount);
+
+        return createLayoutIntent(context, spec);
+    }
+
+    /**
+     * Abre o editor usando o modelo físico padronizado v2 A-D. Este método
+     * permanece como atalho compatível para os chamadores existentes.
+     */
+    public static Intent createStandardV2Intent(
+            Context context,
+            int questionCount
+    ) {
+        return createStandardV2Intent(
+                context,
+                questionCount,
+                OmrSheetTemplateCatalog
+                        .STANDARD_V2_FOUR_OPTION_COUNT
+        );
+    }
+
+    /**
+     * Abre o editor usando o modelo físico padronizado v2 com quatro ou
+     * cinco alternativas e qualquer quantidade de 1 a 90 questões.
+     */
+    public static Intent createStandardV2Intent(
+            Context context,
+            int questionCount,
+            int optionCount
+    ) {
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .standardOptionsV2(
+                                questionCount,
+                                optionCount
+                        );
+
+        return createLayoutIntent(context, spec);
+    }
+
+    /**
+     * Abre o editor usando a distribuicao automatica do modelo flexivel v3.
+     */
+    public static Intent createFlexibleV3Intent(
+            Context context,
+            int questionCount,
+            int optionCount
+    ) {
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .flexibleOptionsV3(
+                                questionCount,
+                                optionCount
+                        );
+
+        return createLayoutIntent(context, spec);
+    }
+
+    /**
+     * Abre o editor usando uma quantidade explicita de itens por coluna no
+     * modelo flexivel v3.
+     */
+    public static Intent createFlexibleV3Intent(
+            Context context,
+            int questionCount,
+            int optionCount,
+            int questionsPerColumn
+    ) {
+        OmrSheetTemplateSpec spec =
+                OmrSheetTemplateCatalog
+                        .flexibleOptionsV3(
+                                questionCount,
+                                optionCount,
+                                questionsPerColumn
+                        );
+
+        return createLayoutIntent(context, spec);
+    }
+
+    private static Intent createLayoutIntent(
+            Context context,
+            OmrSheetTemplateSpec spec
+    ) {
+        return createIntent(context)
+                .putExtra(
+                        EXTRA_LAYOUT_ID,
+                        spec.getTemplateId()
+                )
+                .putExtra(
+                        EXTRA_LAYOUT_VERSION,
+                        spec.getTemplateVersion()
+                )
+                .putExtra(
+                        EXTRA_QUESTION_COUNT,
+                        spec.getQuestionCount()
+                );
     }
 
     /**
@@ -97,8 +219,23 @@ public final class OmrManualAnswerKeyActivity
                 R.layout.activity_omr_manual_answer_key
         );
 
-        layoutDefinition =
-                AvalieCeDevelopmentLayoutFactory.create();
+        setResult(Activity.RESULT_CANCELED);
+
+        try {
+            layoutDefinition = resolveRequestedLayout(
+                    getIntent()
+            );
+
+        } catch (RuntimeException exception) {
+            Toast.makeText(
+                    this,
+                    R.string.omr_manual_key_error_layout,
+                    Toast.LENGTH_LONG
+            ).show();
+
+            finish();
+            return;
+        }
 
         draft = restoreDraft(savedInstanceState);
 
@@ -123,7 +260,28 @@ public final class OmrManualAnswerKeyActivity
         restoreAnswerKeyName(savedInstanceState);
         renderCurrentDraft();
 
-        setResult(Activity.RESULT_CANCELED);
+    }
+
+    private OmrLayoutDefinition resolveRequestedLayout(
+            @Nullable Intent intent
+    ) {
+        if (intent == null
+                || !intent.hasExtra(EXTRA_LAYOUT_ID)) {
+
+            return AvalieCeDevelopmentLayoutFactory.create();
+        }
+
+        return new OmrPublishedLayoutResolver().resolve(
+                intent.getStringExtra(EXTRA_LAYOUT_ID),
+                intent.getIntExtra(
+                        EXTRA_LAYOUT_VERSION,
+                        0
+                ),
+                intent.getIntExtra(
+                        EXTRA_QUESTION_COUNT,
+                        0
+                )
+        );
     }
 
     private void configureBinder() {
