@@ -16,7 +16,7 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
     static final String DEFAULT_DATABASE_NAME =
             "omr_school.db";
 
-    static final int DATABASE_VERSION = 2;
+    static final int DATABASE_VERSION = 3;
 
     static final String TABLE_ASSESSMENT =
             "omr_assessment";
@@ -54,6 +54,32 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
     static final String COLUMN_STUDENT_PAYLOAD =
             "payload";
 
+    static final String TABLE_CLASS_GROUP =
+            "omr_class_group";
+
+    static final String COLUMN_CLASS_GROUP_ID =
+            "class_group_id";
+    static final String COLUMN_CLASS_NAME =
+            "name";
+    static final String COLUMN_CLASS_GRADE_LEVEL =
+            "grade_level";
+    static final String COLUMN_CLASS_SCHOOL_YEAR =
+            "school_year";
+    static final String COLUMN_CLASS_PAYLOAD =
+            "payload";
+
+    static final String TABLE_CLASS_ENROLLMENT =
+            "omr_class_enrollment";
+
+    static final String COLUMN_ENROLLMENT_CLASS_GROUP_ID =
+            "class_group_id";
+    static final String COLUMN_ENROLLMENT_STUDENT_ID =
+            "student_id";
+    static final String COLUMN_ROSTER_POSITION =
+            "roster_position";
+    static final String COLUMN_ENROLLMENT_PAYLOAD =
+            "payload";
+
     OmrSchoolDatabase(
             Context context,
             String databaseName
@@ -80,6 +106,8 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
     ) {
         createAssessmentTable(database);
         createStudentTable(database);
+        createClassGroupTable(database);
+        createClassEnrollmentTable(database);
     }
 
     static void createAssessmentTable(
@@ -167,6 +195,88 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
         );
     }
 
+    static void createClassGroupTable(
+            SQLiteDatabase database
+    ) {
+        database.execSQL(
+                "CREATE TABLE IF NOT EXISTS "
+                        + TABLE_CLASS_GROUP + " ("
+                        + COLUMN_CLASS_GROUP_ID
+                        + " TEXT PRIMARY KEY NOT NULL, "
+                        + COLUMN_CLASS_NAME
+                        + " TEXT NOT NULL, "
+                        + COLUMN_CLASS_GRADE_LEVEL
+                        + " TEXT NOT NULL, "
+                        + COLUMN_CLASS_SCHOOL_YEAR
+                        + " INTEGER NOT NULL CHECK ("
+                        + COLUMN_CLASS_SCHOOL_YEAR + " > 0), "
+                        + COLUMN_CLASS_PAYLOAD
+                        + " BLOB NOT NULL"
+                        + ")"
+        );
+
+        database.execSQL(
+                "CREATE INDEX IF NOT EXISTS "
+                        + "index_omr_class_group_school_order"
+                        + " ON " + TABLE_CLASS_GROUP
+                        + " (" + COLUMN_CLASS_SCHOOL_YEAR
+                        + " DESC, "
+                        + COLUMN_CLASS_NAME
+                        + " COLLATE NOCASE, "
+                        + COLUMN_CLASS_GROUP_ID + ")"
+        );
+    }
+
+    static void createClassEnrollmentTable(
+            SQLiteDatabase database
+    ) {
+        database.execSQL(
+                "CREATE TABLE IF NOT EXISTS "
+                        + TABLE_CLASS_ENROLLMENT + " ("
+                        + COLUMN_ENROLLMENT_CLASS_GROUP_ID
+                        + " TEXT NOT NULL, "
+                        + COLUMN_ENROLLMENT_STUDENT_ID
+                        + " TEXT NOT NULL, "
+                        + COLUMN_ROSTER_POSITION
+                        + " INTEGER NOT NULL CHECK ("
+                        + COLUMN_ROSTER_POSITION + " > 0), "
+                        + COLUMN_ENROLLMENT_PAYLOAD
+                        + " BLOB NOT NULL, "
+                        + "PRIMARY KEY ("
+                        + COLUMN_ENROLLMENT_CLASS_GROUP_ID
+                        + ", "
+                        + COLUMN_ENROLLMENT_STUDENT_ID
+                        + "), "
+                        + "UNIQUE ("
+                        + COLUMN_ENROLLMENT_CLASS_GROUP_ID
+                        + ", "
+                        + COLUMN_ROSTER_POSITION
+                        + "), "
+                        + "FOREIGN KEY ("
+                        + COLUMN_ENROLLMENT_CLASS_GROUP_ID
+                        + ") REFERENCES "
+                        + TABLE_CLASS_GROUP
+                        + " (" + COLUMN_CLASS_GROUP_ID + ")"
+                        + " ON UPDATE RESTRICT ON DELETE RESTRICT, "
+                        + "FOREIGN KEY ("
+                        + COLUMN_ENROLLMENT_STUDENT_ID
+                        + ") REFERENCES "
+                        + TABLE_STUDENT
+                        + " (" + COLUMN_STUDENT_ID + ")"
+                        + " ON UPDATE RESTRICT ON DELETE RESTRICT"
+                        + ")"
+        );
+
+        database.execSQL(
+                "CREATE INDEX IF NOT EXISTS "
+                        + "index_omr_class_enrollment_student"
+                        + " ON " + TABLE_CLASS_ENROLLMENT
+                        + " (" + COLUMN_ENROLLMENT_STUDENT_ID
+                        + ", "
+                        + COLUMN_ENROLLMENT_CLASS_GROUP_ID + ")"
+        );
+    }
+
     @Override
     public void onUpgrade(
             SQLiteDatabase database,
@@ -175,6 +285,11 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
     ) {
         if (oldVersion < 2) {
             createStudentTable(database);
+        }
+
+        if (oldVersion < 3) {
+            createClassGroupTable(database);
+            createClassEnrollmentTable(database);
         }
     }
 }
