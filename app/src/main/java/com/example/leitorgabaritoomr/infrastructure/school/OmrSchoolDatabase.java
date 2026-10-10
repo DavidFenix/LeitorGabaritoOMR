@@ -16,7 +16,7 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
     static final String DEFAULT_DATABASE_NAME =
             "omr_school.db";
 
-    static final int DATABASE_VERSION = 3;
+    static final int DATABASE_VERSION = 4;
 
     static final String TABLE_ASSESSMENT =
             "omr_assessment";
@@ -80,6 +80,26 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
     static final String COLUMN_ENROLLMENT_PAYLOAD =
             "payload";
 
+    static final String TABLE_ASSESSMENT_APPLICATION =
+            "omr_assessment_application";
+
+    static final String COLUMN_APPLICATION_ID =
+            "application_id";
+    static final String COLUMN_APPLICATION_CREATED_AT =
+            "created_at_epoch_millis";
+    static final String COLUMN_APPLICATION_PAYLOAD =
+            "payload";
+
+    static final String TABLE_ASSESSMENT_PARTICIPANT =
+            "omr_assessment_participant";
+
+    static final String COLUMN_PARTICIPANT_STUDENT_NAME =
+            "student_name";
+    static final String COLUMN_PARTICIPANT_CLASS_NAME =
+            "class_name";
+    static final String COLUMN_PARTICIPANT_PAYLOAD =
+            "payload";
+
     OmrSchoolDatabase(
             Context context,
             String databaseName
@@ -108,6 +128,8 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
         createStudentTable(database);
         createClassGroupTable(database);
         createClassEnrollmentTable(database);
+        createAssessmentApplicationTable(database);
+        createAssessmentParticipantTable(database);
     }
 
     static void createAssessmentTable(
@@ -277,6 +299,111 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
         );
     }
 
+    static void createAssessmentApplicationTable(
+            SQLiteDatabase database
+    ) {
+        database.execSQL(
+                "CREATE TABLE IF NOT EXISTS "
+                        + TABLE_ASSESSMENT_APPLICATION + " ("
+                        + COLUMN_APPLICATION_ID
+                        + " TEXT PRIMARY KEY NOT NULL, "
+                        + COLUMN_ASSESSMENT_ID
+                        + " TEXT NOT NULL, "
+                        + COLUMN_ASSESSMENT_VERSION
+                        + " INTEGER NOT NULL CHECK ("
+                        + COLUMN_ASSESSMENT_VERSION + " > 0), "
+                        + COLUMN_CLASS_GROUP_ID
+                        + " TEXT NOT NULL, "
+                        + COLUMN_APPLICATION_CREATED_AT
+                        + " INTEGER NOT NULL CHECK ("
+                        + COLUMN_APPLICATION_CREATED_AT + " > 0), "
+                        + COLUMN_APPLICATION_PAYLOAD
+                        + " BLOB NOT NULL, "
+                        + "FOREIGN KEY ("
+                        + COLUMN_ASSESSMENT_ID + ", "
+                        + COLUMN_ASSESSMENT_VERSION
+                        + ") REFERENCES "
+                        + TABLE_ASSESSMENT + " ("
+                        + COLUMN_ASSESSMENT_ID + ", "
+                        + COLUMN_ASSESSMENT_VERSION + ")"
+                        + " ON UPDATE RESTRICT ON DELETE RESTRICT, "
+                        + "FOREIGN KEY ("
+                        + COLUMN_CLASS_GROUP_ID
+                        + ") REFERENCES "
+                        + TABLE_CLASS_GROUP
+                        + " (" + COLUMN_CLASS_GROUP_ID + ")"
+                        + " ON UPDATE RESTRICT ON DELETE RESTRICT"
+                        + ")"
+        );
+
+        database.execSQL(
+                "CREATE INDEX IF NOT EXISTS "
+                        + "index_omr_application_class"
+                        + " ON " + TABLE_ASSESSMENT_APPLICATION
+                        + " (" + COLUMN_CLASS_GROUP_ID + ", "
+                        + COLUMN_APPLICATION_CREATED_AT + " DESC, "
+                        + COLUMN_APPLICATION_ID + ")"
+        );
+
+        database.execSQL(
+                "CREATE INDEX IF NOT EXISTS "
+                        + "index_omr_application_assessment"
+                        + " ON " + TABLE_ASSESSMENT_APPLICATION
+                        + " (" + COLUMN_ASSESSMENT_ID + ", "
+                        + COLUMN_ASSESSMENT_VERSION + ", "
+                        + COLUMN_APPLICATION_CREATED_AT + " DESC, "
+                        + COLUMN_APPLICATION_ID + ")"
+        );
+    }
+
+    static void createAssessmentParticipantTable(
+            SQLiteDatabase database
+    ) {
+        database.execSQL(
+                "CREATE TABLE IF NOT EXISTS "
+                        + TABLE_ASSESSMENT_PARTICIPANT + " ("
+                        + COLUMN_APPLICATION_ID
+                        + " TEXT NOT NULL, "
+                        + COLUMN_STUDENT_ID
+                        + " TEXT NOT NULL, "
+                        + COLUMN_REGISTRATION
+                        + " TEXT NOT NULL COLLATE NOCASE, "
+                        + COLUMN_PARTICIPANT_STUDENT_NAME
+                        + " TEXT NOT NULL, "
+                        + COLUMN_PARTICIPANT_CLASS_NAME
+                        + " TEXT NOT NULL, "
+                        + COLUMN_ROSTER_POSITION
+                        + " INTEGER NOT NULL CHECK ("
+                        + COLUMN_ROSTER_POSITION + " > 0), "
+                        + COLUMN_PARTICIPANT_PAYLOAD
+                        + " BLOB NOT NULL, "
+                        + "PRIMARY KEY ("
+                        + COLUMN_APPLICATION_ID + ", "
+                        + COLUMN_STUDENT_ID + "), "
+                        + "UNIQUE ("
+                        + COLUMN_APPLICATION_ID + ", "
+                        + COLUMN_REGISTRATION + "), "
+                        + "UNIQUE ("
+                        + COLUMN_APPLICATION_ID + ", "
+                        + COLUMN_ROSTER_POSITION + "), "
+                        + "FOREIGN KEY ("
+                        + COLUMN_APPLICATION_ID
+                        + ") REFERENCES "
+                        + TABLE_ASSESSMENT_APPLICATION
+                        + " (" + COLUMN_APPLICATION_ID + ")"
+                        + " ON UPDATE RESTRICT ON DELETE RESTRICT"
+                        + ")"
+        );
+
+        database.execSQL(
+                "CREATE INDEX IF NOT EXISTS "
+                        + "index_omr_participant_student"
+                        + " ON " + TABLE_ASSESSMENT_PARTICIPANT
+                        + " (" + COLUMN_STUDENT_ID + ", "
+                        + COLUMN_APPLICATION_ID + ")"
+        );
+    }
+
     @Override
     public void onUpgrade(
             SQLiteDatabase database,
@@ -290,6 +417,11 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
         if (oldVersion < 3) {
             createClassGroupTable(database);
             createClassEnrollmentTable(database);
+        }
+
+        if (oldVersion < 4) {
+            createAssessmentApplicationTable(database);
+            createAssessmentParticipantTable(database);
         }
     }
 }
