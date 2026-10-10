@@ -16,7 +16,7 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
     static final String DEFAULT_DATABASE_NAME =
             "omr_school.db";
 
-    private static final int DATABASE_VERSION = 1;
+    static final int DATABASE_VERSION = 2;
 
     static final String TABLE_ASSESSMENT =
             "omr_assessment";
@@ -40,6 +40,18 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
     static final String COLUMN_ANSWER_KEY_VERSION =
             "answer_key_version";
     static final String COLUMN_PAYLOAD =
+            "payload";
+
+    static final String TABLE_STUDENT =
+            "omr_student";
+
+    static final String COLUMN_STUDENT_ID =
+            "student_id";
+    static final String COLUMN_REGISTRATION =
+            "registration";
+    static final String COLUMN_STUDENT_NAME =
+            "name";
+    static final String COLUMN_STUDENT_PAYLOAD =
             "payload";
 
     OmrSchoolDatabase(
@@ -66,8 +78,16 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
     public void onCreate(
             SQLiteDatabase database
     ) {
+        createAssessmentTable(database);
+        createStudentTable(database);
+    }
+
+    static void createAssessmentTable(
+            SQLiteDatabase database
+    ) {
         database.execSQL(
-                "CREATE TABLE " + TABLE_ASSESSMENT + " ("
+                "CREATE TABLE IF NOT EXISTS "
+                        + TABLE_ASSESSMENT + " ("
                         + COLUMN_ASSESSMENT_ID
                         + " TEXT NOT NULL, "
                         + COLUMN_ASSESSMENT_VERSION
@@ -100,7 +120,8 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
         );
 
         database.execSQL(
-                "CREATE INDEX index_omr_assessment_school_order"
+                "CREATE INDEX IF NOT EXISTS "
+                        + "index_omr_assessment_school_order"
                         + " ON " + TABLE_ASSESSMENT
                         + " (" + COLUMN_SCHOOL_YEAR + " DESC, "
                         + COLUMN_TITLE + " COLLATE NOCASE, "
@@ -109,10 +130,40 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
         );
 
         database.execSQL(
-                "CREATE INDEX index_omr_assessment_answer_key"
+                "CREATE INDEX IF NOT EXISTS "
+                        + "index_omr_assessment_answer_key"
                         + " ON " + TABLE_ASSESSMENT
                         + " (" + COLUMN_ANSWER_KEY_ID
                         + ", " + COLUMN_ANSWER_KEY_VERSION + ")"
+        );
+    }
+
+    static void createStudentTable(
+            SQLiteDatabase database
+    ) {
+        database.execSQL(
+                "CREATE TABLE IF NOT EXISTS "
+                        + TABLE_STUDENT + " ("
+                        + COLUMN_STUDENT_ID
+                        + " TEXT PRIMARY KEY NOT NULL, "
+                        + COLUMN_REGISTRATION
+                        + " TEXT NOT NULL COLLATE NOCASE UNIQUE, "
+                        + COLUMN_STUDENT_NAME
+                        + " TEXT NOT NULL, "
+                        + COLUMN_STUDENT_PAYLOAD
+                        + " BLOB NOT NULL"
+                        + ")"
+        );
+
+        database.execSQL(
+                "CREATE INDEX IF NOT EXISTS "
+                        + "index_omr_student_school_order"
+                        + " ON " + TABLE_STUDENT
+                        + " (" + COLUMN_STUDENT_NAME
+                        + " COLLATE NOCASE, "
+                        + COLUMN_REGISTRATION
+                        + " COLLATE NOCASE, "
+                        + COLUMN_STUDENT_ID + ")"
         );
     }
 
@@ -122,6 +173,8 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
             int oldVersion,
             int newVersion
     ) {
-        // A primeira versão do banco escolar ainda não possui migrações.
+        if (oldVersion < 2) {
+            createStudentTable(database);
+        }
     }
 }
