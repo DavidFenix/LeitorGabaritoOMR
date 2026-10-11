@@ -11,8 +11,10 @@ import com.example.leitorgabaritoomr.domain.student.OmrStudentProfile;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * Catálogo SQLite dos alunos permanentes conhecidos pelo dispositivo.
@@ -92,28 +94,27 @@ public final class OmrSQLiteStudentRepository
             );
         }
 
+        saveAll(Collections.singletonList(student));
+    }
+
+    @Override
+    public void saveAll(
+            List<OmrStudentProfile> students
+    ) {
+        validateBatch(students);
+
+        if (students.isEmpty()) {
+            return;
+        }
+
         SQLiteDatabase writableDatabase =
                 database.getWritableDatabase();
 
         writableDatabase.beginTransaction();
 
         try {
-            ContentValues values = valuesOf(student);
-
-            int updated = writableDatabase.update(
-                    OmrSchoolDatabase.TABLE_STUDENT,
-                    values,
-                    OmrSchoolDatabase.COLUMN_STUDENT_ID
-                            + " = ?",
-                    new String[]{student.getStudentId()}
-            );
-
-            if (updated == 0) {
-                writableDatabase.insertOrThrow(
-                        OmrSchoolDatabase.TABLE_STUDENT,
-                        null,
-                        values
-                );
+            for (OmrStudentProfile student : students) {
+                upsert(writableDatabase, student);
             }
 
             writableDatabase.setTransactionSuccessful();
@@ -126,6 +127,28 @@ public final class OmrSQLiteStudentRepository
 
         } finally {
             writableDatabase.endTransaction();
+        }
+    }
+
+    private void upsert(
+            SQLiteDatabase writableDatabase,
+            OmrStudentProfile student
+    ) {
+        ContentValues values = valuesOf(student);
+
+        int updated = writableDatabase.update(
+                OmrSchoolDatabase.TABLE_STUDENT,
+                values,
+                OmrSchoolDatabase.COLUMN_STUDENT_ID + " = ?",
+                new String[]{student.getStudentId()}
+        );
+
+        if (updated == 0) {
+            writableDatabase.insertOrThrow(
+                    OmrSchoolDatabase.TABLE_STUDENT,
+                    null,
+                    values
+            );
         }
     }
 
@@ -316,5 +339,44 @@ public final class OmrSQLiteStudentRepository
         return normalized == null
                 ? null
                 : normalized.toUpperCase(Locale.ROOT);
+    }
+
+    private static void validateBatch(
+            List<OmrStudentProfile> students
+    ) {
+        if (students == null) {
+            throw new IllegalArgumentException(
+                    "A coleção de alunos é obrigatória."
+            );
+        }
+
+        Set<String> studentIds = new HashSet<>();
+        Set<String> registrations = new HashSet<>();
+
+        for (OmrStudentProfile student : students) {
+            if (student == null) {
+                throw new IllegalArgumentException(
+                        "A coleção não pode conter alunos nulos."
+                );
+            }
+
+            if (!studentIds.add(student.getStudentId())) {
+                throw new IllegalArgumentException(
+                        "Aluno repetido no lote: "
+                                + student.getStudentId()
+                );
+            }
+
+            String normalizedRegistration =
+                    student.getRegistration()
+                            .toUpperCase(Locale.ROOT);
+
+            if (!registrations.add(normalizedRegistration)) {
+                throw new IllegalArgumentException(
+                        "Matrícula repetida no lote: "
+                                + student.getRegistration()
+                );
+            }
+        }
     }
 }

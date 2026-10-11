@@ -15,6 +15,14 @@ public interface OmrStudentRepository {
 
     void save(OmrStudentProfile student);
 
+    /**
+     * Cria ou atualiza todos os alunos como uma única operação.
+     *
+     * A implementação persistente deve confirmar o lote inteiro ou não
+     * gravar nenhuma linha quando qualquer aluno for inválido.
+     */
+    void saveAll(List<OmrStudentProfile> students);
+
     List<OmrStudentProfile> loadAll();
 
     OmrStudentProfile findByIdOrNull(String studentId);
