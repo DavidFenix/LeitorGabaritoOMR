@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#FFFFFFFF"
+    android:elevation="1dp"
+    android:gravity="center_vertical"
+    android:minHeight="84dp"
+    android:orientation="horizontal"
+    android:paddingStart="12dp"
+    android:paddingTop="12dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="12dp">
+
+    <TextView
+        android:id="@+id/textOmrClassEnrollmentPosition"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="#FFE5E7EB"
+        android:gravity="center"
+        android:textColor="#FF111827"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        tools:text="12" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/textOmrClassEnrollmentName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            android:textColor="#FF111827"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            tools:text="Ana Beatriz" />
+
+        <TextView
+            android:id="@+id/textOmrClassEnrollmentRegistration"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:textColor="#FF4B5563"
+            android:textSize="14sp"
+            tools:text="Matrícula: 000123" />
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/buttonOmrClassEnrollmentEdit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:minHeight="44dp"
+        android:text="@string/omr_class_roster_action_edit"
+        android:textSize="12sp" />
+
+</LinearLayout>

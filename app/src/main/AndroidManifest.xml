@@ -58,6 +58,14 @@
             android:exported="false" />
 
         <activity
+            android:name=".presentation.classroom.OmrClassListActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".presentation.classroom.OmrClassRosterActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".presentation.history.OmrStudentHistoryActivity"
             android:exported="false" />
 

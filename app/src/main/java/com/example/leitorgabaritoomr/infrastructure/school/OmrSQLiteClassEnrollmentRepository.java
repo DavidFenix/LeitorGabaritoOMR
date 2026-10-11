@@ -49,7 +49,7 @@ public final class OmrSQLiteClassEnrollmentRepository
         );
     }
 
-    OmrSQLiteClassEnrollmentRepository(
+    public OmrSQLiteClassEnrollmentRepository(
             Context context,
             String databaseName
     ) {

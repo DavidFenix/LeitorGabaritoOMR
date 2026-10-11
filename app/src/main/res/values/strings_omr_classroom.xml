@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="omr_lab_action_open_classes">Turmas</string>
+
+    <string name="omr_class_list_title">Turmas</string>
+    <string name="omr_class_list_subtitle">Cadastre uma turma manualmente ou importe turmas, alunos e listas de chamada em um único CSV.</string>
+    <plurals name="omr_class_list_count">
+        <item quantity="one">%1$d turma cadastrada</item>
+        <item quantity="other">%1$d turmas cadastradas</item>
+    </plurals>
+    <string name="omr_class_list_filtered_count">%1$d de %2$d turmas encontradas</string>
+    <string name="omr_class_list_search_hint">Pesquisar turma, etapa ou ano</string>
+    <string name="omr_class_list_empty_title">Nenhuma turma cadastrada</string>
+    <string name="omr_class_list_empty_message">Use “Nova turma” para cadastrar manualmente ou importe um CSV completo de turmas e alunos.</string>
+    <string name="omr_class_list_no_results_title">Nenhuma turma encontrada</string>
+    <string name="omr_class_list_no_results_message">Revise o nome, a etapa ou o ano letivo pesquisado.</string>
+    <string name="omr_class_list_load_error">Não foi possível carregar as turmas cadastradas.</string>
+    <string name="omr_class_list_metadata">%1$s • %2$d</string>
+    <plurals name="omr_class_list_student_count">
+        <item quantity="one">%1$d aluno na lista</item>
+        <item quantity="other">%1$d alunos na lista</item>
+    </plurals>
+    <string name="omr_class_list_action_back">Voltar</string>
+    <string name="omr_class_list_action_create">Nova turma</string>
+    <string name="omr_class_list_action_import_csv">Importar turmas e alunos por CSV</string>
+    <string name="omr_class_list_action_roster">Alunos</string>
+    <string name="omr_class_list_action_edit">Editar</string>
+
+    <string name="omr_class_registration_create_title">Cadastrar turma</string>
+    <string name="omr_class_registration_edit_title">Editar turma</string>
+    <string name="omr_class_registration_name_label">Nome da turma</string>
+    <string name="omr_class_registration_grade_label">Etapa ou série</string>
+    <string name="omr_class_registration_year_label">Ano letivo</string>
+    <string name="omr_class_registration_error_name">Informe o nome da turma.</string>
+    <string name="omr_class_registration_error_grade">Informe a etapa ou série.</string>
+    <string name="omr_class_registration_error_year">Informe um ano letivo válido.</string>
+    <string name="omr_class_registration_action_save">Salvar</string>
+    <string name="omr_class_registration_action_cancel">Cancelar</string>
+    <string name="omr_class_registration_created">Turma cadastrada.</string>
+    <string name="omr_class_registration_updated">Cadastro da turma atualizado.</string>
+    <string name="omr_class_registration_save_error">Não foi possível salvar a turma.</string>
+    <string name="omr_class_registration_missing">A turma selecionada não está mais disponível.</string>
+
+    <string name="omr_class_csv_preview_title">Prévia das turmas e listas</string>
+    <plurals name="omr_class_csv_preview_valid_rows">
+        <item quantity="one">%1$d matrícula em turma está pronta para importação.</item>
+        <item quantity="other">%1$d matrículas em turma estão prontas para importação.</item>
+    </plurals>
+    <plurals name="omr_class_csv_preview_class_count">
+        <item quantity="one">O arquivo contém %1$d turma.</item>
+        <item quantity="other">O arquivo contém %1$d turmas.</item>
+    </plurals>
+    <string name="omr_class_csv_preview_replace_note">Ao confirmar, a lista completa de cada turma presente no arquivo substituirá a lista anterior dessa turma. As demais turmas não serão alteradas.</string>
+    <plurals name="omr_class_csv_preview_more_rows">
+        <item quantity="one">… e mais %1$d matrícula.</item>
+        <item quantity="other">… e mais %1$d matrículas.</item>
+    </plurals>
+    <string name="omr_class_csv_preview_row">%1$s • posição %2$d • %3$s — %4$s</string>
+    <string name="omr_class_csv_preview_technical">Codificação: %1$s • separador: %2$s</string>
+    <string name="omr_class_csv_preview_error_title">O CSV precisa de correções</string>
+    <plurals name="omr_class_csv_preview_error_summary">
+        <item quantity="one">Foi encontrada %1$d inconsistência. Nenhuma linha será importada enquanto houver erros.</item>
+        <item quantity="other">Foram encontradas %1$d inconsistências. Nenhuma linha será importada enquanto houver erros.</item>
+    </plurals>
+    <plurals name="omr_class_csv_preview_more_errors">
+        <item quantity="one">… e mais %1$d inconsistência.</item>
+        <item quantity="other">… e mais %1$d inconsistências.</item>
+    </plurals>
+    <string name="omr_class_csv_action_import">Importar</string>
+    <string name="omr_class_csv_action_close">Fechar</string>
+    <string name="omr_class_csv_action_cancel">Cancelar</string>
+    <string name="omr_class_csv_read_error">Não foi possível ler o arquivo CSV.</string>
+    <string name="omr_class_csv_too_large">O CSV excede o limite de 5 MB.</string>
+    <string name="omr_class_csv_import_error">Não foi possível importar o CSV. Nenhuma linha foi gravada.</string>
+    <string name="omr_class_csv_import_success">Importação concluída: %1$d turmas, %2$d alunos e %3$d matrículas processadas.</string>
+
+    <string name="omr_class_roster_title_fallback">Lista da turma</string>
+    <string name="omr_class_roster_metadata">%1$s • %2$d</string>
+    <plurals name="omr_class_roster_count">
+        <item quantity="one">%1$d aluno matriculado</item>
+        <item quantity="other">%1$d alunos matriculados</item>
+    </plurals>
+    <string name="omr_class_roster_filtered_count">%1$d de %2$d alunos encontrados</string>
+    <string name="omr_class_roster_search_hint">Pesquisar nome, matrícula ou posição</string>
+    <string name="omr_class_roster_empty_title">Lista de chamada vazia</string>
+    <string name="omr_class_roster_empty_message">Matricule um aluno já cadastrado ou retorne à tela de turmas para importar o CSV completo.</string>
+    <string name="omr_class_roster_no_results_title">Nenhum aluno encontrado</string>
+    <string name="omr_class_roster_no_results_message">Revise o nome, a matrícula ou a posição pesquisada.</string>
+    <string name="omr_class_roster_load_error">Não foi possível carregar a lista da turma.</string>
+    <string name="omr_class_roster_missing">A turma selecionada não está mais disponível.</string>
+    <string name="omr_class_roster_student_missing">O aluno selecionado não está mais disponível.</string>
+    <string name="omr_class_roster_position_format">%1$d</string>
+    <string name="omr_class_roster_registration_format">Matrícula: %1$s</string>
+    <string name="omr_class_roster_action_back">Voltar</string>
+    <string name="omr_class_roster_action_enroll">Matricular aluno</string>
+    <string name="omr_class_roster_action_edit">Alterar posição</string>
+
+    <string name="omr_class_enrollment_create_title">Matricular aluno</string>
+    <string name="omr_class_enrollment_edit_title">Alterar posição na chamada</string>
+    <string name="omr_class_enrollment_registration_label">Matrícula do aluno</string>
+    <string name="omr_class_enrollment_registration_helper">O aluno deve estar cadastrado previamente na tela Alunos.</string>
+    <string name="omr_class_enrollment_position_label">Posição na chamada</string>
+    <string name="omr_class_enrollment_error_registration">Informe a matrícula do aluno.</string>
+    <string name="omr_class_enrollment_error_position">Informe uma posição positiva.</string>
+    <string name="omr_class_enrollment_student_not_found">Nenhum aluno cadastrado possui essa matrícula.</string>
+    <string name="omr_class_enrollment_action_save">Salvar</string>
+    <string name="omr_class_enrollment_action_cancel">Cancelar</string>
+    <string name="omr_class_enrollment_created">Aluno matriculado na turma.</string>
+    <string name="omr_class_enrollment_updated">Posição do aluno atualizada.</string>
+    <string name="omr_class_enrollment_save_error">Não foi possível salvar a matrícula. Verifique a posição e as outras turmas do mesmo ano.</string>
+
+</resources>

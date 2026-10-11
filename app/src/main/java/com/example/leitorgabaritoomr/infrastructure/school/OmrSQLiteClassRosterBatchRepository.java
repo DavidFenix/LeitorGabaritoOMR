@@ -28,7 +28,7 @@ public final class OmrSQLiteClassRosterBatchRepository
         this(context, OmrSchoolDatabase.DEFAULT_DATABASE_NAME);
     }
 
-    OmrSQLiteClassRosterBatchRepository(
+    public OmrSQLiteClassRosterBatchRepository(
             Context context,
             String databaseName
     ) {

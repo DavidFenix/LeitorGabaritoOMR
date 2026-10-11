@@ -54,7 +54,7 @@ public final class OmrSQLiteClassGroupRepository
         );
     }
 
-    OmrSQLiteClassGroupRepository(
+    public OmrSQLiteClassGroupRepository(
             Context context,
             String databaseName
     ) {

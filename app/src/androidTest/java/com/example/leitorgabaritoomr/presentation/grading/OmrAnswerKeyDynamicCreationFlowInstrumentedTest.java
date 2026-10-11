@@ -100,6 +100,14 @@ OmrAnswerKeyDynamicCreationFlowInstrumentedTest {
                         .check(matches(withText(expectedLabel)));
             }
 
+            onView(
+                    withText(
+                            R.string
+                                    .omr_answer_key_list_create_count_cancel
+                    )
+            ).inRoot(isDialog())
+                    .perform(click());
+
         }
     }
 
