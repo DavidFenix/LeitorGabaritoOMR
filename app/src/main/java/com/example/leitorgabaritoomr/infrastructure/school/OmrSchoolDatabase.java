@@ -7,16 +7,16 @@ import android.database.sqlite.SQLiteOpenHelper;
 /**
  * Banco local dos dados escolares associados ao núcleo OMR.
  *
- * As próximas tabelas de alunos, turmas, aplicações e tentativas serão
- * acrescentadas por migrações neste mesmo banco, evitando armazenamentos
- * isolados difíceis de consultar em conjunto.
+ * As tabelas de provas, alunos, turmas, aplicações, participantes e
+ * tentativas evoluem por migrações neste mesmo banco, evitando
+ * armazenamentos isolados difíceis de consultar em conjunto.
  */
 final class OmrSchoolDatabase extends SQLiteOpenHelper {
 
     static final String DEFAULT_DATABASE_NAME =
             "omr_school.db";
 
-    static final int DATABASE_VERSION = 4;
+    static final int DATABASE_VERSION = 5;
 
     static final String TABLE_ASSESSMENT =
             "omr_assessment";
@@ -100,6 +100,20 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
     static final String COLUMN_PARTICIPANT_PAYLOAD =
             "payload";
 
+    static final String TABLE_ASSESSMENT_ATTEMPT =
+            "omr_assessment_attempt";
+
+    static final String COLUMN_ATTEMPT_ID =
+            "attempt_id";
+    static final String COLUMN_ATTEMPT_REVISION =
+            "revision";
+    static final String COLUMN_HISTORY_RECORD_ID =
+            "history_record_id";
+    static final String COLUMN_ATTEMPT_RECORDED_AT =
+            "recorded_at_epoch_millis";
+    static final String COLUMN_ATTEMPT_PAYLOAD =
+            "payload";
+
     OmrSchoolDatabase(
             Context context,
             String databaseName
@@ -130,6 +144,7 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
         createClassEnrollmentTable(database);
         createAssessmentApplicationTable(database);
         createAssessmentParticipantTable(database);
+        createAssessmentAttemptTable(database);
     }
 
     static void createAssessmentTable(
@@ -404,6 +419,53 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
         );
     }
 
+    static void createAssessmentAttemptTable(
+            SQLiteDatabase database
+    ) {
+        database.execSQL(
+                "CREATE TABLE IF NOT EXISTS "
+                        + TABLE_ASSESSMENT_ATTEMPT + " ("
+                        + COLUMN_ATTEMPT_ID
+                        + " TEXT PRIMARY KEY NOT NULL, "
+                        + COLUMN_APPLICATION_ID
+                        + " TEXT NOT NULL, "
+                        + COLUMN_STUDENT_ID
+                        + " TEXT NOT NULL, "
+                        + COLUMN_ATTEMPT_REVISION
+                        + " INTEGER NOT NULL CHECK ("
+                        + COLUMN_ATTEMPT_REVISION + " > 0), "
+                        + COLUMN_HISTORY_RECORD_ID
+                        + " TEXT NOT NULL UNIQUE, "
+                        + COLUMN_ATTEMPT_RECORDED_AT
+                        + " INTEGER NOT NULL CHECK ("
+                        + COLUMN_ATTEMPT_RECORDED_AT + " > 0), "
+                        + COLUMN_ATTEMPT_PAYLOAD
+                        + " BLOB NOT NULL, "
+                        + "UNIQUE ("
+                        + COLUMN_APPLICATION_ID + ", "
+                        + COLUMN_STUDENT_ID + ", "
+                        + COLUMN_ATTEMPT_REVISION + "), "
+                        + "FOREIGN KEY ("
+                        + COLUMN_APPLICATION_ID + ", "
+                        + COLUMN_STUDENT_ID
+                        + ") REFERENCES "
+                        + TABLE_ASSESSMENT_PARTICIPANT + " ("
+                        + COLUMN_APPLICATION_ID + ", "
+                        + COLUMN_STUDENT_ID + ")"
+                        + " ON UPDATE RESTRICT ON DELETE RESTRICT"
+                        + ")"
+        );
+
+        database.execSQL(
+                "CREATE INDEX IF NOT EXISTS "
+                        + "index_omr_attempt_application"
+                        + " ON " + TABLE_ASSESSMENT_ATTEMPT
+                        + " (" + COLUMN_APPLICATION_ID + ", "
+                        + COLUMN_STUDENT_ID + ", "
+                        + COLUMN_ATTEMPT_REVISION + ")"
+        );
+    }
+
     @Override
     public void onUpgrade(
             SQLiteDatabase database,
@@ -422,6 +484,10 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
         if (oldVersion < 4) {
             createAssessmentApplicationTable(database);
             createAssessmentParticipantTable(database);
+        }
+
+        if (oldVersion < 5) {
+            createAssessmentAttemptTable(database);
         }
     }
 }
