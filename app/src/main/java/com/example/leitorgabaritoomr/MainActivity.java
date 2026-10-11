@@ -27,6 +27,7 @@ import com.example.leitorgabaritoomr.presentation.capture.OmrCaptureActivity;
 import com.example.leitorgabaritoomr.presentation.export.OmrSheetExportActivity;
 import com.example.leitorgabaritoomr.presentation.grading.OmrAnswerKeyListActivity;
 import com.example.leitorgabaritoomr.presentation.student.OmrStudentIdentificationActivity;
+import com.example.leitorgabaritoomr.presentation.student.OmrStudentListActivity;
 import com.example.leitorgabaritoomr.vision.debug.VisionDebugController;
 import com.example.leitorgabaritoomr.vision.debug.VisionStage;
 import com.example.leitorgabaritoomr.vision.geometry.MarkerSetResolutionResult;
@@ -109,6 +110,7 @@ public class MainActivity extends AppCompatActivity
         configurarAcessoCapturaReal();
         configureAnswerKeyListAccess();
         configureSheetExportAccess();
+        configureStudentListAccess();
 
         configurarCameraView();
 
@@ -238,6 +240,16 @@ public class MainActivity extends AppCompatActivity
                         OmrSheetExportActivity.createIntent(
                                 this
                         )
+                )
+        );
+    }
+
+    private void configureStudentListAccess() {
+        findViewById(
+                R.id.buttonOpenOmrStudents
+        ).setOnClickListener(
+                view -> startActivity(
+                        OmrStudentListActivity.createIntent(this)
                 )
         );
     }

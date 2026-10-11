@@ -54,6 +54,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".presentation.student.OmrStudentListActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".presentation.history.OmrStudentHistoryActivity"
             android:exported="false" />
 

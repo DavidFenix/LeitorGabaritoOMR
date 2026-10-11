@@ -54,7 +54,13 @@ public final class OmrSQLiteStudentRepository
         );
     }
 
-    OmrSQLiteStudentRepository(
+    /**
+     * Abre um catálogo com nome de banco explícito.
+     *
+     * Útil para fluxos isolados e testes instrumentados sem compartilhar o
+     * banco escolar padrão do aplicativo.
+     */
+    public OmrSQLiteStudentRepository(
             Context context,
             String databaseName
     ) {

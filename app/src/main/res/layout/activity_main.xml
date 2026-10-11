@@ -22,9 +22,23 @@
         android:orientation="vertical">
 
         <Button
+            android:id="@+id/buttonOpenOmrStudents"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:backgroundTint="#D91F2937"
+            android:elevation="8dp"
+            android:minHeight="48dp"
+            android:text="@string/omr_lab_action_open_students"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <Button
             android:id="@+id/buttonOpenOmrSheetExport"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
             android:backgroundTint="#D91F2937"
             android:elevation="8dp"
             android:minHeight="48dp"

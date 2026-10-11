@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="omr_lab_action_open_students">Alunos</string>
+    <string name="omr_student_list_title">Alunos</string>
+    <string name="omr_student_list_subtitle">Cadastre individualmente ou importe uma lista CSV sem perder os zeros iniciais das matrículas.</string>
+
+    <plurals name="omr_student_list_count">
+        <item quantity="one">%1$d aluno cadastrado</item>
+        <item quantity="other">%1$d alunos cadastrados</item>
+    </plurals>
+
+    <string name="omr_student_list_filtered_count">%1$d de %2$d alunos encontrados</string>
+    <string name="omr_student_list_search_hint">Pesquisar por nome ou matrícula</string>
+    <string name="omr_student_list_empty_title">Nenhum aluno cadastrado</string>
+    <string name="omr_student_list_empty_message">Use “Novo aluno” para cadastrar manualmente ou importe um CSV com as colunas matricula,nome.</string>
+    <string name="omr_student_list_no_results_title">Nenhum aluno encontrado</string>
+    <string name="omr_student_list_no_results_message">Revise o nome ou a matrícula informada na pesquisa.</string>
+    <string name="omr_student_list_load_error">Não foi possível carregar os alunos cadastrados.</string>
+    <string name="omr_student_list_registration_format">Matrícula: %1$s</string>
+
+    <string name="omr_student_list_action_back">Voltar</string>
+    <string name="omr_student_list_action_create">Novo aluno</string>
+    <string name="omr_student_list_action_import_csv">Importar CSV</string>
+    <string name="omr_student_list_action_edit">Editar</string>
+
+    <string name="omr_student_registration_create_title">Cadastrar aluno</string>
+    <string name="omr_student_registration_edit_title">Editar aluno</string>
+    <string name="omr_student_registration_registration_label">Matrícula</string>
+    <string name="omr_student_registration_registration_helper">Zeros à esquerda serão preservados.</string>
+    <string name="omr_student_registration_name_label">Nome completo</string>
+    <string name="omr_student_registration_error_registration">Informe a matrícula.</string>
+    <string name="omr_student_registration_error_name">Informe o nome do aluno.</string>
+    <string name="omr_student_registration_action_save">Salvar</string>
+    <string name="omr_student_registration_action_cancel">Cancelar</string>
+    <string name="omr_student_registration_created">Aluno cadastrado.</string>
+    <string name="omr_student_registration_updated">Cadastro do aluno atualizado.</string>
+    <string name="omr_student_registration_save_error">Não foi possível salvar o aluno.</string>
+    <string name="omr_student_registration_missing">O cadastro selecionado não está mais disponível.</string>
+
+    <string name="omr_student_csv_preview_title">Prévia da importação CSV</string>
+    <plurals name="omr_student_csv_preview_valid_rows">
+        <item quantity="one">%1$d linha válida está pronta para importação.</item>
+        <item quantity="other">%1$d linhas válidas estão prontas para importação.</item>
+    </plurals>
+    <string name="omr_student_csv_preview_update_note">Matrículas já cadastradas serão atualizadas sem trocar a identidade do aluno.</string>
+    <plurals name="omr_student_csv_preview_more_rows">
+        <item quantity="one">… e mais %1$d aluno.</item>
+        <item quantity="other">… e mais %1$d alunos.</item>
+    </plurals>
+    <string name="omr_student_csv_preview_technical">Codificação: %1$s • separador: %2$s</string>
+    <string name="omr_student_csv_preview_error_title">O CSV precisa de correções</string>
+    <plurals name="omr_student_csv_preview_error_summary">
+        <item quantity="one">Foi encontrada %1$d inconsistência. Nenhuma linha será importada enquanto houver erros.</item>
+        <item quantity="other">Foram encontradas %1$d inconsistências. Nenhuma linha será importada enquanto houver erros.</item>
+    </plurals>
+    <plurals name="omr_student_csv_preview_more_errors">
+        <item quantity="one">… e mais %1$d inconsistência.</item>
+        <item quantity="other">… e mais %1$d inconsistências.</item>
+    </plurals>
+    <string name="omr_student_csv_action_import">Importar</string>
+    <string name="omr_student_csv_action_close">Fechar</string>
+    <string name="omr_student_csv_action_cancel">Cancelar</string>
+    <string name="omr_student_csv_read_error">Não foi possível ler o arquivo CSV.</string>
+    <string name="omr_student_csv_too_large">O CSV excede o limite de 5 MB.</string>
+    <string name="omr_student_csv_import_error">Não foi possível importar o CSV. Nenhuma linha foi gravada.</string>
+    <string name="omr_student_csv_import_success">Importação concluída: %1$d novos e %2$d atualizados.</string>
+
+</resources>
