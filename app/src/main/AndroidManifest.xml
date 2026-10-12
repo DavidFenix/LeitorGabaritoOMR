@@ -66,6 +66,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".presentation.assessment.OmrAssessmentListActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".presentation.history.OmrStudentHistoryActivity"
             android:exported="false" />
 

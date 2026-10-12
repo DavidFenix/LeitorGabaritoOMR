@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="20dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:id="@+id/textOmrAssessmentVersionDialog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#FF374151"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            tools:text="A próxima publicação será a versão 2." />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/inputLayoutOmrAssessmentTitleDialog"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/omr_assessment_registration_title_label">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editOmrAssessmentTitleDialog"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="actionNext"
+                android:inputType="textCapSentences"
+                android:maxLength="180"
+                android:maxLines="2"
+                tools:text="Avaliação bimestral" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/inputLayoutOmrAssessmentSubjectDialog"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:hint="@string/omr_assessment_registration_subject_label">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editOmrAssessmentSubjectDialog"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="actionNext"
+                android:inputType="textCapWords"
+                android:maxLength="120"
+                android:maxLines="1"
+                android:singleLine="true"
+                tools:text="Matemática" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/inputLayoutOmrAssessmentGradeDialog"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:hint="@string/omr_assessment_registration_grade_label">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editOmrAssessmentGradeDialog"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="actionNext"
+                android:inputType="textCapWords"
+                android:maxLength="120"
+                android:maxLines="1"
+                android:singleLine="true"
+                tools:text="9º ano" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/inputLayoutOmrAssessmentPeriodDialog"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:hint="@string/omr_assessment_registration_period_label">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editOmrAssessmentPeriodDialog"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="actionNext"
+                android:inputType="textCapWords"
+                android:maxLength="120"
+                android:maxLines="1"
+                android:singleLine="true"
+                tools:text="2º bimestre" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/inputLayoutOmrAssessmentYearDialog"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:hint="@string/omr_assessment_registration_year_label">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editOmrAssessmentYearDialog"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="actionDone"
+                android:inputType="number"
+                android:maxLength="6"
+                android:maxLines="1"
+                android:singleLine="true"
+                tools:text="2026" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="@string/omr_assessment_registration_answer_key_label"
+            android:textColor="#FF111827"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/spinnerOmrAssessmentAnswerKeyDialog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:minHeight="64dp"
+            android:spinnerMode="dialog" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/omr_assessment_registration_answer_key_helper"
+            android:textColor="#FF6B7280"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+</ScrollView>

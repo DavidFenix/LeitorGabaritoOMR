@@ -93,7 +93,7 @@ public final class OmrSQLiteAssessmentRepository
         );
     }
 
-    OmrSQLiteAssessmentRepository(
+    public OmrSQLiteAssessmentRepository(
             Context context,
             String databaseName
     ) {

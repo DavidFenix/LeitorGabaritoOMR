@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="omr_lab_action_open_assessments">Provas</string>
+    <string name="omr_assessment_list_title">Provas</string>
+    <string name="omr_assessment_list_subtitle">Cadastre provas, preserve suas versões e importe lotes CSV vinculados aos gabaritos oficiais.</string>
+
+    <plurals name="omr_assessment_list_count">
+        <item quantity="one">%1$d prova cadastrada</item>
+        <item quantity="other">%1$d provas cadastradas</item>
+    </plurals>
+
+    <string name="omr_assessment_list_filtered_count">%1$d de %2$d provas encontradas</string>
+    <string name="omr_assessment_list_search_hint">Pesquisar por título, disciplina, etapa ou ano</string>
+    <string name="omr_assessment_list_empty_title">Nenhuma prova cadastrada</string>
+    <string name="omr_assessment_list_empty_message">Use “Nova prova” para cadastrar manualmente ou importe um CSV com código e versão explícitos.</string>
+    <string name="omr_assessment_list_no_results_title">Nenhuma prova encontrada</string>
+    <string name="omr_assessment_list_no_results_message">Revise os dados informados na pesquisa.</string>
+    <string name="omr_assessment_list_load_error">Não foi possível carregar as provas cadastradas.</string>
+    <string name="omr_assessment_list_metadata">%1$s • %2$s • %3$d</string>
+    <string name="omr_assessment_list_period_version">%1$s • versão %2$d</string>
+    <string name="omr_assessment_list_answer_key">Gabarito: %1$s • versão %2$d</string>
+
+    <string name="omr_assessment_list_action_back">Voltar</string>
+    <string name="omr_assessment_list_action_create">Nova prova</string>
+    <string name="omr_assessment_list_action_import_csv">Importar CSV</string>
+    <string name="omr_assessment_list_action_new_version">Nova versão</string>
+
+    <string name="omr_assessment_registration_create_title">Cadastrar prova</string>
+    <string name="omr_assessment_registration_revision_title">Publicar nova versão</string>
+    <string name="omr_assessment_registration_version_one">A prova será criada como versão 1.</string>
+    <string name="omr_assessment_registration_next_version">A próxima publicação será a versão %1$d.</string>
+    <string name="omr_assessment_registration_title_label">Título da prova</string>
+    <string name="omr_assessment_registration_subject_label">Disciplina</string>
+    <string name="omr_assessment_registration_grade_label">Etapa ou série</string>
+    <string name="omr_assessment_registration_period_label">Período acadêmico</string>
+    <string name="omr_assessment_registration_year_label">Ano letivo</string>
+    <string name="omr_assessment_registration_answer_key_label">Gabarito oficial e versão</string>
+    <string name="omr_assessment_registration_answer_key_helper">A prova ficará permanentemente vinculada à versão escolhida.</string>
+    <string name="omr_assessment_registration_error_title">Informe o título da prova.</string>
+    <string name="omr_assessment_registration_error_subject">Informe a disciplina.</string>
+    <string name="omr_assessment_registration_error_grade">Informe a etapa ou série.</string>
+    <string name="omr_assessment_registration_error_period">Informe o período acadêmico.</string>
+    <string name="omr_assessment_registration_error_year">Informe um ano letivo válido.</string>
+    <string name="omr_assessment_registration_action_save">Salvar</string>
+    <string name="omr_assessment_registration_action_cancel">Cancelar</string>
+    <string name="omr_assessment_registration_created">Prova cadastrada na versão 1.</string>
+    <string name="omr_assessment_registration_revised">Nova versão da prova publicada.</string>
+    <string name="omr_assessment_registration_save_error">Não foi possível salvar a prova.</string>
+    <string name="omr_assessment_registration_missing">A prova selecionada não está mais disponível.</string>
+    <string name="omr_assessment_registration_no_answer_keys_title">Cadastre um gabarito primeiro</string>
+    <string name="omr_assessment_registration_no_answer_keys_message">Toda prova precisa apontar para uma versão exata de gabarito. Cadastre ao menos um gabarito oficial antes de continuar.</string>
+    <string name="omr_assessment_registration_no_answer_keys_close">Entendi</string>
+    <string name="omr_assessment_registration_answer_key_item">%1$s\nID: %2$s\nVersão %3$d • %4$d questões</string>
+
+    <string name="omr_assessment_csv_preview_title">Prévia da importação de provas</string>
+    <plurals name="omr_assessment_csv_preview_valid_rows">
+        <item quantity="one">%1$d versão de prova está pronta para importação.</item>
+        <item quantity="other">%1$d versões de provas estão prontas para importação.</item>
+    </plurals>
+    <plurals name="omr_assessment_csv_preview_more_rows">
+        <item quantity="one">… e mais %1$d versão.</item>
+        <item quantity="other">… e mais %1$d versões.</item>
+    </plurals>
+    <string name="omr_assessment_csv_preview_row">%1$s v%2$d — %3$s</string>
+    <string name="omr_assessment_csv_preview_safety_note">Reimportações idênticas serão ignoradas. Uma versão existente com conteúdo diferente ou qualquer lacuna de versão rejeitará o lote inteiro.</string>
+    <string name="omr_assessment_csv_preview_technical">Codificação: %1$s • separador: %2$s</string>
+    <string name="omr_assessment_csv_preview_error_title">O CSV precisa de correções</string>
+    <plurals name="omr_assessment_csv_preview_error_summary">
+        <item quantity="one">Foi encontrada %1$d inconsistência. Nenhuma versão será importada enquanto houver erros.</item>
+        <item quantity="other">Foram encontradas %1$d inconsistências. Nenhuma versão será importada enquanto houver erros.</item>
+    </plurals>
+    <plurals name="omr_assessment_csv_preview_more_errors">
+        <item quantity="one">… e mais %1$d inconsistência.</item>
+        <item quantity="other">… e mais %1$d inconsistências.</item>
+    </plurals>
+    <string name="omr_assessment_csv_action_import">Importar</string>
+    <string name="omr_assessment_csv_action_close">Fechar</string>
+    <string name="omr_assessment_csv_action_cancel">Cancelar</string>
+    <string name="omr_assessment_csv_read_error">Não foi possível ler o arquivo CSV.</string>
+    <string name="omr_assessment_csv_too_large">O CSV excede o limite de 5 MB.</string>
+    <string name="omr_assessment_csv_import_error">Não foi possível importar o CSV. Nenhuma versão foi gravada.</string>
+    <string name="omr_assessment_csv_import_success">Importação concluída: %1$d versões novas e %2$d já existentes sem alteração.</string>
+
+</resources>

@@ -24,6 +24,7 @@ import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.domain.student.OmrStudentIdentity;
 import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesAnswerKeyRepository;
 import com.example.leitorgabaritoomr.presentation.capture.OmrCaptureActivity;
+import com.example.leitorgabaritoomr.presentation.assessment.OmrAssessmentListActivity;
 import com.example.leitorgabaritoomr.presentation.classroom.OmrClassListActivity;
 import com.example.leitorgabaritoomr.presentation.export.OmrSheetExportActivity;
 import com.example.leitorgabaritoomr.presentation.grading.OmrAnswerKeyListActivity;
@@ -113,6 +114,7 @@ public class MainActivity extends AppCompatActivity
         configureSheetExportAccess();
         configureStudentListAccess();
         configureClassListAccess();
+        configureAssessmentListAccess();
 
         configurarCameraView();
 
@@ -262,6 +264,16 @@ public class MainActivity extends AppCompatActivity
         ).setOnClickListener(
                 view -> startActivity(
                         OmrClassListActivity.createIntent(this)
+                )
+        );
+    }
+
+    private void configureAssessmentListAccess() {
+        findViewById(
+                R.id.buttonOpenOmrAssessments
+        ).setOnClickListener(
+                view -> startActivity(
+                        OmrAssessmentListActivity.createIntent(this)
                 )
         );
     }
