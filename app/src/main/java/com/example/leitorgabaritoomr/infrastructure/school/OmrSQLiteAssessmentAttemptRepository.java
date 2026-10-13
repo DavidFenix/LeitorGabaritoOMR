@@ -57,7 +57,7 @@ public final class OmrSQLiteAssessmentAttemptRepository
         );
     }
 
-    OmrSQLiteAssessmentAttemptRepository(
+    public OmrSQLiteAssessmentAttemptRepository(
             Context context,
             String databaseName
     ) {

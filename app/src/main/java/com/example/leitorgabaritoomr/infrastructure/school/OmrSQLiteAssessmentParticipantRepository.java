@@ -52,7 +52,7 @@ public final class OmrSQLiteAssessmentParticipantRepository
         );
     }
 
-    OmrSQLiteAssessmentParticipantRepository(
+    public OmrSQLiteAssessmentParticipantRepository(
             Context context,
             String databaseName
     ) {

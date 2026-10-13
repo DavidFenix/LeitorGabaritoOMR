@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#FFFFFFFF"
+    android:elevation="1dp"
+    android:gravity="center_vertical"
+    android:minHeight="92dp"
+    android:orientation="horizontal"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/textOmrApplicationParticipantPosition"
+        android:layout_width="52dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textColor="#FF1F2937"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        tools:text="#05" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/textOmrApplicationParticipantName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            android:textColor="#FF111827"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            tools:text="Ana Souza" />
+
+        <TextView
+            android:id="@+id/textOmrApplicationParticipantRegistration"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:maxLines="2"
+            android:textColor="#FF6B7280"
+            android:textSize="12sp"
+            tools:text="Matrícula MAT-001 • student-ana" />
+
+        <TextView
+            android:id="@+id/textOmrApplicationParticipantStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="#FF047857"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            tools:text="Corrigido • revisão 2 • 12/10/2026 09:30" />
+    </LinearLayout>
+</LinearLayout>

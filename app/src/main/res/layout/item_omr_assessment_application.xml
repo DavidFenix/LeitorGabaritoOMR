@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#FFFFFFFF"
+    android:elevation="1dp"
+    android:gravity="center_vertical"
+    android:minHeight="150dp"
+    android:orientation="horizontal"
+    android:paddingStart="16dp"
+    android:paddingTop="12dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="12dp">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/textOmrAssessmentApplicationItemTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            android:textColor="#FF111827"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            tools:text="Avaliação bimestral" />
+
+        <TextView
+            android:id="@+id/textOmrAssessmentApplicationItemAssessment"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:textColor="#FF374151"
+            android:textSize="14sp"
+            tools:text="Matemática • prova v2 • 2026" />
+
+        <TextView
+            android:id="@+id/textOmrAssessmentApplicationItemClass"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:textColor="#FF4B5563"
+            android:textSize="13sp"
+            tools:text="Turma congelada: 9º A" />
+
+        <TextView
+            android:id="@+id/textOmrAssessmentApplicationItemProgress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:textColor="#FF047857"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            tools:text="18 de 30 corrigidos • 12 pendentes" />
+
+        <TextView
+            android:id="@+id/textOmrAssessmentApplicationItemIdentity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:maxLines="2"
+            android:textColor="#FF6B7280"
+            android:textSize="11sp"
+            tools:text="ID: application-1 • criada em 12/10/2026 09:30" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/buttonOmrAssessmentApplicationItemRoster"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:minHeight="44dp"
+        android:text="@string/omr_assessment_application_list_action_roster"
+        android:textSize="11sp" />
+</LinearLayout>

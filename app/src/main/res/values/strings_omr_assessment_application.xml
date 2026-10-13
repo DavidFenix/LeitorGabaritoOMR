@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="omr_lab_action_open_assessment_applications">Aplicações</string>
+    <string name="omr_assessment_application_list_title">Aplicações de prova</string>
+    <string name="omr_assessment_application_list_subtitle">Aplique uma versão exata de prova a uma turma e preserve a chamada usada na correção.</string>
+    <plurals name="omr_assessment_application_list_count">
+        <item quantity="one">%1$d aplicação cadastrada</item>
+        <item quantity="other">%1$d aplicações cadastradas</item>
+    </plurals>
+    <string name="omr_assessment_application_list_filtered_count">%1$d de %2$d aplicações encontradas</string>
+    <string name="omr_assessment_application_list_search_hint">Pesquisar por prova, turma, disciplina, ano ou ID</string>
+    <string name="omr_assessment_application_list_empty_title">Nenhuma aplicação cadastrada</string>
+    <string name="omr_assessment_application_list_empty_message">Use “Nova aplicação” ou importe um CSV. A chamada da turma será congelada no momento do cadastro.</string>
+    <string name="omr_assessment_application_list_no_results_title">Nenhuma aplicação encontrada</string>
+    <string name="omr_assessment_application_list_no_results_message">Revise os dados informados na pesquisa.</string>
+    <string name="omr_assessment_application_list_load_error">Não foi possível carregar as aplicações.</string>
+    <string name="omr_assessment_application_list_assessment">%1$s • prova v%2$d • %3$d</string>
+    <string name="omr_assessment_application_list_class">Turma congelada: %1$s</string>
+    <plurals name="omr_assessment_application_list_progress">
+        <item quantity="one">%1$d de %2$d corrigidos • %3$d pendente</item>
+        <item quantity="other">%1$d de %2$d corrigidos • %3$d pendentes</item>
+    </plurals>
+    <string name="omr_assessment_application_list_progress_complete">%1$d de %2$d corrigidos • chamada concluída</string>
+    <string name="omr_assessment_application_list_identity">ID: %1$s • criada em %2$s</string>
+    <string name="omr_assessment_application_list_action_back">Voltar</string>
+    <string name="omr_assessment_application_list_action_create">Nova aplicação</string>
+    <string name="omr_assessment_application_list_action_import_csv">Importar aplicações CSV</string>
+    <string name="omr_assessment_application_list_action_roster">Chamada</string>
+
+    <string name="omr_assessment_application_registration_title">Nova aplicação</string>
+    <string name="omr_assessment_application_registration_assessment_label">Prova e versão exata</string>
+    <string name="omr_assessment_application_registration_class_label">Turma compatível</string>
+    <string name="omr_assessment_application_registration_hint">Somente turmas do mesmo ano letivo aparecem. A lista atual de matriculados será fotografada e não mudará retroativamente.</string>
+    <string name="omr_assessment_application_registration_assessment_option">%1$s\n%2$s • versão %3$d • %4$s • %5$d</string>
+    <string name="omr_assessment_application_registration_class_option">%1$s\n%2$s • %3$d • %4$d alunos</string>
+    <string name="omr_assessment_application_registration_no_assessments">Cadastre uma prova antes de criar a aplicação.</string>
+    <string name="omr_assessment_application_registration_no_classes">Não há turma do mesmo ano letivo com alunos matriculados.</string>
+    <string name="omr_assessment_application_registration_action_save">Criar aplicação</string>
+    <string name="omr_assessment_application_registration_action_cancel">Cancelar</string>
+    <string name="omr_assessment_application_registration_created">Aplicação criada com %1$d participantes na chamada congelada.</string>
+    <string name="omr_assessment_application_registration_save_error">Não foi possível criar a aplicação.</string>
+
+    <string name="omr_assessment_application_csv_preview_title">Prévia da importação de aplicações</string>
+    <plurals name="omr_assessment_application_csv_preview_valid_rows">
+        <item quantity="one">%1$d aplicação está pronta para importação.</item>
+        <item quantity="other">%1$d aplicações estão prontas para importação.</item>
+    </plurals>
+    <string name="omr_assessment_application_csv_preview_row">%1$s — %2$s v%3$d — %4$s</string>
+    <plurals name="omr_assessment_application_csv_preview_more_rows">
+        <item quantity="one">… e mais %1$d aplicação.</item>
+        <item quantity="other">… e mais %1$d aplicações.</item>
+    </plurals>
+    <string name="omr_assessment_application_csv_preview_safety_note">Cada linha resolve uma versão exata da prova e uma turma do mesmo ano. Reimportações idênticas preservam a chamada original.</string>
+    <string name="omr_assessment_application_csv_preview_technical">Codificação: %1$s • separador: %2$s</string>
+    <string name="omr_assessment_application_csv_preview_error_title">O CSV precisa de correções</string>
+    <plurals name="omr_assessment_application_csv_preview_error_summary">
+        <item quantity="one">Foi encontrada %1$d inconsistência. Nenhuma aplicação será importada.</item>
+        <item quantity="other">Foram encontradas %1$d inconsistências. Nenhuma aplicação será importada.</item>
+    </plurals>
+    <plurals name="omr_assessment_application_csv_preview_more_errors">
+        <item quantity="one">… e mais %1$d inconsistência.</item>
+        <item quantity="other">… e mais %1$d inconsistências.</item>
+    </plurals>
+    <string name="omr_assessment_application_csv_action_import">Importar</string>
+    <string name="omr_assessment_application_csv_action_close">Fechar</string>
+    <string name="omr_assessment_application_csv_action_cancel">Cancelar</string>
+    <string name="omr_assessment_application_csv_read_error">Não foi possível ler o arquivo CSV.</string>
+    <string name="omr_assessment_application_csv_too_large">O CSV excede o limite de 5 MB.</string>
+    <string name="omr_assessment_application_csv_import_error">Não foi possível importar o CSV. Nenhuma aplicação foi gravada.</string>
+    <string name="omr_assessment_application_csv_import_success">Importação concluída: %1$d novas, %2$d já existentes e %3$d participantes congelados.</string>
+
+    <string name="omr_application_roster_assessment">%1$s • prova v%2$d • %3$s</string>
+    <string name="omr_application_roster_class">Chamada congelada: %1$s</string>
+    <plurals name="omr_application_roster_progress">
+        <item quantity="one">%1$d de %2$d corrigidos • %3$d pendente</item>
+        <item quantity="other">%1$d de %2$d corrigidos • %3$d pendentes</item>
+    </plurals>
+    <string name="omr_application_roster_created">Criada em %1$s • %2$s</string>
+    <plurals name="omr_application_roster_count">
+        <item quantity="one">%1$d participante</item>
+        <item quantity="other">%1$d participantes</item>
+    </plurals>
+    <string name="omr_application_roster_filtered_count">%1$d de %2$d participantes encontrados</string>
+    <string name="omr_application_roster_search_hint">Pesquisar por aluno, matrícula, posição, pendente ou corrigido</string>
+    <string name="omr_application_roster_no_results_title">Nenhum participante encontrado</string>
+    <string name="omr_application_roster_no_results_message">Revise o nome, matrícula, posição ou status pesquisado.</string>
+    <string name="omr_application_roster_position">#%1$02d</string>
+    <string name="omr_application_roster_registration">Matrícula %1$s • %2$s</string>
+    <string name="omr_application_roster_corrected">Corrigido • revisão %1$d • %2$s</string>
+    <string name="omr_application_roster_pending">Pendente de correção</string>
+    <string name="omr_application_roster_action_back">Voltar às aplicações</string>
+    <string name="omr_application_roster_load_error">Não foi possível carregar a chamada congelada.</string>
+    <string name="omr_application_roster_missing">A aplicação solicitada não está disponível.</string>
+</resources>
