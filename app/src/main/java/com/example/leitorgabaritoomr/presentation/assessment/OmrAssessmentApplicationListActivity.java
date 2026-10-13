@@ -58,6 +58,9 @@ public final class OmrAssessmentApplicationListActivity
     private static final String EXTRA_DATABASE_NAME =
             "com.example.leitorgabaritoomr.extra."
                     + "APPLICATION_DATABASE_NAME";
+    private static final String EXTRA_ANSWER_KEY_NAMESPACE =
+            "com.example.leitorgabaritoomr.extra."
+                    + "APPLICATION_ANSWER_KEY_NAMESPACE";
     private static final String[] CSV_MIME_TYPES = {
             "text/csv",
             "text/comma-separated-values",
@@ -123,6 +126,27 @@ public final class OmrAssessmentApplicationListActivity
         return createIntent(context).putExtra(
                 EXTRA_DATABASE_NAME,
                 databaseName.trim()
+        );
+    }
+
+    static Intent createIsolatedStorageIntent(
+            Context context,
+            String databaseName,
+            String answerKeyNamespace
+    ) {
+        if (answerKeyNamespace == null
+                || answerKeyNamespace.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "O namespace isolado dos gabaritos é obrigatório."
+            );
+        }
+
+        return createIsolatedStorageIntent(
+                context,
+                databaseName
+        ).putExtra(
+                EXTRA_ANSWER_KEY_NAMESPACE,
+                answerKeyNamespace.trim()
         );
     }
 
@@ -260,11 +284,21 @@ public final class OmrAssessmentApplicationListActivity
                     this, applicationId
             );
         } else {
-            intent = OmrAssessmentApplicationRosterActivity
+            String answerKeyNamespace =
+                    normalizedAnswerKeyNamespace();
+            intent = answerKeyNamespace == null
+                    ? OmrAssessmentApplicationRosterActivity
                     .createIsolatedStorageIntent(
                             this,
                             applicationId,
                             databaseName
+                    )
+                    : OmrAssessmentApplicationRosterActivity
+                    .createIsolatedStorageIntent(
+                            this,
+                            applicationId,
+                            databaseName,
+                            answerKeyNamespace
                     );
         }
         startActivity(intent);
@@ -709,6 +743,16 @@ public final class OmrAssessmentApplicationListActivity
         String value = getIntent().getStringExtra(EXTRA_DATABASE_NAME);
         return value == null || value.trim().isEmpty()
                 ? null : value.trim();
+    }
+
+    @Nullable
+    private String normalizedAnswerKeyNamespace() {
+        String value = getIntent().getStringExtra(
+                EXTRA_ANSWER_KEY_NAMESPACE
+        );
+        return value == null || value.trim().isEmpty()
+                ? null
+                : value.trim();
     }
 
     private void dismissCsvPreviewDialog() {

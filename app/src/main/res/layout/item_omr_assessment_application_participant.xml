@@ -57,4 +57,14 @@
             android:textStyle="bold"
             tools:text="Corrigido • revisão 2 • 12/10/2026 09:30" />
     </LinearLayout>
+
+    <Button
+        android:id="@+id/buttonOmrApplicationParticipantCorrect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:minHeight="44dp"
+        android:minWidth="92dp"
+        android:text="@string/omr_application_roster_action_correct"
+        android:textSize="12sp" />
 </LinearLayout>

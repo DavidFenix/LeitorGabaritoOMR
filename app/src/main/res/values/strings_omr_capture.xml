@@ -43,6 +43,8 @@
         Leitura confirmada
     </string>
 
+    <string name="omr_capture_assessment_context">#%1$02d • %2$s • %3$s\n%4$s • prova v%5$d</string>
+
     <!-- Acoes e diagnostico -->
     <string name="omr_capture_action_retry">
         Tentar novamente

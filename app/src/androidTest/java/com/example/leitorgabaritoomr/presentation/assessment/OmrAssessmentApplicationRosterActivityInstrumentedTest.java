@@ -1,9 +1,13 @@
 package com.example.leitorgabaritoomr.presentation.assessment;
 
 import static androidx.test.espresso.Espresso.onView;
+import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.action.ViewActions.closeSoftKeyboard;
 import static androidx.test.espresso.action.ViewActions.replaceText;
+import static androidx.test.espresso.assertion.ViewAssertions.matches;
+import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
+import static androidx.test.espresso.matcher.ViewMatchers.withText;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -12,7 +16,9 @@ import static org.junit.Assert.fail;
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ListAdapter;
@@ -22,19 +28,25 @@ import android.widget.TextView;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.example.leitorgabaritoomr.R;
+import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentCorrectionContext;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentAttempt;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
 import com.example.leitorgabaritoomr.domain.classroom.OmrClassGroup;
+import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
+import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyEntry;
 import com.example.leitorgabaritoomr.domain.student.OmrStudentProfile;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentApplicationBatchRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentAttemptRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteClassGroupRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteStudentRepository;
+import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesAnswerKeyRepository;
+import com.example.leitorgabaritoomr.presentation.capture.OmrCaptureActivity;
 
 import org.junit.After;
 import org.junit.Before;
@@ -50,18 +62,22 @@ public final class OmrAssessmentApplicationRosterActivityInstrumentedTest {
 
     private Context applicationContext;
     private String databaseName;
+    private String answerKeyNamespace;
     private OmrSQLiteAssessmentRepository assessmentRepository;
     private OmrSQLiteClassGroupRepository classRepository;
     private OmrSQLiteStudentRepository studentRepository;
     private OmrSQLiteAssessmentApplicationBatchRepository batchRepository;
     private OmrSQLiteAssessmentAttemptRepository attemptRepository;
+    private OmrSharedPreferencesAnswerKeyRepository answerKeyRepository;
 
     @Before
     public void setUp() {
         applicationContext = ApplicationProvider.getApplicationContext();
         databaseName = "omr_application_roster_activity_"
                 + UUID.randomUUID() + ".db";
+        answerKeyNamespace = "application_roster_" + UUID.randomUUID();
         applicationContext.deleteDatabase(databaseName);
+        clearAnswerKeyStorage();
         assessmentRepository = new OmrSQLiteAssessmentRepository(
                 applicationContext, databaseName
         );
@@ -78,6 +94,10 @@ public final class OmrAssessmentApplicationRosterActivityInstrumentedTest {
         attemptRepository = new OmrSQLiteAssessmentAttemptRepository(
                 applicationContext, databaseName
         );
+        answerKeyRepository = new OmrSharedPreferencesAnswerKeyRepository(
+                isolatedAnswerKeyContext()
+        );
+        answerKeyRepository.save(answerKey());
         seedApplication();
     }
 
@@ -98,6 +118,7 @@ public final class OmrAssessmentApplicationRosterActivityInstrumentedTest {
         if (assessmentRepository != null) {
             assessmentRepository.close();
         }
+        clearAnswerKeyStorage();
         applicationContext.deleteDatabase(databaseName);
     }
 
@@ -116,6 +137,14 @@ public final class OmrAssessmentApplicationRosterActivityInstrumentedTest {
                         .createIsolatedStorageIntent(
                                 applicationContext,
                                 "application-1",
+                                " "
+                        ));
+        expectIllegalArgument(() ->
+                OmrAssessmentApplicationRosterActivity
+                        .createIsolatedStorageIntent(
+                                applicationContext,
+                                "application-1",
+                                databaseName,
                                 " "
                         ));
         Intent intent = createActivityIntent(" application-1 ");
@@ -254,13 +283,202 @@ public final class OmrAssessmentApplicationRosterActivityInstrumentedTest {
         }
     }
 
+    @Test
+    public void pendingParticipantLaunchesCaptureWithExactFrozenContext() {
+        Instrumentation instrumentation =
+                InstrumentationRegistry.getInstrumentation();
+        Instrumentation.ActivityMonitor monitor = instrumentation.addMonitor(
+                OmrCaptureActivity.class.getName(),
+                null,
+                false
+        );
+
+        try (ActivityScenario<OmrAssessmentApplicationRosterActivity>
+                     scenario = ActivityScenario.launch(
+                createActivityIntent("application-1"))) {
+            scenario.onActivity(activity -> {
+                View pendingRow = rowAt(activity, 1);
+                button(
+                        pendingRow,
+                        R.id.buttonOmrApplicationParticipantCorrect
+                ).performClick();
+            });
+
+            Activity capture = monitor.waitForActivityWithTimeout(5_000L);
+            assertNotNull(capture);
+            OmrAssessmentCorrectionContext context =
+                    OmrCaptureActivity.extractAssessmentCorrectionContext(
+                            capture.getIntent()
+                    );
+            assertNotNull(context);
+            assertEquals("student-bruno",
+                    context.getParticipant().getStudentId());
+            assertEquals("Bruno original",
+                    context.getStudentIdentity().getName());
+            assertEquals("assessment-1",
+                    context.getAssessment().getAssessmentId());
+            assertEquals(2, context.getAssessment().getVersion());
+            assertEquals("key-1", context.getAnswerKey().getId());
+            assertEquals(1, context.getAnswerKey().getVersion());
+            finishActivity(capture);
+        } finally {
+            instrumentation.removeMonitor(monitor);
+        }
+    }
+
+    @Test
+    public void correctedParticipantRequiresExplicitNewRevisionConfirmation() {
+        saveAttempts();
+        Instrumentation instrumentation =
+                InstrumentationRegistry.getInstrumentation();
+        Instrumentation.ActivityMonitor monitor = instrumentation.addMonitor(
+                OmrCaptureActivity.class.getName(),
+                null,
+                false
+        );
+
+        try (ActivityScenario<OmrAssessmentApplicationRosterActivity>
+                     scenario = ActivityScenario.launch(
+                createActivityIntent("application-1"))) {
+            scenario.onActivity(activity -> button(
+                    rowAt(activity, 0),
+                    R.id.buttonOmrApplicationParticipantCorrect
+            ).performClick());
+
+            assertTrue(monitor.getHits() == 0);
+            onView(withText("Criar nova revisão?")).check(
+                    matches(isDisplayed())
+            );
+            onView(withText("Corrigir novamente")).perform(click());
+
+            Activity capture = monitor.waitForActivityWithTimeout(5_000L);
+            assertNotNull(capture);
+            OmrAssessmentCorrectionContext context =
+                    OmrCaptureActivity.extractAssessmentCorrectionContext(
+                            capture.getIntent()
+                    );
+            assertNotNull(context);
+            assertEquals("student-ana",
+                    context.getParticipant().getStudentId());
+            finishActivity(capture);
+        } finally {
+            instrumentation.removeMonitor(monitor);
+        }
+    }
+
+    @Test
+    public void nextPendingActionUsesFirstPendingFrozenPosition() {
+        saveAttempts();
+        Instrumentation instrumentation =
+                InstrumentationRegistry.getInstrumentation();
+        Instrumentation.ActivityMonitor monitor = instrumentation.addMonitor(
+                OmrCaptureActivity.class.getName(),
+                null,
+                false
+        );
+
+        try (ActivityScenario<OmrAssessmentApplicationRosterActivity>
+                     scenario = ActivityScenario.launch(
+                createActivityIntent("application-1"))) {
+            scenario.onActivity(activity -> button(
+                    activity,
+                    R.id.buttonOmrApplicationRosterNextPending
+            ).performClick());
+
+            Activity capture = monitor.waitForActivityWithTimeout(5_000L);
+            assertNotNull(capture);
+            OmrAssessmentCorrectionContext context =
+                    OmrCaptureActivity.extractAssessmentCorrectionContext(
+                            capture.getIntent()
+                    );
+            assertNotNull(context);
+            assertEquals("student-bruno",
+                    context.getParticipant().getStudentId());
+            assertEquals(5, context.getParticipant().getRosterPosition());
+            finishActivity(capture);
+        } finally {
+            instrumentation.removeMonitor(monitor);
+        }
+    }
+
+    @Test
+    public void completedRosterDisablesBatchCorrection() {
+        saveAttempts();
+        attemptRepository.save(new OmrAssessmentAttempt(
+                "attempt-3", "application-1", "student-bruno", 1,
+                "history-3", 4_000L
+        ));
+
+        try (ActivityScenario<OmrAssessmentApplicationRosterActivity>
+                     scenario = ActivityScenario.launch(
+                createActivityIntent("application-1"))) {
+            scenario.onActivity(activity -> {
+                Button next = button(
+                        activity,
+                        R.id.buttonOmrApplicationRosterNextPending
+                );
+                assertTrue(!next.isEnabled());
+                assertEquals("Chamada concluída", next.getText().toString());
+            });
+        }
+    }
+
     private Intent createActivityIntent(String applicationId) {
         return OmrAssessmentApplicationRosterActivity
                 .createIsolatedStorageIntent(
                         applicationContext,
                         applicationId,
-                        databaseName
+                        databaseName,
+                        answerKeyNamespace
                 );
+    }
+
+    private Context isolatedAnswerKeyContext() {
+        Context base = applicationContext;
+        String suffix = "." + answerKeyNamespace;
+        return new ContextWrapper(base) {
+            @Override
+            public Context getApplicationContext() {
+                return this;
+            }
+
+            @Override
+            public SharedPreferences getSharedPreferences(
+                    String name,
+                    int mode
+            ) {
+                return base.getSharedPreferences(name + suffix, mode);
+            }
+        };
+    }
+
+    private void clearAnswerKeyStorage() {
+        if (applicationContext == null || answerKeyNamespace == null) {
+            return;
+        }
+        String suffix = "." + answerKeyNamespace;
+        applicationContext.getSharedPreferences(
+                "omr_answer_key_repository" + suffix,
+                Context.MODE_PRIVATE
+        ).edit().clear().commit();
+        applicationContext.getSharedPreferences(
+                "omr_active_answer_key" + suffix,
+                Context.MODE_PRIVATE
+        ).edit().clear().commit();
+    }
+
+    private static OmrAnswerKeyDefinition answerKey() {
+        return new OmrAnswerKeyDefinition(
+                "key-1", 1, "Gabarito exato",
+                "omr-flex-ad-q001-r001", 3,
+                Collections.singletonList(
+                        OmrAnswerKeyEntry.singleAnswer(
+                                "question-001",
+                                "question-001-option-01",
+                                1.0
+                        )
+                )
+        );
     }
 
     private void seedApplication() {
@@ -323,6 +541,16 @@ public final class OmrAssessmentApplicationRosterActivityInstrumentedTest {
 
     private static Button button(Activity activity, int id) {
         return activity.findViewById(id);
+    }
+
+    private static Button button(View root, int id) {
+        return root.findViewById(id);
+    }
+
+    private static void finishActivity(Activity activity) {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(
+                activity::finish
+        );
     }
 
     private static void assertText(

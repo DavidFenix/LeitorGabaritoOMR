@@ -72,6 +72,37 @@ public final class OmrAssessmentApplicationRosterViewStateTest {
     }
 
     @Test
+    public void firstPendingParticipantUsesFrozenRosterOrder() {
+        assertEquals(
+                "student-bruno",
+                state("Ana").getFirstPendingStudentIdOrNull()
+        );
+    }
+
+    @Test
+    public void completedRosterHasNoNextPendingParticipant() {
+        List<OmrAssessmentAttempt> completed = new ArrayList<>(attempts());
+        completed.add(attempt(
+                "attempt-4",
+                "student-bruno",
+                1,
+                "history-4",
+                5_000L
+        ));
+
+        OmrAssessmentApplicationRosterViewState state = create(
+                application(),
+                assessment(),
+                participants(),
+                completed,
+                ""
+        );
+
+        assertEquals(0, state.getPendingCount());
+        assertNull(state.getFirstPendingStudentIdOrNull());
+    }
+
+    @Test
     public void searchMatchesNameRegistrationAndIdIgnoringAccents() {
         assertEquals(1, state("JOAO").getVisibleCount());
         assertEquals(1, state("MAT-001").getVisibleCount());

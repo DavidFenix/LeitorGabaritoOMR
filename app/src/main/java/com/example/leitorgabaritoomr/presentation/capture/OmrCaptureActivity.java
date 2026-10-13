@@ -9,6 +9,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.SurfaceView;
 import android.view.WindowManager;
+import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -21,6 +23,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.example.leitorgabaritoomr.R;
+import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentCorrectionContext;
+import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentCorrectionRecorder;
 import com.example.leitorgabaritoomr.application.grading.OmrGradingService;
 import com.example.leitorgabaritoomr.application.history.OmrGradingHistoryRecorder;
 import com.example.leitorgabaritoomr.application.layout.OmrCaptureLayoutProvider;
@@ -30,6 +34,7 @@ import com.example.leitorgabaritoomr.domain.history.OmrGradingHistoryRecord;
 import com.example.leitorgabaritoomr.domain.reading.OmrReadingResult;
 import com.example.leitorgabaritoomr.domain.student.OmrStudentIdentity;
 import com.example.leitorgabaritoomr.infrastructure.history.OmrSQLiteGradingHistoryRepository;
+import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentAttemptRepository;
 import com.example.leitorgabaritoomr.presentation.grading.OmrGradingResultActivity;
 import com.example.leitorgabaritoomr.presentation.result.OmrReadingResultActivity;
 import com.example.leitorgabaritoomr.vision.layout.OmrLayoutDefinition;
@@ -63,6 +68,14 @@ public final class OmrCaptureActivity
             "com.example.leitorgabaritoomr.extra."
                     + "OMR_STUDENT_IDENTITY";
 
+    public static final String EXTRA_ASSESSMENT_CORRECTION_CONTEXT =
+            "com.example.leitorgabaritoomr.extra."
+                    + "OMR_ASSESSMENT_CORRECTION_CONTEXT";
+
+    private static final String EXTRA_SCHOOL_DATABASE_NAME =
+            "com.example.leitorgabaritoomr.extra."
+                    + "OMR_CAPTURE_SCHOOL_DATABASE_NAME";
+
     private static final int CAMERA_PERMISSION_CODE =
             101;
 
@@ -77,8 +90,11 @@ public final class OmrCaptureActivity
     private OmrLayoutDefinition captureLayoutDefinition;
     private OmrAnswerKeyDefinition activeAnswerKey;
     private OmrStudentIdentity activeStudentIdentity;
+    private OmrAssessmentCorrectionContext activeAssessmentContext;
     private OmrSQLiteGradingHistoryRepository gradingHistoryRepository;
     private OmrGradingHistoryRecorder gradingHistoryRecorder;
+    private OmrSQLiteAssessmentAttemptRepository assessmentAttemptRepository;
+    private OmrAssessmentCorrectionRecorder assessmentCorrectionRecorder;
 
     private boolean openCvLoaded;
     private volatile boolean cameraEnabled;
@@ -171,6 +187,67 @@ public final class OmrCaptureActivity
         return intent;
     }
 
+    /**
+     * Cria uma captura vinculada a uma aplicação e a um participante da
+     * chamada congelada. O gabarito e o aluno são obtidos do contexto já
+     * validado, sem consultar a seleção global do laboratório.
+     */
+    public static Intent createAssessmentIntent(
+            Context context,
+            OmrAssessmentCorrectionContext correctionContext
+    ) {
+        return createAssessmentIntent(
+                context,
+                correctionContext,
+                null
+        );
+    }
+
+    /**
+     * Variante usada por fluxos com armazenamento escolar isolado.
+     * Um nome nulo mantém o banco padrão de produção.
+     */
+    public static Intent createAssessmentIntent(
+            Context context,
+            OmrAssessmentCorrectionContext correctionContext,
+            @Nullable String schoolDatabaseName
+    ) {
+        if (context == null) {
+            throw new IllegalArgumentException(
+                    "O contexto é obrigatório."
+            );
+        }
+
+        if (correctionContext == null) {
+            throw new IllegalArgumentException(
+                    "O contexto da correção é obrigatório."
+            );
+        }
+
+        Intent intent = new Intent(
+                context,
+                OmrCaptureActivity.class
+        ).putExtra(
+                EXTRA_ASSESSMENT_CORRECTION_CONTEXT,
+                correctionContext
+        );
+
+        if (schoolDatabaseName != null) {
+            if (schoolDatabaseName.trim().isEmpty()) {
+                throw new IllegalArgumentException(
+                        "O nome do banco escolar não pode ser vazio."
+                );
+            }
+
+            intent.putExtra(
+                    EXTRA_SCHOOL_DATABASE_NAME,
+                    schoolDatabaseName.trim()
+            );
+        }
+
+        return intent;
+    }
+
     @Override
     protected void onCreate(
             Bundle savedInstanceState
@@ -185,22 +262,31 @@ public final class OmrCaptureActivity
                 R.layout.activity_omr_capture
         );
 
-        activeAnswerKey = extractAnswerKey(
+        activeAssessmentContext = extractAssessmentCorrectionContext(
                 getIntent()
         );
 
-        activeStudentIdentity = extractStudentIdentity(
-                getIntent()
-        );
+        if (activeAssessmentContext == null) {
+            activeAnswerKey = extractAnswerKey(getIntent());
+            activeStudentIdentity = extractStudentIdentity(getIntent());
+        } else {
+            activeAnswerKey = activeAssessmentContext.getAnswerKey();
+            activeStudentIdentity = activeAssessmentContext
+                    .getStudentIdentity();
+        }
 
         logActiveAnswerKey();
         logActiveStudentIdentity();
+        renderAssessmentCorrectionContext();
 
         if (!resolveCaptureLayout()) {
             return;
         }
 
         initializeGradingHistory();
+        if (!initializeAssessmentCorrection()) {
+            return;
+        }
 
         configureCameraView();
         initializeOpenCvAndCapture();
@@ -250,6 +336,55 @@ public final class OmrCaptureActivity
         }
 
         return (OmrStudentIdentity) value;
+    }
+
+    @Nullable
+    @SuppressWarnings("deprecation")
+    public static OmrAssessmentCorrectionContext
+    extractAssessmentCorrectionContext(
+            @Nullable Intent intent
+    ) {
+        if (intent == null) {
+            return null;
+        }
+
+        Serializable value = intent.getSerializableExtra(
+                EXTRA_ASSESSMENT_CORRECTION_CONTEXT
+        );
+
+        if (!(value instanceof OmrAssessmentCorrectionContext)) {
+            return null;
+        }
+
+        return (OmrAssessmentCorrectionContext) value;
+    }
+
+    private void renderAssessmentCorrectionContext() {
+        TextView contextTextView = findViewById(
+                R.id.textOmrCaptureAssessmentContext
+        );
+
+        if (contextTextView == null) {
+            return;
+        }
+
+        if (activeAssessmentContext == null) {
+            contextTextView.setVisibility(View.GONE);
+            return;
+        }
+
+        contextTextView.setText(getString(
+                R.string.omr_capture_assessment_context,
+                activeAssessmentContext.getParticipant()
+                        .getRosterPosition(),
+                activeAssessmentContext.getParticipant()
+                        .getStudentName(),
+                activeAssessmentContext.getParticipant()
+                        .getRegistration(),
+                activeAssessmentContext.getAssessment().getTitle(),
+                activeAssessmentContext.getAssessment().getVersion()
+        ));
+        contextTextView.setVisibility(View.VISIBLE);
     }
 
     private void logActiveAnswerKey() {
@@ -331,6 +466,61 @@ public final class OmrCaptureActivity
             showLongMessage(
                     "Nao foi possivel preparar o historico deste aluno."
             );
+        }
+    }
+
+    private boolean initializeAssessmentCorrection() {
+        if (activeAssessmentContext == null) {
+            return true;
+        }
+
+        if (gradingHistoryRecorder == null) {
+            showLongMessage(
+                    "Não foi possível preparar o histórico desta aplicação."
+            );
+            setResult(Activity.RESULT_CANCELED);
+            finish();
+            return false;
+        }
+
+        try {
+            String databaseName = getIntent().getStringExtra(
+                    EXTRA_SCHOOL_DATABASE_NAME
+            );
+
+            if (databaseName == null || databaseName.trim().isEmpty()) {
+                assessmentAttemptRepository =
+                        new OmrSQLiteAssessmentAttemptRepository(this);
+            } else {
+                assessmentAttemptRepository =
+                        new OmrSQLiteAssessmentAttemptRepository(
+                                this,
+                                databaseName.trim()
+                        );
+            }
+
+            assessmentCorrectionRecorder =
+                    new OmrAssessmentCorrectionRecorder(
+                            assessmentAttemptRepository
+                    );
+
+            return true;
+
+        } catch (RuntimeException exception) {
+            closeAssessmentCorrection();
+
+            Log.e(
+                    TAG,
+                    "Não foi possível preparar o vínculo com a aplicação.",
+                    exception
+            );
+
+            showLongMessage(
+                    "Não foi possível preparar a correção desta aplicação."
+            );
+            setResult(Activity.RESULT_CANCELED);
+            finish();
+            return false;
         }
     }
 
@@ -687,9 +877,15 @@ public final class OmrCaptureActivity
         resultScreenOpen = true;
 
         gradingResultLauncher.launch(
-                OmrGradingResultActivity.createIntent(
+                activeAssessmentContext == null
+                        ? OmrGradingResultActivity.createIntent(
                         this,
                         completedGradingResult
+                )
+                        : OmrGradingResultActivity.createIntent(
+                        this,
+                        completedGradingResult,
+                        activeAssessmentContext
                 )
         );
     }
@@ -748,6 +944,19 @@ public final class OmrCaptureActivity
                 );
 
                 return true;
+            }
+
+            if (activeAssessmentContext != null) {
+                if (assessmentCorrectionRecorder == null) {
+                    throw new IllegalStateException(
+                            "O gravador da tentativa não está disponível."
+                    );
+                }
+
+                assessmentCorrectionRecorder.record(
+                        activeAssessmentContext,
+                        historyRecord
+                );
             }
 
             Log.i(
@@ -970,12 +1179,14 @@ public final class OmrCaptureActivity
         stopCamera();
         closeCaptureController();
         closeGradingHistory();
+        closeAssessmentCorrection();
 
         completedReadingResult = null;
         completedGradingResult = null;
         captureLayoutDefinition = null;
         activeAnswerKey = null;
         activeStudentIdentity = null;
+        activeAssessmentContext = null;
         resultScreenOpen = false;
         cameraBridgeView = null;
 
@@ -1001,6 +1212,28 @@ public final class OmrCaptureActivity
             Log.w(
                     TAG,
                     "Falha ao fechar o historico de correcoes.",
+                    exception
+            );
+        }
+    }
+
+    private void closeAssessmentCorrection() {
+        assessmentCorrectionRecorder = null;
+
+        OmrSQLiteAssessmentAttemptRepository repository =
+                assessmentAttemptRepository;
+        assessmentAttemptRepository = null;
+
+        if (repository == null) {
+            return;
+        }
+
+        try {
+            repository.close();
+        } catch (RuntimeException exception) {
+            Log.w(
+                    TAG,
+                    "Falha ao fechar as tentativas da aplicação.",
                     exception
             );
         }

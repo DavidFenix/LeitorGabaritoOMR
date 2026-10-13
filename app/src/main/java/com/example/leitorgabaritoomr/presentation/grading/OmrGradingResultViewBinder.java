@@ -12,8 +12,10 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import androidx.annotation.IdRes;
+import androidx.annotation.StringRes;
 
 import com.example.leitorgabaritoomr.R;
+import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentCorrectionContext;
 
 import java.text.DateFormat;
 import java.text.NumberFormat;
@@ -54,6 +56,7 @@ public final class OmrGradingResultViewBinder {
     private final LayoutInflater layoutInflater;
 
     private final TextView overallTextView;
+    private final TextView assessmentContextTextView;
     private final TextView answerKeyTextView;
     private final TextView layoutTextView;
     private final TextView capturedAtTextView;
@@ -93,6 +96,12 @@ public final class OmrGradingResultViewBinder {
         overallTextView = requireView(
                 rootView,
                 R.id.textOmrGradingOverall,
+                TextView.class
+        );
+
+        assessmentContextTextView = requireView(
+                rootView,
+                R.id.textOmrGradingAssessmentContext,
                 TextView.class
         );
 
@@ -229,6 +238,32 @@ public final class OmrGradingResultViewBinder {
     ) {
         ensureNotReleased();
         finishButton.setOnClickListener(listener);
+    }
+
+    public void renderAssessmentContext(
+            OmrAssessmentCorrectionContext correctionContext
+    ) {
+        ensureNotReleased();
+
+        if (correctionContext == null) {
+            assessmentContextTextView.setVisibility(View.GONE);
+            return;
+        }
+
+        assessmentContextTextView.setText(context.getString(
+                R.string.omr_grading_assessment_context,
+                correctionContext.getParticipant().getRosterPosition(),
+                correctionContext.getParticipant().getStudentName(),
+                correctionContext.getParticipant().getRegistration(),
+                correctionContext.getAssessment().getTitle(),
+                correctionContext.getAssessment().getVersion()
+        ));
+        assessmentContextTextView.setVisibility(View.VISIBLE);
+    }
+
+    public void setFinishText(@StringRes int textResource) {
+        ensureNotReleased();
+        finishButton.setText(textResource);
     }
 
     public void release() {

@@ -39,6 +39,7 @@ public final class OmrAssessmentApplicationRosterViewBinderInstrumentedTest {
     private View rootView;
     private OmrAssessmentApplicationRosterViewBinder binder;
     private RecordingSearch search;
+    private RecordingCorrection correction;
 
     @Before
     public void setUp() {
@@ -55,8 +56,13 @@ public final class OmrAssessmentApplicationRosterViewBinderInstrumentedTest {
             );
             binder = new OmrAssessmentApplicationRosterViewBinder(rootView);
             search = new RecordingSearch();
+            correction = new RecordingCorrection();
             binder.setOnSearchQueryChangedListener(search);
             binder.setOnBackClickListener(view -> search.backCount++);
+            binder.setOnParticipantCorrectionListener(correction);
+            binder.setOnNextPendingClickListener(
+                    view -> correction.nextPendingCount++
+            );
         });
     }
 
@@ -68,6 +74,7 @@ public final class OmrAssessmentApplicationRosterViewBinderInstrumentedTest {
             }
             binder = null;
             search = null;
+            correction = null;
             rootView = null;
         });
     }
@@ -135,6 +142,48 @@ public final class OmrAssessmentApplicationRosterViewBinderInstrumentedTest {
     }
 
     @Test
+    public void rowActionsDistinguishFirstCorrectionFromNewRevision() {
+        runOnMain(() -> {
+            binder.render(state(""));
+            Button corrected = rowAt(0).findViewById(
+                    R.id.buttonOmrApplicationParticipantCorrect
+            );
+            Button pending = rowAt(1).findViewById(
+                    R.id.buttonOmrApplicationParticipantCorrect
+            );
+            assertEquals("Nova revisão", corrected.getText().toString());
+            assertEquals("Corrigir", pending.getText().toString());
+
+            corrected.performClick();
+            assertEquals("student-ana", correction.lastStudentId);
+            pending.performClick();
+            assertEquals("student-bruno", correction.lastStudentId);
+            assertEquals(2, correction.participantCount);
+        });
+    }
+
+    @Test
+    public void nextPendingActionIsForwardedAndDisabledWhenComplete() {
+        runOnMain(() -> {
+            binder.render(state(""));
+            Button next = button(
+                    R.id.buttonOmrApplicationRosterNextPending
+            );
+            assertTrue(next.isEnabled());
+            assertEquals(
+                    "Corrigir próximo pendente",
+                    next.getText().toString()
+            );
+            next.performClick();
+            assertEquals(1, correction.nextPendingCount);
+
+            binder.render(completedState());
+            assertFalse(next.isEnabled());
+            assertEquals("Chamada concluída", next.getText().toString());
+        });
+    }
+
+    @Test
     public void filteredStateUpdatesCountAndRows() {
         runOnMain(() -> {
             binder.render(state("pendente"));
@@ -175,6 +224,9 @@ public final class OmrAssessmentApplicationRosterViewBinderInstrumentedTest {
         runOnMain(() -> {
             binder.render(state(""));
             binder.setBusy(true);
+            Button rowAction = rowAt(0).findViewById(
+                    R.id.buttonOmrApplicationParticipantCorrect
+            );
             assertVisibility(
                     R.id.progressOmrApplicationRoster, View.VISIBLE
             );
@@ -183,6 +235,10 @@ public final class OmrAssessmentApplicationRosterViewBinderInstrumentedTest {
             assertFalse(button(
                     R.id.buttonOmrApplicationRosterBack
             ).isEnabled());
+            assertFalse(button(
+                    R.id.buttonOmrApplicationRosterNextPending
+            ).isEnabled());
+            assertFalse(rowAction.isEnabled());
             binder.setBusy(false);
             assertTrue(searchEditText().isEnabled());
             assertVisibility(R.id.listOmrApplicationRoster, View.VISIBLE);
@@ -237,6 +293,49 @@ public final class OmrAssessmentApplicationRosterViewBinderInstrumentedTest {
                         )
                 ),
                 query
+        );
+    }
+
+    private OmrAssessmentApplicationRosterViewState completedState() {
+        OmrAssessmentApplication application =
+                new OmrAssessmentApplication(
+                        "application-1", "assessment-1", 2,
+                        "class-1", 1_000L
+                );
+        OmrAssessmentDefinition assessment =
+                new OmrAssessmentDefinition(
+                        "assessment-1", 2, "Avaliação bimestral",
+                        "Matemática", "9º ano", "2º bimestre", 2026,
+                        "key-1", 1
+                );
+        return OmrAssessmentApplicationRosterViewState.from(
+                application,
+                assessment,
+                Arrays.asList(
+                        new OmrAssessmentParticipant(
+                                "application-1", "student-bruno",
+                                "MAT-002", "Bruno", "9º A original", 5
+                        ),
+                        new OmrAssessmentParticipant(
+                                "application-1", "student-ana",
+                                "MAT-001", "Ana", "9º A original", 1
+                        )
+                ),
+                Arrays.asList(
+                        new OmrAssessmentAttempt(
+                                "attempt-1", "application-1",
+                                "student-ana", 1, "history-1", 2_000L
+                        ),
+                        new OmrAssessmentAttempt(
+                                "attempt-2", "application-1",
+                                "student-ana", 2, "history-2", 3_000L
+                        ),
+                        new OmrAssessmentAttempt(
+                                "attempt-3", "application-1",
+                                "student-bruno", 1, "history-3", 4_000L
+                        )
+                ),
+                ""
         );
     }
 
@@ -309,6 +408,20 @@ public final class OmrAssessmentApplicationRosterViewBinderInstrumentedTest {
         public void onSearchQueryChanged(String query) {
             count++;
             lastQuery = query;
+        }
+    }
+
+    private static final class RecordingCorrection
+            implements OmrAssessmentApplicationRosterViewBinder
+            .OnParticipantCorrectionListener {
+        private int participantCount;
+        private int nextPendingCount;
+        private String lastStudentId;
+
+        @Override
+        public void onCorrectParticipant(String studentId) {
+            participantCount++;
+            lastStudentId = studentId;
         }
     }
 }

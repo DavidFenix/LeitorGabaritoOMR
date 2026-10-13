@@ -12,6 +12,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.leitorgabaritoomr.R;
+import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentCorrectionContext;
 import com.example.leitorgabaritoomr.application.layout.OmrPublishedLayoutResolver;
 import com.example.leitorgabaritoomr.domain.grading.OmrGradingResult;
 import com.example.leitorgabaritoomr.vision.layout.OmrLayoutDefinition;
@@ -34,6 +35,10 @@ public final class OmrGradingResultActivity
     private static final String EXTRA_READ_ONLY =
             "com.example.leitorgabaritoomr.extra.OMR_GRADING_RESULT_READ_ONLY";
 
+    private static final String EXTRA_ASSESSMENT_CORRECTION_CONTEXT =
+            "com.example.leitorgabaritoomr.extra."
+                    + "OMR_GRADING_ASSESSMENT_CORRECTION_CONTEXT";
+
     /**
      * Resultado devolvido quando o usuário deseja corrigir outra
      * leitura usando o mesmo fluxo.
@@ -42,6 +47,7 @@ public final class OmrGradingResultActivity
             Activity.RESULT_FIRST_USER + 402;
 
     private OmrGradingResult gradingResult;
+    private OmrAssessmentCorrectionContext assessmentCorrectionContext;
     private OmrGradingResultViewBinder viewBinder;
 
     /**
@@ -54,7 +60,27 @@ public final class OmrGradingResultActivity
         return createIntent(
                 context,
                 gradingResult,
-                false
+                false,
+                null
+        );
+    }
+
+    public static Intent createIntent(
+            Context context,
+            OmrGradingResult gradingResult,
+            OmrAssessmentCorrectionContext correctionContext
+    ) {
+        if (correctionContext == null) {
+            throw new IllegalArgumentException(
+                    "O contexto da correção é obrigatório."
+            );
+        }
+
+        return createIntent(
+                context,
+                gradingResult,
+                false,
+                correctionContext
         );
     }
 
@@ -71,14 +97,16 @@ public final class OmrGradingResultActivity
         return createIntent(
                 context,
                 gradingResult,
-                true
+                true,
+                null
         );
     }
 
     private static Intent createIntent(
             Context context,
             OmrGradingResult gradingResult,
-            boolean readOnly
+            boolean readOnly,
+            @Nullable OmrAssessmentCorrectionContext correctionContext
     ) {
         if (context == null) {
             throw new IllegalArgumentException(
@@ -92,7 +120,7 @@ public final class OmrGradingResultActivity
             );
         }
 
-        return new Intent(
+        Intent intent = new Intent(
                 context,
                 OmrGradingResultActivity.class
         )
@@ -104,6 +132,15 @@ public final class OmrGradingResultActivity
                         EXTRA_READ_ONLY,
                         readOnly
                 );
+
+        if (correctionContext != null) {
+            intent.putExtra(
+                    EXTRA_ASSESSMENT_CORRECTION_CONTEXT,
+                    correctionContext
+            );
+        }
+
+        return intent;
     }
 
     /**
@@ -144,6 +181,25 @@ public final class OmrGradingResultActivity
         return (OmrGradingResult) value;
     }
 
+    @Nullable
+    @SuppressWarnings("deprecation")
+    public static OmrAssessmentCorrectionContext
+    extractAssessmentCorrectionContext(
+            @Nullable Intent intent
+    ) {
+        if (intent == null) {
+            return null;
+        }
+
+        Serializable value = intent.getSerializableExtra(
+                EXTRA_ASSESSMENT_CORRECTION_CONTEXT
+        );
+
+        return value instanceof OmrAssessmentCorrectionContext
+                ? (OmrAssessmentCorrectionContext) value
+                : null;
+    }
+
     @Override
     protected void onCreate(
             @Nullable Bundle savedInstanceState
@@ -157,8 +213,14 @@ public final class OmrGradingResultActivity
         gradingResult = extractGradingResult(
                 getIntent()
         );
+        assessmentCorrectionContext =
+                extractAssessmentCorrectionContext(getIntent());
 
-        if (gradingResult == null) {
+        if (gradingResult == null
+                || !matchesAssessmentContext(
+                gradingResult,
+                assessmentCorrectionContext
+        )) {
             handleMissingGradingResult();
             return;
         }
@@ -188,6 +250,9 @@ public final class OmrGradingResultActivity
         );
 
         viewBinder.render(viewState);
+        viewBinder.renderAssessmentContext(
+                assessmentCorrectionContext
+        );
 
         setResult(Activity.RESULT_CANCELED);
 
@@ -263,6 +328,23 @@ public final class OmrGradingResultActivity
                         Activity.RESULT_OK
                 )
         );
+
+        if (assessmentCorrectionContext != null) {
+            viewBinder.setFinishText(
+                    R.string.omr_grading_action_save_assessment
+            );
+        }
+    }
+
+    private static boolean matchesAssessmentContext(
+            OmrGradingResult gradingResult,
+            @Nullable OmrAssessmentCorrectionContext correctionContext
+    ) {
+        return correctionContext == null
+                || correctionContext.getAssessment().usesAnswerKey(
+                gradingResult.getAnswerKeyDefinition().getId(),
+                gradingResult.getAnswerKeyDefinition().getVersion()
+        );
     }
 
     private void handleMissingGradingResult() {
@@ -308,6 +390,7 @@ public final class OmrGradingResultActivity
         }
 
         gradingResult = null;
+        assessmentCorrectionContext = null;
 
         super.onDestroy();
     }

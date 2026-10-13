@@ -91,6 +91,7 @@ public final class OmrAssessmentApplicationRosterViewState {
     private final String query;
     private final int totalCount;
     private final int correctedCount;
+    private final String firstPendingStudentId;
     private final List<ParticipantItem> visibleParticipants;
 
     private OmrAssessmentApplicationRosterViewState(
@@ -100,6 +101,7 @@ public final class OmrAssessmentApplicationRosterViewState {
             String query,
             int totalCount,
             int correctedCount,
+            String firstPendingStudentId,
             List<ParticipantItem> visibleParticipants
     ) {
         applicationId = application.getApplicationId();
@@ -112,6 +114,7 @@ public final class OmrAssessmentApplicationRosterViewState {
         this.query = query;
         this.totalCount = totalCount;
         this.correctedCount = correctedCount;
+        this.firstPendingStudentId = firstPendingStudentId;
         this.visibleParticipants = Collections.unmodifiableList(
                 new ArrayList<>(visibleParticipants)
         );
@@ -182,12 +185,16 @@ public final class OmrAssessmentApplicationRosterViewState {
                 latestAttempts(application, studentIds, attempts);
         String normalizedQuery = normalizeSearchText(query).trim();
         List<ParticipantItem> visible = new ArrayList<>();
+        String firstPendingStudentId = null;
 
         for (OmrAssessmentParticipant participant : ordered) {
             ParticipantItem item = new ParticipantItem(
                     participant,
                     latestByStudent.get(participant.getStudentId())
             );
+            if (!item.isCorrected() && firstPendingStudentId == null) {
+                firstPendingStudentId = item.getStudentId();
+            }
             if (matches(item, normalizedQuery)) {
                 visible.add(item);
             }
@@ -200,6 +207,7 @@ public final class OmrAssessmentApplicationRosterViewState {
                 normalizedQuery,
                 ordered.size(),
                 latestByStudent.size(),
+                firstPendingStudentId,
                 visible
         );
     }
@@ -307,6 +315,10 @@ public final class OmrAssessmentApplicationRosterViewState {
 
     public int getPendingCount() {
         return totalCount - correctedCount;
+    }
+
+    public String getFirstPendingStudentIdOrNull() {
+        return firstPendingStudentId;
     }
 
     public int getVisibleCount() {

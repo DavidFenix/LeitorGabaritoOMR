@@ -43,6 +43,20 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
+        <TextView
+            android:id="@+id/textOmrCaptureAssessmentContext"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:gravity="center"
+            android:maxLines="4"
+            android:textColor="#FFD1FAE5"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            tools:text="#05 • Ana Souza • MAT-001\nAvaliação bimestral • prova v2"
+            tools:visibility="visible" />
+
         <ProgressBar
             android:id="@+id/progressOmrCapture"
             style="?android:attr/progressBarStyleHorizontal"

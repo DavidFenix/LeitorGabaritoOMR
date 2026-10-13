@@ -27,6 +27,8 @@
         Capturada em %1$s
     </string>
 
+    <string name="omr_grading_assessment_context">#%1$02d • %2$s • %3$s\n%4$s • prova v%5$d</string>
+
     <string name="omr_grading_percentage_format">
         %1$d%%
     </string>
@@ -112,6 +114,7 @@
 
     <string name="omr_grading_action_read_again">Nova leitura</string>
     <string name="omr_grading_action_finish">Concluir</string>
+    <string name="omr_grading_action_save_assessment">Salvar correção</string>
 
     <string name="omr_grading_error_missing_result">
         O resultado da correção não foi recebido.
