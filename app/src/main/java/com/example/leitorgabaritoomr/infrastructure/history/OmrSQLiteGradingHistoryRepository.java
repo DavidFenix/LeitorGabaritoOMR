@@ -100,7 +100,7 @@ public final class OmrSQLiteGradingHistoryRepository
         this(context, DEFAULT_DATABASE_NAME);
     }
 
-    OmrSQLiteGradingHistoryRepository(
+    public OmrSQLiteGradingHistoryRepository(
             Context context,
             String databaseName
     ) {

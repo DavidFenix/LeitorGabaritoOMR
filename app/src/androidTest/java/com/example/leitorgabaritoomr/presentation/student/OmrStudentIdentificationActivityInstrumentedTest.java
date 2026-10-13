@@ -45,7 +45,7 @@ import java.util.Collections;
 public final class OmrStudentIdentificationActivityInstrumentedTest {
 
     private static final String HISTORY_DATABASE_NAME =
-            "omr_grading_history.db";
+            "omr_student_identification_history_test.db";
 
     private Context applicationContext;
 
@@ -509,9 +509,10 @@ public final class OmrStudentIdentificationActivityInstrumentedTest {
         Context context =
                 ApplicationProvider.getApplicationContext();
 
-        return OmrStudentIdentificationActivity.createIntent(
+        return OmrStudentIdentificationActivity.createIsolatedStorageIntent(
                 context,
-                answerKey
+                answerKey,
+                HISTORY_DATABASE_NAME
         );
     }
 

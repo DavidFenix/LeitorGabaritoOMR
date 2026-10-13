@@ -47,6 +47,7 @@ public final class OmrAssessmentApplicationRosterViewBinder {
     private final View noResultsContainer;
     private final ProgressBar progressBar;
     private final Button nextPendingButton;
+    private final Button resultsButton;
     private final Button backButton;
     private final ParticipantAdapter adapter;
     private final TextWatcher searchWatcher;
@@ -89,6 +90,8 @@ public final class OmrAssessmentApplicationRosterViewBinder {
                 R.id.progressOmrApplicationRoster, ProgressBar.class);
         nextPendingButton = requireView(rootView,
                 R.id.buttonOmrApplicationRosterNextPending, Button.class);
+        resultsButton = requireView(rootView,
+                R.id.buttonOmrApplicationRosterResults, Button.class);
         backButton = requireView(rootView,
                 R.id.buttonOmrApplicationRosterBack, Button.class);
 
@@ -144,13 +147,23 @@ public final class OmrAssessmentApplicationRosterViewBinder {
                 R.string.omr_application_roster_class,
                 state.getFrozenClassName()
         ));
-        progressTextView.setText(context.getResources().getQuantityString(
-                R.plurals.omr_application_roster_progress,
-                pluralSelector(state.getPendingCount()),
-                state.getCorrectedCount(),
-                state.getTotalCount(),
-                state.getPendingCount()
-        ));
+        if (state.getRecoveryCount() > 0) {
+            progressTextView.setText(context.getString(
+                    R.string.omr_application_roster_progress_recovery,
+                    state.getCorrectedCount(),
+                    state.getTotalCount(),
+                    state.getPendingCount(),
+                    state.getRecoveryCount()
+            ));
+        } else {
+            progressTextView.setText(context.getResources().getQuantityString(
+                    R.plurals.omr_application_roster_progress,
+                    pluralSelector(state.getPendingCount()),
+                    state.getCorrectedCount(),
+                    state.getTotalCount(),
+                    state.getPendingCount()
+            ));
+        }
         createdAtTextView.setText(context.getString(
                 R.string.omr_application_roster_created,
                 dateFormat.format(new Date(
@@ -172,11 +185,13 @@ public final class OmrAssessmentApplicationRosterViewBinder {
             ));
         }
         adapter.replaceItems(state.getVisibleParticipants());
-        boolean hasPending = state.getPendingCount() > 0;
+        boolean hasPending = state.getRemainingCount() > 0;
         nextPendingButton.setEnabled(hasPending && !busy);
-        nextPendingButton.setText(hasPending
-                ? R.string.omr_application_roster_action_next_pending
-                : R.string.omr_application_roster_action_complete);
+        nextPendingButton.setText(!hasPending
+                ? R.string.omr_application_roster_action_complete
+                : state.getRecoveryCount() > 0
+                ? R.string.omr_application_roster_action_recover_next
+                : R.string.omr_application_roster_action_next_pending);
         applyVisibility();
     }
 
@@ -194,8 +209,9 @@ public final class OmrAssessmentApplicationRosterViewBinder {
         nextPendingButton.setEnabled(
                 !busy
                         && currentState != null
-                        && currentState.getPendingCount() > 0
+                        && currentState.getRemainingCount() > 0
         );
+        resultsButton.setEnabled(!busy && currentState != null);
         backButton.setEnabled(!busy);
         adapter.notifyDataSetChanged();
         applyVisibility();
@@ -220,6 +236,13 @@ public final class OmrAssessmentApplicationRosterViewBinder {
         nextPendingButton.setOnClickListener(listener);
     }
 
+    public void setOnResultsClickListener(
+            View.OnClickListener listener
+    ) {
+        ensureNotReleased();
+        resultsButton.setOnClickListener(listener);
+    }
+
     public void setOnParticipantCorrectionListener(
             OnParticipantCorrectionListener listener
     ) {
@@ -236,6 +259,7 @@ public final class OmrAssessmentApplicationRosterViewBinder {
         participantCorrectionListener = null;
         searchEditText.removeTextChangedListener(searchWatcher);
         nextPendingButton.setOnClickListener(null);
+        resultsButton.setOnClickListener(null);
         backButton.setOnClickListener(null);
         adapter.clear();
         participantListView.setAdapter(null);
@@ -356,7 +380,13 @@ public final class OmrAssessmentApplicationRosterViewBinder {
                     item.getRegistration(),
                     item.getStudentId()
             ));
-            if (item.isCorrected()) {
+            if (item.needsHistoryRecovery()) {
+                status.setText(context.getString(
+                        R.string.omr_application_roster_history_unavailable,
+                        item.getLatestRevision()
+                ));
+                status.setTextColor(0xFFB91C1C);
+            } else if (item.isCorrected()) {
                 status.setText(context.getString(
                         R.string.omr_application_roster_corrected,
                         item.getLatestRevision(),
@@ -369,7 +399,9 @@ public final class OmrAssessmentApplicationRosterViewBinder {
                 status.setText(R.string.omr_application_roster_pending);
                 status.setTextColor(0xFFB45309);
             }
-            correctButton.setText(item.isCorrected()
+            correctButton.setText(item.needsHistoryRecovery()
+                    ? R.string.omr_application_roster_action_recover
+                    : item.isCorrected()
                     ? R.string.omr_application_roster_action_correct_again
                     : R.string.omr_application_roster_action_correct);
             correctButton.setEnabled(!busy);

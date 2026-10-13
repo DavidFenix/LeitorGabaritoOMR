@@ -57,6 +57,7 @@ public final class OmrAssessmentApplicationListViewBinderInstrumentedTest {
             binder = new OmrAssessmentApplicationListViewBinder(rootView);
             actions = new RecordingActions();
             binder.setOnApplicationActionListener(actions);
+            binder.setOnResultActionListener(actions);
             binder.setOnSearchQueryChangedListener(actions);
             binder.setOnBackClickListener(view -> actions.backCount++);
             binder.setOnCreateClickListener(view -> actions.createCount++);
@@ -206,6 +207,12 @@ public final class OmrAssessmentApplicationListViewBinderInstrumentedTest {
             roster.performClick();
             assertEquals(2, actions.openCount);
             assertEquals("application-1", actions.lastApplicationId);
+            Button results = first.findViewById(
+                    R.id.buttonOmrAssessmentApplicationItemResults
+            );
+            results.performClick();
+            assertEquals(1, actions.resultCount);
+            assertEquals("application-1", actions.lastResultApplicationId);
         });
     }
 
@@ -370,19 +377,29 @@ public final class OmrAssessmentApplicationListViewBinderInstrumentedTest {
             implements OmrAssessmentApplicationListViewBinder
             .OnApplicationActionListener,
             OmrAssessmentApplicationListViewBinder
+                    .OnResultActionListener,
+            OmrAssessmentApplicationListViewBinder
                     .OnSearchQueryChangedListener {
         private int openCount;
         private int searchCount;
         private int backCount;
         private int createCount;
         private int importCount;
+        private int resultCount;
         private String lastApplicationId;
+        private String lastResultApplicationId;
         private String lastQuery;
 
         @Override
         public void onOpenFrozenRoster(String applicationId) {
             openCount++;
             lastApplicationId = applicationId;
+        }
+
+        @Override
+        public void onOpenResults(String applicationId) {
+            resultCount++;
+            lastResultApplicationId = applicationId;
         }
 
         @Override

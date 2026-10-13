@@ -103,6 +103,62 @@ public final class OmrAssessmentApplicationRosterViewStateTest {
     }
 
     @Test
+    public void missingLatestHistoryBecomesRecoverableInsteadOfCorrected() {
+        OmrAssessmentApplicationRosterViewState state =
+                OmrAssessmentApplicationRosterViewState.from(
+                        application(),
+                        assessment(),
+                        participants(),
+                        attempts(),
+                        Collections.singleton("history-3"),
+                        ""
+                );
+
+        assertEquals(1, state.getCorrectedCount());
+        assertEquals(1, state.getPendingCount());
+        assertEquals(1, state.getRecoveryCount());
+        assertEquals(2, state.getRemainingCount());
+        assertEquals(
+                "student-ana",
+                state.getFirstPendingStudentIdOrNull()
+        );
+
+        OmrAssessmentApplicationRosterViewState.ParticipantItem ana =
+                state.findVisibleParticipantOrNull("student-ana");
+        assertNotNull(ana);
+        assertFalse(ana.isCorrected());
+        assertTrue(ana.needsHistoryRecovery());
+        assertEquals(2, ana.getLatestRevision());
+        assertEquals("history-2", ana.getLatestHistoryRecordId());
+    }
+
+    @Test
+    public void recoveryStatusCanBeFoundAndUsesLatestHistoryOnly() {
+        OmrAssessmentApplicationRosterViewState state =
+                OmrAssessmentApplicationRosterViewState.from(
+                        application(),
+                        assessment(),
+                        participants(),
+                        attempts(),
+                        new java.util.HashSet<>(Arrays.asList(
+                                "history-1",
+                                "history-3"
+                        )),
+                        "histórico indisponível"
+                );
+
+        assertEquals(1, state.getVisibleCount());
+        assertEquals(
+                "student-ana",
+                state.getVisibleParticipants().get(0).getStudentId()
+        );
+        assertTrue(
+                state.getVisibleParticipants().get(0)
+                        .needsHistoryRecovery()
+        );
+    }
+
+    @Test
     public void searchMatchesNameRegistrationAndIdIgnoringAccents() {
         assertEquals(1, state("JOAO").getVisibleCount());
         assertEquals(1, state("MAT-001").getVisibleCount());

@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFF3F4F6"
+    android:orientation="vertical"
+    tools:context=".presentation.assessment.OmrAssessmentResultActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FF1F2937"
+        android:orientation="vertical"
+        android:paddingStart="20dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="14dp">
+
+        <TextView
+            android:id="@+id/textOmrAssessmentResultTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFFFF"
+            android:textSize="21sp"
+            android:textStyle="bold"
+            tools:text="Avaliação bimestral" />
+
+        <TextView
+            android:id="@+id/textOmrAssessmentResultAssessment"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="#FFD1D5DB"
+            android:textSize="13sp"
+            tools:text="Matemática • prova v2 • 2026" />
+
+        <TextView
+            android:id="@+id/textOmrAssessmentResultClass"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:maxLines="2"
+            android:textColor="#FFD1D5DB"
+            android:textSize="12sp"
+            tools:text="Turma: 9º A • aplicação application-1" />
+
+        <TextView
+            android:id="@+id/textOmrAssessmentResultSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="#FF86EFAC"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            tools:text="18/30 corrigidos • 12 pendentes • 0 inconsistências" />
+
+        <TextView
+            android:id="@+id/textOmrAssessmentResultAverage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:textColor="#FFFFFFFF"
+            android:textSize="13sp"
+            tools:text="Média dos corrigidos: 78,50%" />
+    </LinearLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="16dp"
+        android:hint="@string/omr_assessment_result_search_hint"
+        app:endIconMode="clear_text">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editOmrAssessmentResultSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:maxLines="1"
+            android:singleLine="true" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <TextView
+        android:id="@+id/textOmrAssessmentResultCount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="18dp"
+        android:paddingTop="5dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="5dp"
+        android:textColor="#FF4B5563"
+        android:textSize="12sp"
+        tools:text="30 participantes" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
+
+        <ListView
+            android:id="@+id/listOmrAssessmentResults"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:divider="@android:color/transparent"
+            android:dividerHeight="7dp"
+            android:paddingBottom="8dp"
+            tools:listitem="@layout/item_omr_assessment_result" />
+
+        <LinearLayout
+            android:id="@+id/containerOmrAssessmentResultNoResults"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="28dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="@string/omr_assessment_result_no_results_title"
+                android:textColor="#FF111827"
+                android:textSize="19sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="@string/omr_assessment_result_no_results_message"
+                android:textColor="#FF6B7280"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/progressOmrAssessmentResult"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="12dp">
+
+        <Button
+            android:id="@+id/buttonOmrAssessmentResultCsv"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:minHeight="46dp"
+            android:text="@string/omr_assessment_result_export_csv"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/buttonOmrAssessmentResultXlsx"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:layout_weight="1"
+            android:minHeight="46dp"
+            android:text="@string/omr_assessment_result_export_xlsx"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/buttonOmrAssessmentResultPdf"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:layout_weight="1"
+            android:minHeight="46dp"
+            android:text="@string/omr_assessment_result_export_pdf"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/buttonOmrAssessmentResultBack"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="10dp"
+        android:minHeight="46dp"
+        android:text="@string/omr_assessment_result_back" />
+</LinearLayout>

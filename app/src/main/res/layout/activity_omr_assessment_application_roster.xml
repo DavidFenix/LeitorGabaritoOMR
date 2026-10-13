@@ -160,6 +160,16 @@
         android:text="@string/omr_application_roster_action_next_pending" />
 
     <Button
+        android:id="@+id/buttonOmrApplicationRosterResults"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="16dp"
+        android:minHeight="48dp"
+        android:text="@string/omr_application_roster_action_results" />
+
+    <Button
         android:id="@+id/buttonOmrApplicationRosterBack"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

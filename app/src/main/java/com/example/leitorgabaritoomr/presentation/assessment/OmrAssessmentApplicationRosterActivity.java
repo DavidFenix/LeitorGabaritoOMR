@@ -19,11 +19,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentCorrectionContext;
 import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentCorrectionResolver;
+import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentResultReportService;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentAttempt;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
+import com.example.leitorgabaritoomr.domain.history.OmrGradingHistoryRecord;
 import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesAnswerKeyRepository;
+import com.example.leitorgabaritoomr.infrastructure.history.OmrSQLiteGradingHistoryRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentApplicationRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentAttemptRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentParticipantRepository;
@@ -31,7 +34,9 @@ import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentRe
 import com.example.leitorgabaritoomr.presentation.capture.OmrCaptureActivity;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /** Exibe a chamada congelada e coordena suas correções e revisões. */
 public final class OmrAssessmentApplicationRosterActivity
@@ -54,6 +59,7 @@ public final class OmrAssessmentApplicationRosterActivity
     private OmrSQLiteAssessmentRepository assessmentRepository;
     private OmrSQLiteAssessmentParticipantRepository participantRepository;
     private OmrSQLiteAssessmentAttemptRepository attemptRepository;
+    private OmrSQLiteGradingHistoryRepository historyRepository;
     private OmrSharedPreferencesAnswerKeyRepository answerKeyRepository;
     private OmrAssessmentCorrectionResolver correctionResolver;
     private OmrAssessmentApplicationRosterViewBinder viewBinder;
@@ -62,6 +68,7 @@ public final class OmrAssessmentApplicationRosterActivity
     private List<OmrAssessmentParticipant> participants =
             Collections.emptyList();
     private List<OmrAssessmentAttempt> attempts = Collections.emptyList();
+    private Set<String> compatibleHistoryRecordIds = Collections.emptySet();
     private OmrAssessmentApplicationRosterViewState currentState;
     private AlertDialog revisionDialog;
     private boolean batchCorrectionActive;
@@ -155,6 +162,7 @@ public final class OmrAssessmentApplicationRosterActivity
         viewBinder.setOnNextPendingClickListener(
                 view -> startNextPendingCorrection()
         );
+        viewBinder.setOnResultsClickListener(view -> openResults());
 
         batchCorrectionActive = savedInstanceState != null
                 && savedInstanceState.getBoolean(
@@ -173,6 +181,8 @@ public final class OmrAssessmentApplicationRosterActivity
                     new OmrSQLiteAssessmentParticipantRepository(this);
             attemptRepository =
                     new OmrSQLiteAssessmentAttemptRepository(this);
+            historyRepository =
+                    new OmrSQLiteGradingHistoryRepository(this);
         } else {
             String normalized = databaseName.trim();
             applicationRepository =
@@ -232,6 +242,8 @@ public final class OmrAssessmentApplicationRosterActivity
                 showMissingAndFinish();
                 return;
             }
+            compatibleHistoryRecordIds =
+                    loadCompatibleHistoryRecordIds();
             renderQuery(viewBinder == null
                     ? ""
                     : viewBinder.getSearchQuery());
@@ -250,14 +262,95 @@ public final class OmrAssessmentApplicationRosterActivity
         if (application == null || assessment == null) {
             return;
         }
-        currentState = OmrAssessmentApplicationRosterViewState.from(
+        currentState = createViewState(query);
+        viewBinder.render(currentState);
+    }
+
+    private OmrAssessmentApplicationRosterViewState createViewState(
+            String query
+    ) {
+        if (historyRepository == null) {
+            return OmrAssessmentApplicationRosterViewState.from(
+                    application,
+                    assessment,
+                    participants,
+                    attempts,
+                    query
+            );
+        }
+        return OmrAssessmentApplicationRosterViewState.from(
                 application,
                 assessment,
                 participants,
                 attempts,
+                compatibleHistoryRecordIds,
                 query
         );
-        viewBinder.render(currentState);
+    }
+
+    private Set<String> loadCompatibleHistoryRecordIds() {
+        if (historyRepository == null) {
+            return Collections.emptySet();
+        }
+        Set<String> compatible = new HashSet<>();
+        for (OmrAssessmentAttempt attempt : attempts) {
+            OmrAssessmentParticipant participant =
+                    findParticipantOrNull(attempt.getStudentId());
+            if (participant == null) {
+                continue;
+            }
+            try {
+                OmrGradingHistoryRecord history =
+                        historyRepository.findByIdOrNull(
+                                attempt.getHistoryRecordId()
+                        );
+                if (OmrAssessmentResultReportService.isCompatible(
+                        history,
+                        participant,
+                        assessment
+                )) {
+                    compatible.add(attempt.getHistoryRecordId());
+                }
+            } catch (RuntimeException exception) {
+                Log.w(
+                        TAG,
+                        "Histórico incompatível ou ilegível: "
+                                + attempt.getHistoryRecordId(),
+                        exception
+                );
+            }
+        }
+        return Collections.unmodifiableSet(compatible);
+    }
+
+    @Nullable
+    private OmrAssessmentParticipant findParticipantOrNull(
+            String studentId
+    ) {
+        for (OmrAssessmentParticipant participant : participants) {
+            if (participant.belongsToStudent(studentId)) {
+                return participant;
+            }
+        }
+        return null;
+    }
+
+    private void openResults() {
+        if (application == null) {
+            return;
+        }
+        String databaseName = normalizedDatabaseName();
+        Intent intent = databaseName == null
+                ? OmrAssessmentResultActivity.createIntent(
+                this,
+                application.getApplicationId()
+        )
+                : OmrAssessmentResultActivity.createIsolatedStorageIntent(
+                this,
+                application.getApplicationId(),
+                databaseName
+        );
+        startActivity(intent);
     }
 
     private void onParticipantCorrectionRequested(String studentId) {
@@ -333,13 +426,7 @@ public final class OmrAssessmentApplicationRosterActivity
     private OmrAssessmentApplicationRosterViewState.ParticipantItem
     findParticipantItem(String studentId) {
         OmrAssessmentApplicationRosterViewState unfiltered =
-                OmrAssessmentApplicationRosterViewState.from(
-                        application,
-                        assessment,
-                        participants,
-                        attempts,
-                        ""
-                );
+                createViewState("");
         return unfiltered.findVisibleParticipantOrNull(studentId);
     }
 
@@ -399,7 +486,7 @@ public final class OmrAssessmentApplicationRosterActivity
 
         if (batchCorrectionActive
                 && currentState != null
-                && currentState.getPendingCount() > 0) {
+                && currentState.getRemainingCount() > 0) {
 
             Toast.makeText(
                     this,
@@ -513,6 +600,10 @@ public final class OmrAssessmentApplicationRosterActivity
             attemptRepository.close();
             attemptRepository = null;
         }
+        if (historyRepository != null) {
+            historyRepository.close();
+            historyRepository = null;
+        }
         if (participantRepository != null) {
             participantRepository.close();
             participantRepository = null;
@@ -532,6 +623,7 @@ public final class OmrAssessmentApplicationRosterActivity
         currentState = null;
         participants = Collections.emptyList();
         attempts = Collections.emptyList();
+        compatibleHistoryRecordIds = Collections.emptySet();
         activeCorrectionStudentName = null;
         super.onDestroy();
     }

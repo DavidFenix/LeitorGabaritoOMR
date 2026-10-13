@@ -225,6 +225,7 @@ public final class OmrAssessmentApplicationListActivity
     private void configureBinder() {
         viewBinder.setOnSearchQueryChangedListener(this::renderQuery);
         viewBinder.setOnApplicationActionListener(this::openFrozenRoster);
+        viewBinder.setOnResultActionListener(this::openResults);
         viewBinder.setOnBackClickListener(view -> finish());
         viewBinder.setOnCreateClickListener(
                 view -> showRegistrationDialog()
@@ -299,6 +300,24 @@ public final class OmrAssessmentApplicationListActivity
                             applicationId,
                             databaseName,
                             answerKeyNamespace
+                    );
+        }
+        startActivity(intent);
+    }
+
+    private void openResults(String applicationId) {
+        Intent intent;
+        String databaseName = normalizedDatabaseName();
+        if (databaseName == null) {
+            intent = OmrAssessmentResultActivity.createIntent(
+                    this, applicationId
+            );
+        } else {
+            intent = OmrAssessmentResultActivity
+                    .createIsolatedStorageIntent(
+                            this,
+                            applicationId,
+                            databaseName
                     );
         }
         startActivity(intent);

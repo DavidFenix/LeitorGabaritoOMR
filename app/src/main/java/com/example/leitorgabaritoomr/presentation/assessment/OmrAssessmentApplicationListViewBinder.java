@@ -30,6 +30,10 @@ public final class OmrAssessmentApplicationListViewBinder {
         void onOpenFrozenRoster(String applicationId);
     }
 
+    public interface OnResultActionListener {
+        void onOpenResults(String applicationId);
+    }
+
     public interface OnSearchQueryChangedListener {
         void onSearchQueryChanged(String query);
     }
@@ -51,6 +55,7 @@ public final class OmrAssessmentApplicationListViewBinder {
 
     private OmrAssessmentApplicationListViewState currentState;
     private OnApplicationActionListener applicationActionListener;
+    private OnResultActionListener resultActionListener;
     private OnSearchQueryChangedListener searchListener;
     private boolean busy;
     private boolean released;
@@ -183,6 +188,13 @@ public final class OmrAssessmentApplicationListViewBinder {
         applicationActionListener = listener;
     }
 
+    public void setOnResultActionListener(
+            OnResultActionListener listener
+    ) {
+        ensureNotReleased();
+        resultActionListener = listener;
+    }
+
     public void setOnSearchQueryChangedListener(
             OnSearchQueryChangedListener listener
     ) {
@@ -211,6 +223,7 @@ public final class OmrAssessmentApplicationListViewBinder {
         }
         released = true;
         applicationActionListener = null;
+        resultActionListener = null;
         searchListener = null;
         searchEditText.removeTextChangedListener(searchWatcher);
         backButton.setOnClickListener(null);
@@ -236,6 +249,14 @@ public final class OmrAssessmentApplicationListViewBinder {
             applicationActionListener.onOpenFrozenRoster(
                     item.getApplicationId()
             );
+        }
+    }
+
+    private void notifyOpenResults(
+            OmrAssessmentApplicationListViewState.ApplicationItem item
+    ) {
+        if (!busy && resultActionListener != null) {
+            resultActionListener.onOpenResults(item.getApplicationId());
         }
     }
 
@@ -378,6 +399,11 @@ public final class OmrAssessmentApplicationListViewBinder {
                     R.id.buttonOmrAssessmentApplicationItemRoster,
                     Button.class
             );
+            Button results = requireView(
+                    itemView,
+                    R.id.buttonOmrAssessmentApplicationItemResults,
+                    Button.class
+            );
 
             title.setText(item.getAssessmentTitle());
             assessment.setText(context.getString(
@@ -414,6 +440,7 @@ public final class OmrAssessmentApplicationListViewBinder {
                     ))
             ));
             roster.setOnClickListener(view -> notifyOpenRoster(item));
+            results.setOnClickListener(view -> notifyOpenResults(item));
             itemView.setOnClickListener(view -> notifyOpenRoster(item));
             return itemView;
         }

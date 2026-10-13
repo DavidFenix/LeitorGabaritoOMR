@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="omr_assessment_application_list_action_results">Resultados</string>
+    <string name="omr_application_roster_action_results">Ver resultados e exportar</string>
+
+    <string name="omr_assessment_result_assessment">%1$s • prova v%2$d • %3$d</string>
+    <string name="omr_assessment_result_class">Turma: %1$s • aplicação %2$s</string>
+    <string name="omr_assessment_result_summary">%1$d de %2$d corrigidos • %3$s • %4$s</string>
+    <plurals name="omr_assessment_result_pending_summary">
+        <item quantity="one">%1$d pendente</item>
+        <item quantity="other">%1$d pendentes</item>
+    </plurals>
+    <plurals name="omr_assessment_result_issue_summary">
+        <item quantity="one">%1$d inconsistência</item>
+        <item quantity="other">%1$d inconsistências</item>
+    </plurals>
+    <string name="omr_assessment_result_average">Média dos corrigidos: %1$.2f%%</string>
+    <plurals name="omr_assessment_result_count">
+        <item quantity="one">%1$d participante</item>
+        <item quantity="other">%1$d participantes</item>
+    </plurals>
+    <string name="omr_assessment_result_filtered_count">%1$d de %2$d participantes encontrados</string>
+    <string name="omr_assessment_result_search_hint">Pesquisar aluno, matrícula, ID, posição ou situação</string>
+    <string name="omr_assessment_result_no_results_title">Nenhum resultado encontrado</string>
+    <string name="omr_assessment_result_no_results_message">Revise o aluno, matrícula, posição ou situação pesquisada.</string>
+    <string name="omr_assessment_result_position">#%1$02d</string>
+    <string name="omr_assessment_result_registration">Matrícula %1$s • %2$s</string>
+    <string name="omr_assessment_result_grade">%1$.2f de %2$.2f • %3$.2f%%</string>
+    <string name="omr_assessment_result_corrected">Corrigido • revisão %1$d • %2$s</string>
+    <string name="omr_assessment_result_review">Requer revisão • revisão %1$d • %2$s</string>
+    <string name="omr_assessment_result_missing_history">Inconsistência: histórico da revisão %1$d indisponível</string>
+    <string name="omr_assessment_result_pending">Pendente de correção</string>
+    <string name="omr_assessment_result_no_grade">Sem nota disponível</string>
+    <string name="omr_assessment_result_export_csv">CSV</string>
+    <string name="omr_assessment_result_export_xlsx">Excel</string>
+    <string name="omr_assessment_result_export_pdf">PDF</string>
+    <string name="omr_assessment_result_back">Voltar</string>
+    <string name="omr_assessment_result_load_error">Não foi possível montar o relatório desta aplicação.</string>
+    <string name="omr_assessment_result_export_success">Relatório exportado com sucesso.</string>
+    <string name="omr_assessment_result_export_error">Não foi possível salvar o relatório no destino escolhido.</string>
+    <string name="omr_assessment_result_export_cancelled">Exportação cancelada.</string>
+</resources>

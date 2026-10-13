@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#FFFFFFFF"
+    android:elevation="1dp"
+    android:minHeight="102dp"
+    android:orientation="horizontal"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/textOmrAssessmentResultItemPosition"
+        android:layout_width="48dp"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:textColor="#FF2563EB"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        tools:text="#01" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/textOmrAssessmentResultItemName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            android:textColor="#FF111827"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            tools:text="Ana Souza" />
+
+        <TextView
+            android:id="@+id/textOmrAssessmentResultItemRegistration"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:maxLines="2"
+            android:textColor="#FF6B7280"
+            android:textSize="12sp"
+            tools:text="Matrícula MAT-001 • student-1" />
+
+        <TextView
+            android:id="@+id/textOmrAssessmentResultItemGrade"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:textColor="#FF1D4ED8"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            tools:text="8,00 de 10,00 • 80,00%" />
+
+        <TextView
+            android:id="@+id/textOmrAssessmentResultItemStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:maxLines="2"
+            android:textColor="#FF047857"
+            android:textSize="12sp"
+            tools:text="Corrigido • revisão 2 • 13/10/2026 09:30" />
+    </LinearLayout>
+</LinearLayout>

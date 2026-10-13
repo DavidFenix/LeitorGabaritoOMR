@@ -55,7 +55,7 @@ public final class
 OmrStudentHistoryActivityInstrumentedTest {
 
     private static final String HISTORY_DATABASE_NAME =
-            "omr_grading_history.db";
+            "omr_student_history_activity_test.db";
 
     private Context applicationContext;
 
@@ -72,7 +72,8 @@ OmrStudentHistoryActivityInstrumentedTest {
 
         repository =
                 new OmrSQLiteGradingHistoryRepository(
-                        applicationContext
+                        applicationContext,
+                        HISTORY_DATABASE_NAME
                 );
     }
 
@@ -422,9 +423,10 @@ OmrStudentHistoryActivityInstrumentedTest {
     private Intent historyIntent(
             OmrStudentIdentity student
     ) {
-        return OmrStudentHistoryActivity.createIntent(
+        return OmrStudentHistoryActivity.createIsolatedStorageIntent(
                 applicationContext,
-                student
+                student,
+                HISTORY_DATABASE_NAME
         );
     }
 

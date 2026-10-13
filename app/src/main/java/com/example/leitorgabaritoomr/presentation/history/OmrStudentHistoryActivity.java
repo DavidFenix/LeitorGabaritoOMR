@@ -32,6 +32,10 @@ public final class OmrStudentHistoryActivity
             "com.example.leitorgabaritoomr.extra."
                     + "STUDENT_HISTORY_STUDENT_IDENTITY";
 
+    private static final String EXTRA_HISTORY_DATABASE_NAME =
+            "com.example.leitorgabaritoomr.extra."
+                    + "STUDENT_HISTORY_DATABASE_NAME";
+
     private OmrStudentIdentity studentIdentity;
 
     private OmrSQLiteGradingHistoryRepository
@@ -64,6 +68,23 @@ public final class OmrStudentHistoryActivity
         ).putExtra(
                 EXTRA_STUDENT_IDENTITY,
                 studentIdentity
+        );
+    }
+
+    /** Cria a tela sobre um banco exclusivo de teste. */
+    public static Intent createIsolatedStorageIntent(
+            Context context,
+            OmrStudentIdentity studentIdentity,
+            String databaseName
+    ) {
+        if (databaseName == null || databaseName.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "O nome do banco isolado é obrigatório."
+            );
+        }
+        return createIntent(context, studentIdentity).putExtra(
+                EXTRA_HISTORY_DATABASE_NAME,
+                databaseName.trim()
         );
     }
 
@@ -119,8 +140,16 @@ public final class OmrStudentHistoryActivity
                 this
         );
 
-        historyRepository =
-                new OmrSQLiteGradingHistoryRepository(this);
+        String databaseName = getIntent().getStringExtra(
+                EXTRA_HISTORY_DATABASE_NAME
+        );
+        historyRepository = databaseName == null
+                || databaseName.trim().isEmpty()
+                ? new OmrSQLiteGradingHistoryRepository(this)
+                : new OmrSQLiteGradingHistoryRepository(
+                this,
+                databaseName.trim()
+        );
     }
 
     @Override

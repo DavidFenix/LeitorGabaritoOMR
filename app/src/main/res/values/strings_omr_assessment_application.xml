@@ -88,6 +88,10 @@
     <string name="omr_application_roster_registration">Matrícula %1$s • %2$s</string>
     <string name="omr_application_roster_corrected">Corrigido • revisão %1$d • %2$s</string>
     <string name="omr_application_roster_pending">Pendente de correção</string>
+    <string name="omr_application_roster_history_unavailable">Histórico da revisão %1$d indisponível • corrigir novamente</string>
+    <string name="omr_application_roster_progress_recovery">Corrigidos: %1$d/%2$d • pendentes: %3$d • recuperar: %4$d</string>
+    <string name="omr_application_roster_action_recover">Recuperar nota</string>
+    <string name="omr_application_roster_action_recover_next">Corrigir pendentes e recuperar notas</string>
     <string name="omr_application_roster_action_correct">Corrigir</string>
     <string name="omr_application_roster_action_correct_again">Nova revisão</string>
     <string name="omr_application_roster_action_next_pending">Corrigir próximo pendente</string>

@@ -35,6 +35,10 @@ public final class OmrStudentIdentificationActivity
             "com.example.leitorgabaritoomr.extra."
                     + "STUDENT_IDENTITY";
 
+    private static final String EXTRA_HISTORY_DATABASE_NAME =
+            "com.example.leitorgabaritoomr.extra."
+                    + "STUDENT_IDENTIFICATION_HISTORY_DATABASE_NAME";
+
     private static final String STATE_REGISTRATION =
             "omr.student_identification.registration";
 
@@ -74,6 +78,23 @@ public final class OmrStudentIdentificationActivity
         ).putExtra(
                 EXTRA_ANSWER_KEY,
                 answerKeyDefinition
+        );
+    }
+
+    static Intent createIsolatedStorageIntent(
+            Context context,
+            OmrAnswerKeyDefinition answerKeyDefinition,
+            String historyDatabaseName
+    ) {
+        if (historyDatabaseName == null
+                || historyDatabaseName.trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "O nome do banco isolado é obrigatório."
+            );
+        }
+        return createIntent(context, answerKeyDefinition).putExtra(
+                EXTRA_HISTORY_DATABASE_NAME,
+                historyDatabaseName.trim()
         );
     }
 
@@ -181,12 +202,21 @@ public final class OmrStudentIdentificationActivity
             return;
         }
 
-        startActivity(
-                OmrStudentHistoryActivity.createIntent(
-                        this,
-                        studentIdentity
-                )
+        String databaseName = getIntent().getStringExtra(
+                EXTRA_HISTORY_DATABASE_NAME
         );
+        Intent historyIntent = databaseName == null
+                || databaseName.trim().isEmpty()
+                ? OmrStudentHistoryActivity.createIntent(
+                this,
+                studentIdentity
+        )
+                : OmrStudentHistoryActivity.createIsolatedStorageIntent(
+                this,
+                studentIdentity,
+                databaseName.trim()
+        );
+        startActivity(historyIntent);
     }
 
     private void returnStudentAndFinish() {

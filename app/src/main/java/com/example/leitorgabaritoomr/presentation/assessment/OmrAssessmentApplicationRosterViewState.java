@@ -27,10 +27,12 @@ public final class OmrAssessmentApplicationRosterViewState {
         private final int latestRevision;
         private final String latestHistoryRecordId;
         private final long latestRecordedAtEpochMillis;
+        private final boolean historyAvailable;
 
         private ParticipantItem(
                 OmrAssessmentParticipant participant,
-                OmrAssessmentAttempt latestAttempt
+                OmrAssessmentAttempt latestAttempt,
+                boolean historyAvailable
         ) {
             studentId = participant.getStudentId();
             registration = participant.getRegistration();
@@ -42,6 +44,8 @@ public final class OmrAssessmentApplicationRosterViewState {
                     ? null : latestAttempt.getHistoryRecordId();
             latestRecordedAtEpochMillis = latestAttempt == null
                     ? 0L : latestAttempt.getRecordedAtEpochMillis();
+            this.historyAvailable = latestAttempt == null
+                    || historyAvailable;
         }
 
         public String getStudentId() {
@@ -61,7 +65,15 @@ public final class OmrAssessmentApplicationRosterViewState {
         }
 
         public boolean isCorrected() {
-            return latestRevision > 0;
+            return latestRevision > 0 && historyAvailable;
+        }
+
+        /**
+         * Indica que o vínculo da tentativa sobreviveu, mas o resultado
+         * detalhado que ela referencia não está mais disponível.
+         */
+        public boolean needsHistoryRecovery() {
+            return latestRevision > 0 && !historyAvailable;
         }
 
         public int getLatestRevision() {
@@ -91,6 +103,7 @@ public final class OmrAssessmentApplicationRosterViewState {
     private final String query;
     private final int totalCount;
     private final int correctedCount;
+    private final int recoveryCount;
     private final String firstPendingStudentId;
     private final List<ParticipantItem> visibleParticipants;
 
@@ -101,6 +114,7 @@ public final class OmrAssessmentApplicationRosterViewState {
             String query,
             int totalCount,
             int correctedCount,
+            int recoveryCount,
             String firstPendingStudentId,
             List<ParticipantItem> visibleParticipants
     ) {
@@ -114,6 +128,7 @@ public final class OmrAssessmentApplicationRosterViewState {
         this.query = query;
         this.totalCount = totalCount;
         this.correctedCount = correctedCount;
+        this.recoveryCount = recoveryCount;
         this.firstPendingStudentId = firstPendingStudentId;
         this.visibleParticipants = Collections.unmodifiableList(
                 new ArrayList<>(visibleParticipants)
@@ -125,6 +140,30 @@ public final class OmrAssessmentApplicationRosterViewState {
             OmrAssessmentDefinition assessment,
             List<OmrAssessmentParticipant> participants,
             List<OmrAssessmentAttempt> attempts,
+            String query
+    ) {
+        return from(
+                application,
+                assessment,
+                participants,
+                attempts,
+                null,
+                query
+        );
+    }
+
+    /**
+     * Monta o estado validando se o histórico detalhado de cada tentativa
+     * ainda existe. Um conjunto nulo preserva o contrato legado e considera
+     * todas as tentativas disponíveis, útil para armazenamentos isolados que
+     * não possuem banco de histórico associado.
+     */
+    public static OmrAssessmentApplicationRosterViewState from(
+            OmrAssessmentApplication application,
+            OmrAssessmentDefinition assessment,
+            List<OmrAssessmentParticipant> participants,
+            List<OmrAssessmentAttempt> attempts,
+            Set<String> availableHistoryRecordIds,
             String query
     ) {
         if (application == null || assessment == null
@@ -186,14 +225,30 @@ public final class OmrAssessmentApplicationRosterViewState {
         String normalizedQuery = normalizeSearchText(query).trim();
         List<ParticipantItem> visible = new ArrayList<>();
         String firstPendingStudentId = null;
+        int correctedCount = 0;
+        int recoveryCount = 0;
 
         for (OmrAssessmentParticipant participant : ordered) {
+            OmrAssessmentAttempt latestAttempt = latestByStudent.get(
+                    participant.getStudentId()
+            );
+            boolean historyAvailable = latestAttempt == null
+                    || availableHistoryRecordIds == null
+                    || availableHistoryRecordIds.contains(
+                    latestAttempt.getHistoryRecordId()
+            );
             ParticipantItem item = new ParticipantItem(
                     participant,
-                    latestByStudent.get(participant.getStudentId())
+                    latestAttempt,
+                    historyAvailable
             );
             if (!item.isCorrected() && firstPendingStudentId == null) {
                 firstPendingStudentId = item.getStudentId();
+            }
+            if (item.isCorrected()) {
+                correctedCount++;
+            } else if (item.needsHistoryRecovery()) {
+                recoveryCount++;
             }
             if (matches(item, normalizedQuery)) {
                 visible.add(item);
@@ -206,7 +261,8 @@ public final class OmrAssessmentApplicationRosterViewState {
                 frozenClassName,
                 normalizedQuery,
                 ordered.size(),
-                latestByStudent.size(),
+                correctedCount,
+                recoveryCount,
                 firstPendingStudentId,
                 visible
         );
@@ -252,7 +308,9 @@ public final class OmrAssessmentApplicationRosterViewState {
         if (query.isEmpty()) {
             return true;
         }
-        String status = item.isCorrected() ? "corrigido" : "pendente";
+        String status = item.needsHistoryRecovery()
+                ? "inconsistencia historico indisponivel recuperar recorrigir"
+                : item.isCorrected() ? "corrigido" : "pendente";
         String revision = item.isCorrected()
                 ? "revisao " + item.latestRevision : "";
         return normalizeSearchText(item.studentName).contains(query)
@@ -314,6 +372,14 @@ public final class OmrAssessmentApplicationRosterViewState {
     }
 
     public int getPendingCount() {
+        return totalCount - correctedCount - recoveryCount;
+    }
+
+    public int getRecoveryCount() {
+        return recoveryCount;
+    }
+
+    public int getRemainingCount() {
         return totalCount - correctedCount;
     }
 
