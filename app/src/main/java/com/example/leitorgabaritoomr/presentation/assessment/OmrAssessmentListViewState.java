@@ -1,6 +1,8 @@
 package com.example.leitorgabaritoomr.presentation.assessment;
 
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlock;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -8,6 +10,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
 /** Fotografia visual imutável das versões mais recentes das provas. */
@@ -23,9 +27,11 @@ public final class OmrAssessmentListViewState {
         private final int schoolYear;
         private final String answerKeyId;
         private final int answerKeyVersion;
+        private final OmrAssessmentStructure structure;
 
         private AssessmentItem(
-                OmrAssessmentDefinition assessment
+                OmrAssessmentDefinition assessment,
+                OmrAssessmentStructure structure
         ) {
             assessmentId = assessment.getAssessmentId();
             version = assessment.getVersion();
@@ -36,6 +42,7 @@ public final class OmrAssessmentListViewState {
             schoolYear = assessment.getSchoolYear();
             answerKeyId = assessment.getAnswerKeyId();
             answerKeyVersion = assessment.getAnswerKeyVersion();
+            this.structure = structure;
         }
 
         public String getAssessmentId() {
@@ -74,6 +81,22 @@ public final class OmrAssessmentListViewState {
             return answerKeyVersion;
         }
 
+        public boolean hasPublishedStructure() {
+            return structure != null;
+        }
+
+        public int getBlockCount() {
+            return structure == null ? 0 : structure.getBlockCount();
+        }
+
+        public int getStructureQuestionCount() {
+            return structure == null ? 0 : structure.getQuestionCount();
+        }
+
+        public OmrAssessmentStructure getStructureOrNull() {
+            return structure;
+        }
+
         public boolean hasAssessmentId(String candidate) {
             return candidate != null
                     && assessmentId.equals(candidate.trim());
@@ -100,15 +123,34 @@ public final class OmrAssessmentListViewState {
             List<OmrAssessmentDefinition> latestAssessments,
             String query
     ) {
+        return from(
+                latestAssessments,
+                Collections.emptyList(),
+                query
+        );
+    }
+
+    public static OmrAssessmentListViewState from(
+            List<OmrAssessmentDefinition> latestAssessments,
+            List<OmrAssessmentStructure> storedStructures,
+            String query
+    ) {
         if (latestAssessments == null) {
             throw new IllegalArgumentException(
                     "A lista de provas é obrigatória."
+            );
+        }
+        if (storedStructures == null) {
+            throw new IllegalArgumentException(
+                    "A lista de estruturas e obrigatoria."
             );
         }
 
         String normalizedQuery = normalizeSearchText(query).trim();
         List<AssessmentItem> visible = new ArrayList<>();
         Set<String> assessmentIds = new HashSet<>();
+        Map<String, OmrAssessmentStructure> structuresByIdentity =
+                indexStructures(storedStructures);
 
         for (OmrAssessmentDefinition assessment
                 : latestAssessments) {
@@ -125,8 +167,19 @@ public final class OmrAssessmentListViewState {
                 );
             }
 
-            if (matches(assessment, normalizedQuery)) {
-                visible.add(new AssessmentItem(assessment));
+            OmrAssessmentStructure structure = structuresByIdentity.get(
+                    identityOf(
+                            assessment.getAssessmentId(),
+                            assessment.getVersion()
+                    )
+            );
+            AssessmentItem item = new AssessmentItem(
+                    assessment,
+                    structure
+            );
+
+            if (matches(item, normalizedQuery)) {
+                visible.add(item);
             }
         }
 
@@ -138,14 +191,14 @@ public final class OmrAssessmentListViewState {
     }
 
     private static boolean matches(
-            OmrAssessmentDefinition assessment,
+            AssessmentItem assessment,
             String query
     ) {
         if (query.isEmpty()) {
             return true;
         }
 
-        return normalizeSearchText(assessment.getTitle())
+        if (normalizeSearchText(assessment.getTitle())
                 .contains(query)
                 || normalizeSearchText(assessment.getSubject())
                 .contains(query)
@@ -158,7 +211,55 @@ public final class OmrAssessmentListViewState {
                 || normalizeSearchText(assessment.getAnswerKeyId())
                 .contains(query)
                 || Integer.toString(assessment.getSchoolYear())
-                .contains(query);
+                .contains(query)) {
+            return true;
+        }
+
+        OmrAssessmentStructure structure =
+                assessment.getStructureOrNull();
+        if (structure == null) {
+            return false;
+        }
+
+        for (OmrAssessmentBlock block : structure.getBlocks()) {
+            if (normalizeSearchText(block.getAreaName()).contains(query)
+                    || normalizeSearchText(block.getComponentCode())
+                    .contains(query)
+                    || normalizeSearchText(block.getComponentName())
+                    .contains(query)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static Map<String, OmrAssessmentStructure> indexStructures(
+            List<OmrAssessmentStructure> structures
+    ) {
+        Map<String, OmrAssessmentStructure> indexed =
+                new LinkedHashMap<>();
+
+        for (OmrAssessmentStructure structure : structures) {
+            if (structure == null) {
+                throw new IllegalArgumentException(
+                        "A lista de estruturas nao pode conter nulos."
+                );
+            }
+            String identity = identityOf(
+                    structure.getAssessmentId(),
+                    structure.getAssessmentVersion()
+            );
+            if (indexed.put(identity, structure) != null) {
+                throw new IllegalArgumentException(
+                        "A lista nao pode repetir uma estrutura."
+                );
+            }
+        }
+        return indexed;
+    }
+
+    private static String identityOf(String assessmentId, int version) {
+        return assessmentId + "\u0000" + version;
     }
 
     private static String normalizeSearchText(String value) {

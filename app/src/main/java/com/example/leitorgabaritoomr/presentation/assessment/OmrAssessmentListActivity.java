@@ -6,12 +6,15 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -25,12 +28,17 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentCsvParser;
 import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentRegistrationService;
+import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentStructureCsvParser;
+import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentStructureRegistrationService;
 import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyRepository;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlock;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesAnswerKeyRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentBatchRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentRepository;
+import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentStructureRepository;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
@@ -68,23 +76,37 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
 
     private OmrSQLiteAssessmentRepository assessmentRepository;
     private OmrSQLiteAssessmentBatchRepository batchRepository;
+    private OmrSQLiteAssessmentStructureRepository structureRepository;
     private OmrAnswerKeyRepository answerKeyRepository;
     private OmrAssessmentRegistrationService registrationService;
     private OmrAssessmentCsvParser csvParser;
+    private OmrAssessmentStructureCsvParser structureCsvParser;
+    private OmrAssessmentStructureRegistrationService
+            structureRegistrationService;
     private OmrAssessmentListViewBinder viewBinder;
     private ExecutorService backgroundExecutor;
     private List<OmrAssessmentDefinition> assessmentCatalog =
+            Collections.emptyList();
+    private List<OmrAssessmentStructure> structureCatalog =
             Collections.emptyList();
 
     private AlertDialog registrationDialog;
     private AlertDialog noAnswerKeysDialog;
     private AlertDialog csvPreviewDialog;
+    private AlertDialog structureCsvPreviewDialog;
+    private AlertDialog structureDialog;
     private volatile boolean released;
 
     private final ActivityResultLauncher<String[]> csvDocumentLauncher =
             registerForActivityResult(
                     new ActivityResultContracts.OpenDocument(),
                     this::handleCsvDocument
+            );
+
+    private final ActivityResultLauncher<String[]> blocksCsvDocumentLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.OpenDocument(),
+                    this::handleBlocksCsvDocument
             );
 
     public static Intent createIntent(Context context) {
@@ -136,6 +158,8 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
                     new OmrSQLiteAssessmentRepository(this);
             batchRepository =
                     new OmrSQLiteAssessmentBatchRepository(this);
+            structureRepository =
+                    new OmrSQLiteAssessmentStructureRepository(this);
         } else {
             assessmentRepository = new OmrSQLiteAssessmentRepository(
                     this,
@@ -145,6 +169,11 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
                     this,
                     databaseName.trim()
             );
+            structureRepository =
+                    new OmrSQLiteAssessmentStructureRepository(
+                            this,
+                            databaseName.trim()
+                    );
         }
 
         answerKeyRepository =
@@ -156,7 +185,15 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
                 batchRepository,
                 answerKeyRepository
         );
+        structureRegistrationService =
+                new OmrAssessmentStructureRegistrationService(
+                        assessmentRepository,
+                        structureRepository,
+                        structureRepository,
+                        answerKeyRepository
+                );
         csvParser = new OmrAssessmentCsvParser();
+        structureCsvParser = new OmrAssessmentStructureCsvParser();
         backgroundExecutor = Executors.newSingleThreadExecutor();
         viewBinder = new OmrAssessmentListViewBinder(
                 findViewById(android.R.id.content)
@@ -200,7 +237,22 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
     private void configureBinder() {
         viewBinder.setOnSearchQueryChangedListener(this::renderQuery);
         viewBinder.setOnAssessmentActionListener(
-                this::showRevisionDialog
+                new OmrAssessmentListViewBinder
+                        .OnAssessmentActionListener() {
+                    @Override
+                    public void onCreateNewVersion(
+                            String assessmentId
+                    ) {
+                        showRevisionDialog(assessmentId);
+                    }
+
+                    @Override
+                    public void onManageStructure(
+                            String assessmentId
+                    ) {
+                        showStructureDialog(assessmentId);
+                    }
+                }
         );
         viewBinder.setOnBackClickListener(view -> finish());
         viewBinder.setOnCreateClickListener(
@@ -209,6 +261,9 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
         viewBinder.setOnImportCsvClickListener(
                 view -> csvDocumentLauncher.launch(CSV_MIME_TYPES)
         );
+        viewBinder.setOnImportBlocksCsvClickListener(
+                view -> blocksCsvDocumentLauncher.launch(CSV_MIME_TYPES)
+        );
     }
 
     private void reloadRepository() {
@@ -216,6 +271,19 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
             assessmentCatalog = new ArrayList<>(
                     assessmentRepository.loadLatestVersions()
             );
+            List<OmrAssessmentStructure> loadedStructures =
+                    new ArrayList<>();
+            for (OmrAssessmentDefinition assessment : assessmentCatalog) {
+                OmrAssessmentStructure structure = structureRepository
+                        .findStoredOrNull(
+                                assessment.getAssessmentId(),
+                                assessment.getVersion()
+                        );
+                if (structure != null) {
+                    loadedStructures.add(structure);
+                }
+            }
+            structureCatalog = loadedStructures;
             renderQuery(viewBinder.getSearchQuery());
         } catch (RuntimeException exception) {
             Log.e(TAG, "Falha ao carregar provas.", exception);
@@ -230,6 +298,7 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
     private void renderQuery(String query) {
         viewBinder.render(OmrAssessmentListViewState.from(
                 assessmentCatalog,
+                structureCatalog,
                 query
         ));
     }
@@ -583,6 +652,507 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
         }
     }
 
+    private void showStructureDialog(String assessmentId) {
+        if (structureDialog != null && structureDialog.isShowing()) {
+            return;
+        }
+
+        OmrAssessmentDefinition assessment = assessmentRepository
+                .findLatestVersionOrNull(assessmentId);
+        if (assessment == null) {
+            Toast.makeText(
+                    this,
+                    R.string.omr_assessment_registration_missing,
+                    Toast.LENGTH_LONG
+            ).show();
+            reloadRepository();
+            return;
+        }
+
+        OmrAssessmentStructure stored = structureRepository
+                .findStoredOrNull(
+                        assessment.getAssessmentId(),
+                        assessment.getVersion()
+                );
+        if (stored != null) {
+            showPublishedStructureDialog(assessment, stored);
+            return;
+        }
+
+        OmrAnswerKeyDefinition answerKey = answerKeyRepository.findOrNull(
+                assessment.getAnswerKeyId(),
+                assessment.getAnswerKeyVersion()
+        );
+        if (answerKey == null) {
+            Toast.makeText(
+                    this,
+                    R.string
+                            .omr_assessment_structure_missing_answer_key,
+                    Toast.LENGTH_LONG
+            ).show();
+            return;
+        }
+
+        View dialogView = LayoutInflater.from(this).inflate(
+                R.layout.dialog_omr_assessment_structure,
+                null,
+                false
+        );
+        TextView target = dialogView.findViewById(
+                R.id.textOmrAssessmentStructureTarget
+        );
+        LinearLayout blocksContainer = dialogView.findViewById(
+                R.id.containerOmrAssessmentStructureBlocks
+        );
+        Button addBlock = dialogView.findViewById(
+                R.id.buttonOmrAssessmentStructureAddBlock
+        );
+        TextView total = dialogView.findViewById(
+                R.id.textOmrAssessmentStructureTotal
+        );
+        List<BlockEditorRow> rows = new ArrayList<>();
+        int expectedQuestionCount = answerKey.getQuestionCount();
+
+        target.setText(getString(
+                R.string.omr_assessment_structure_editor_target,
+                assessment.getTitle(),
+                assessment.getVersion(),
+                expectedQuestionCount
+        ));
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.omr_assessment_structure_editor_title)
+                .setView(dialogView)
+                .setNegativeButton(
+                        R.string.omr_assessment_structure_action_cancel,
+                        null
+                )
+                .setPositiveButton(
+                        R.string.omr_assessment_structure_action_publish,
+                        null
+                )
+                .create();
+        structureDialog = dialog;
+
+        addBlock.setOnClickListener(view -> addBlockEditorRow(
+                blocksContainer,
+                rows,
+                total,
+                expectedQuestionCount
+        ));
+        addBlockEditorRow(
+                blocksContainer,
+                rows,
+                total,
+                expectedQuestionCount
+        );
+
+        dialog.setOnShowListener(ignored -> dialog.getButton(
+                AlertDialog.BUTTON_POSITIVE
+        ).setOnClickListener(view -> publishStructure(
+                dialog,
+                assessment,
+                rows,
+                total,
+                expectedQuestionCount
+        )));
+        dialog.setOnDismissListener(ignored -> {
+            for (BlockEditorRow row : rows) {
+                row.release();
+            }
+            rows.clear();
+            addBlock.setOnClickListener(null);
+            if (structureDialog == dialog) {
+                structureDialog = null;
+            }
+        });
+        dialog.show();
+    }
+
+    private void showPublishedStructureDialog(
+            OmrAssessmentDefinition assessment,
+            OmrAssessmentStructure structure
+    ) {
+        StringBuilder message = new StringBuilder(getString(
+                R.string.omr_assessment_structure_read_only_header,
+                assessment.getTitle(),
+                assessment.getVersion()
+        ));
+
+        for (OmrAssessmentBlock block : structure.getBlocks()) {
+            String area = block.hasAreaName()
+                    ? getString(
+                    R.string.omr_assessment_structure_read_only_area,
+                    block.getAreaName()
+            )
+                    : "";
+            message.append("\n\n").append(getString(
+                    R.string.omr_assessment_structure_read_only_row,
+                    block.getOrder(),
+                    block.getComponentName(),
+                    area,
+                    block.getFirstQuestionPosition(),
+                    block.getLastQuestionPosition(),
+                    block.getQuestionCount()
+            ));
+        }
+        message.append("\n\n").append(getString(
+                R.string.omr_assessment_structure_read_only_policy
+        ));
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(
+                        R.string.omr_assessment_structure_read_only_title
+                )
+                .setMessage(message)
+                .setPositiveButton(
+                        R.string.omr_assessment_structure_action_close,
+                        null
+                )
+                .create();
+        structureDialog = dialog;
+        dialog.setOnDismissListener(ignored -> {
+            if (structureDialog == dialog) {
+                structureDialog = null;
+            }
+        });
+        dialog.show();
+    }
+
+    private void addBlockEditorRow(
+            LinearLayout container,
+            List<BlockEditorRow> rows,
+            TextView total,
+            int expectedQuestionCount
+    ) {
+        View rowView = LayoutInflater.from(this).inflate(
+                R.layout.item_omr_assessment_structure_editor,
+                container,
+                false
+        );
+        BlockEditorRow row = new BlockEditorRow(rowView, () ->
+                updateStructureEditor(
+                        rows,
+                        total,
+                        expectedQuestionCount
+                )
+        );
+        rows.add(row);
+        container.addView(rowView);
+        row.removeButton.setOnClickListener(view -> {
+            if (rows.size() <= 1) {
+                return;
+            }
+            row.release();
+            rows.remove(row);
+            container.removeView(rowView);
+            updateStructureEditor(
+                    rows,
+                    total,
+                    expectedQuestionCount
+            );
+        });
+        updateStructureEditor(rows, total, expectedQuestionCount);
+    }
+
+    private void updateStructureEditor(
+            List<BlockEditorRow> rows,
+            TextView total,
+            int expectedQuestionCount
+    ) {
+        long informed = 0L;
+        for (int index = 0; index < rows.size(); index++) {
+            BlockEditorRow row = rows.get(index);
+            row.order.setText(getString(
+                    R.string.omr_assessment_structure_block_order,
+                    index + 1
+            ));
+            row.removeButton.setEnabled(rows.size() > 1);
+            Integer count = positiveIntegerOrNull(
+                    textOf(row.questionCount)
+            );
+            if (count != null) {
+                informed += count;
+            }
+        }
+
+        int safeTotal = informed > Integer.MAX_VALUE
+                ? Integer.MAX_VALUE
+                : (int) informed;
+        total.setText(getString(
+                R.string.omr_assessment_structure_total,
+                safeTotal,
+                expectedQuestionCount
+        ));
+        total.setTextColor(safeTotal == expectedQuestionCount
+                ? 0xFF047857
+                : 0xFFB45309);
+    }
+
+    private void publishStructure(
+            AlertDialog dialog,
+            OmrAssessmentDefinition assessment,
+            List<BlockEditorRow> rows,
+            TextView total,
+            int expectedQuestionCount
+    ) {
+        List<OmrAssessmentStructureRegistrationService.BlockInput> inputs =
+                new ArrayList<>();
+        boolean valid = true;
+        long informedTotal = 0L;
+        View firstInvalid = null;
+
+        for (int index = 0; index < rows.size(); index++) {
+            BlockEditorRow row = rows.get(index);
+            String component = textOf(row.component);
+            Integer count = positiveIntegerOrNull(
+                    textOf(row.questionCount)
+            );
+            boolean componentValid = !component.trim().isEmpty();
+
+            row.componentLayout.setError(componentValid
+                    ? null
+                    : getString(
+                    R.string.omr_assessment_structure_error_component
+            ));
+            row.questionCountLayout.setError(count != null
+                    ? null
+                    : getString(
+                    R.string
+                            .omr_assessment_structure_error_question_count
+            ));
+
+            if (!componentValid || count == null) {
+                valid = false;
+                if (firstInvalid == null) {
+                    firstInvalid = componentValid
+                            ? row.questionCount
+                            : row.component;
+                }
+                continue;
+            }
+
+            informedTotal += count;
+            inputs.add(new OmrAssessmentStructureRegistrationService
+                    .BlockInput(
+                    index + 1,
+                    null,
+                    textOf(row.area),
+                    null,
+                    component,
+                    count
+            ));
+        }
+
+        if (!valid) {
+            firstInvalid.requestFocus();
+            return;
+        }
+        if (informedTotal != expectedQuestionCount) {
+            total.setText(getString(
+                    R.string.omr_assessment_structure_total_mismatch,
+                    expectedQuestionCount
+            ));
+            total.setTextColor(0xFFB91C1C);
+            return;
+        }
+
+        try {
+            structureRegistrationService.register(
+                    assessment.getAssessmentId(),
+                    assessment.getVersion(),
+                    inputs
+            );
+            dialog.dismiss();
+            reloadRepository();
+            Toast.makeText(
+                    this,
+                    R.string.omr_assessment_structure_created,
+                    Toast.LENGTH_SHORT
+            ).show();
+        } catch (RuntimeException exception) {
+            Log.e(TAG, "Falha ao publicar blocos.", exception);
+            Toast.makeText(
+                    this,
+                    R.string.omr_assessment_structure_save_error,
+                    Toast.LENGTH_LONG
+            ).show();
+        }
+    }
+
+    private void handleBlocksCsvDocument(@Nullable Uri documentUri) {
+        if (documentUri == null || released) {
+            return;
+        }
+
+        viewBinder.setBusy(true);
+        backgroundExecutor.execute(() -> {
+            try {
+                byte[] bytes = readCsvBytes(documentUri);
+                OmrAssessmentStructureCsvParser.Preview preview =
+                        structureCsvParser.parse(bytes);
+                postToUi(() -> showBlocksCsvPreview(preview));
+            } catch (CsvTooLargeException exception) {
+                Log.w(TAG, "CSV de blocos acima do limite.", exception);
+                postToUi(() -> showBackgroundError(
+                        R.string.omr_assessment_csv_too_large
+                ));
+            } catch (IOException | RuntimeException exception) {
+                Log.e(TAG, "Falha ao ler CSV de blocos.", exception);
+                postToUi(() -> showBackgroundError(
+                        R.string.omr_assessment_csv_read_error
+                ));
+            }
+        });
+    }
+
+    void showBlocksCsvPreview(
+            OmrAssessmentStructureCsvParser.Preview preview
+    ) {
+        if (preview == null) {
+            throw new IllegalArgumentException(
+                    "A previa do CSV de blocos e obrigatoria."
+            );
+        }
+
+        viewBinder.setBusy(false);
+        dismissStructureCsvPreviewDialog();
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle(preview.isReadyToImport()
+                        ? R.string
+                        .omr_assessment_blocks_csv_preview_title
+                        : R.string
+                        .omr_assessment_blocks_csv_preview_error_title)
+                .setMessage(formatBlocksCsvPreview(preview));
+
+        if (preview.isReadyToImport()) {
+            builder.setNegativeButton(
+                    R.string.omr_assessment_csv_action_cancel,
+                    null
+            );
+            builder.setPositiveButton(
+                    R.string.omr_assessment_blocks_csv_action_import,
+                    (dialog, which) -> importBlocksCsvPreview(preview)
+            );
+        } else {
+            builder.setPositiveButton(
+                    R.string.omr_assessment_csv_action_close,
+                    null
+            );
+        }
+
+        AlertDialog dialog = builder.create();
+        structureCsvPreviewDialog = dialog;
+        dialog.setOnDismissListener(ignored -> {
+            if (structureCsvPreviewDialog == dialog) {
+                structureCsvPreviewDialog = null;
+            }
+        });
+        dialog.show();
+    }
+
+    private String formatBlocksCsvPreview(
+            OmrAssessmentStructureCsvParser.Preview preview
+    ) {
+        if (preview.isReadyToImport()) {
+            int rowCount = preview.getRows().size();
+            StringBuilder message = new StringBuilder(
+                    getResources().getQuantityString(
+                            R.plurals
+                                    .omr_assessment_blocks_csv_preview_valid_rows,
+                            rowCount,
+                            rowCount
+                    )
+            );
+            int visibleCount = Math.min(rowCount, MAX_PREVIEW_ROWS);
+            for (int index = 0; index < visibleCount; index++) {
+                OmrAssessmentStructureCsvParser.Row row =
+                        preview.getRows().get(index);
+                message.append("\n\n• ").append(getString(
+                        R.string.omr_assessment_blocks_csv_preview_row,
+                        row.getAssessmentReference(),
+                        row.getAssessmentVersion(),
+                        row.getBlockOrder(),
+                        row.getComponentName(),
+                        row.getQuestionCount()
+                ));
+            }
+            int hiddenCount = rowCount - visibleCount;
+            if (hiddenCount > 0) {
+                message.append("\n\n… +").append(hiddenCount);
+            }
+            message.append("\n\n").append(getString(
+                    R.string
+                            .omr_assessment_blocks_csv_preview_safety_note
+            )).append("\n\n").append(getString(
+                    R.string
+                            .omr_assessment_blocks_csv_preview_technical,
+                    preview.getEncoding(),
+                    String.valueOf(preview.getDelimiter())
+            ));
+            return message.toString();
+        }
+
+        List<OmrAssessmentStructureCsvParser.Issue> issues =
+                preview.getIssues();
+        StringBuilder message = new StringBuilder(
+                getResources().getQuantityString(
+                        R.plurals
+                                .omr_assessment_blocks_csv_preview_error_summary,
+                        issues.size(),
+                        issues.size()
+                )
+        );
+        int visibleCount = Math.min(issues.size(), MAX_PREVIEW_ISSUES);
+        for (int index = 0; index < visibleCount; index++) {
+            OmrAssessmentStructureCsvParser.Issue issue =
+                    issues.get(index);
+            message.append("\n\n• ").append(getString(
+                    R.string.omr_assessment_blocks_csv_preview_issue,
+                    issue.getLineNumber(),
+                    issue.getMessage()
+            ));
+        }
+        int hiddenCount = issues.size() - visibleCount;
+        if (hiddenCount > 0) {
+            message.append("\n\n… +").append(hiddenCount);
+        }
+        return message.toString();
+    }
+
+    private void importBlocksCsvPreview(
+            OmrAssessmentStructureCsvParser.Preview preview
+    ) {
+        viewBinder.setBusy(true);
+        backgroundExecutor.execute(() -> {
+            try {
+                OmrAssessmentStructureRegistrationService.ImportSummary
+                        summary = structureRegistrationService
+                        .importPreview(preview);
+                postToUi(() -> {
+                    viewBinder.setBusy(false);
+                    reloadRepository();
+                    Toast.makeText(
+                            this,
+                            getString(
+                                    R.string
+                                            .omr_assessment_blocks_csv_import_success,
+                                    summary.getCreatedStructureCount(),
+                                    summary.getUnchangedStructureCount(),
+                                    summary.getProcessedBlockCount()
+                            ),
+                            Toast.LENGTH_LONG
+                    ).show();
+                });
+            } catch (RuntimeException exception) {
+                Log.e(TAG, "Falha ao importar blocos.", exception);
+                postToUi(() -> showBackgroundError(
+                        R.string.omr_assessment_blocks_csv_import_error
+                ));
+            }
+        });
+    }
+
     private void handleCsvDocument(@Nullable Uri documentUri) {
         if (documentUri == null || released) {
             return;
@@ -824,6 +1394,13 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
         }
     }
 
+    private void dismissStructureCsvPreviewDialog() {
+        if (structureCsvPreviewDialog != null) {
+            structureCsvPreviewDialog.dismiss();
+            structureCsvPreviewDialog = null;
+        }
+    }
+
     @Override
     protected void onDestroy() {
         released = true;
@@ -837,6 +1414,11 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
             noAnswerKeysDialog = null;
         }
         dismissCsvPreviewDialog();
+        dismissStructureCsvPreviewDialog();
+        if (structureDialog != null) {
+            structureDialog.dismiss();
+            structureDialog = null;
+        }
 
         if (viewBinder != null) {
             viewBinder.release();
@@ -854,11 +1436,18 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
             assessmentRepository.close();
             assessmentRepository = null;
         }
+        if (structureRepository != null) {
+            structureRepository.close();
+            structureRepository = null;
+        }
 
         registrationService = null;
+        structureRegistrationService = null;
         answerKeyRepository = null;
         csvParser = null;
+        structureCsvParser = null;
         assessmentCatalog = Collections.emptyList();
+        structureCatalog = Collections.emptyList();
         super.onDestroy();
     }
 
@@ -877,6 +1466,73 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
         @Override
         public String toString() {
             return label;
+        }
+    }
+
+    private static final class BlockEditorRow {
+        private final TextView order;
+        private final TextInputEditText area;
+        private final TextInputLayout componentLayout;
+        private final TextInputEditText component;
+        private final TextInputLayout questionCountLayout;
+        private final TextInputEditText questionCount;
+        private final Button removeButton;
+        private final TextWatcher countWatcher;
+
+        private BlockEditorRow(View root, Runnable onCountChanged) {
+            order = root.findViewById(
+                    R.id.textOmrAssessmentStructureBlockOrder
+            );
+            area = root.findViewById(
+                    R.id.editOmrAssessmentStructureArea
+            );
+            componentLayout = root.findViewById(
+                    R.id.inputLayoutOmrAssessmentStructureComponent
+            );
+            component = root.findViewById(
+                    R.id.editOmrAssessmentStructureComponent
+            );
+            questionCountLayout = root.findViewById(
+                    R.id.inputLayoutOmrAssessmentStructureQuestionCount
+            );
+            questionCount = root.findViewById(
+                    R.id.editOmrAssessmentStructureQuestionCount
+            );
+            removeButton = root.findViewById(
+                    R.id.buttonOmrAssessmentStructureRemoveBlock
+            );
+            countWatcher = new TextWatcher() {
+                @Override
+                public void beforeTextChanged(
+                        CharSequence value,
+                        int start,
+                        int count,
+                        int after
+                ) {
+                    // Nenhuma acao necessaria.
+                }
+
+                @Override
+                public void onTextChanged(
+                        CharSequence value,
+                        int start,
+                        int before,
+                        int count
+                ) {
+                    onCountChanged.run();
+                }
+
+                @Override
+                public void afterTextChanged(Editable value) {
+                    // O total ja foi atualizado.
+                }
+            };
+            questionCount.addTextChangedListener(countWatcher);
+        }
+
+        private void release() {
+            questionCount.removeTextChangedListener(countWatcher);
+            removeButton.setOnClickListener(null);
         }
     }
 

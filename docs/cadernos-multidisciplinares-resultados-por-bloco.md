@@ -60,7 +60,7 @@ posicao logica das questoes ja produzida pela correcao OMR.
 - testes unitarios dos codecs e testes instrumentados de SQLite, versoes,
   reinicializacao e migracao real de banco v5.
 
-### 3A. Nucleo do cadastro de blocos (checkpoint atual)
+### 3A. Nucleo do cadastro de blocos (concluido)
 
 - CSV independente de blocos, com uma linha por componente curricular;
 - referencia por codigo usado no CSV de provas ou pelo ID exato da prova;
@@ -84,14 +84,23 @@ NAT-1;1;3;BIO;Ciencias da Natureza;BIO;Biologia;15
 ```
 
 `codigo_bloco`, `area` e `codigo_componente` podem ficar vazios. O campo
-`componente` e a quantidade positiva de `itens` sao obrigatorios. Este
-checkpoint ainda nao expoe os comandos nas telas; ele estabelece a operacao
-validada e transacional que o editor visual utilizara.
+`componente` e a quantidade positiva de `itens` sao obrigatorios. O nucleo
+estabelece a operacao validada e transacional usada pelas telas.
 
-### 3B. Telas e resultados
+### 3B1. Cadastro de blocos nas telas (checkpoint atual)
 
-- editor manual e importacao CSV dos blocos;
-- validacao da soma de itens contra o gabarito escolhido;
+- cada prova informa se a estrutura curricular ainda precisa ser configurada;
+- editor manual permite ordenar componentes, informar area opcional e definir
+  a quantidade de questoes de cada bloco;
+- total informado e comparado ao gabarito antes da publicacao;
+- estrutura publicada fica somente para consulta; qualquer mudanca exige uma
+  nova versao da prova;
+- importacao de provas e importacao de blocos permanecem comandos separados;
+- CSV de blocos possui previa e importacao transacional, sem gravacao parcial;
+- pesquisa de provas tambem localiza area, codigo e nome dos componentes.
+
+### 3B2. Resultados e congelamento (proximo checkpoint)
+
 - apresentacao por componente curricular;
 - estados explicitos para pendente, ausente, inconsistente, em revisao e zero;
 - congelamento do detalhamento junto da revisao da correcao.
@@ -103,10 +112,10 @@ validada e transacional que o editor visual utilizara.
 - campo opcional de nota para o SIGE, preservando a nota calculada;
 - politica de nota identificada em toda exportacao auditavel.
 
-## Fora dos checkpoints 1, 2 e 3A
+## Fora dos checkpoints 1, 2, 3A e 3B1
 
-Estes checkpoints ainda nao mudam o CSV atual de provas, telas, exportacoes,
-cartao-resposta, reconhecimento OMR ou fluxos de correcao ja publicados. O
-CSV de blocos e adicional e nao altera a interpretacao de arquivos antigos.
-A versao 6 do banco apenas acrescenta as novas tabelas e preserva os
-registros historicos existentes.
+Estes checkpoints ainda nao mudam exportacoes, cartao-resposta,
+reconhecimento OMR ou resultados historicos. O CSV de blocos e adicional e
+nao altera a interpretacao do CSV de provas nem de arquivos antigos. A versao
+6 do banco apenas acrescenta as novas tabelas e preserva os registros
+historicos existentes.

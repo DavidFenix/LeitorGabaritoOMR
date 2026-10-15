@@ -23,8 +23,16 @@
 
     <string name="omr_assessment_list_action_back">Voltar</string>
     <string name="omr_assessment_list_action_create">Nova prova</string>
-    <string name="omr_assessment_list_action_import_csv">Importar CSV</string>
+    <string name="omr_assessment_list_action_import_csv">Importar provas CSV</string>
+    <string name="omr_assessment_list_action_import_blocks_csv">Importar blocos CSV</string>
     <string name="omr_assessment_list_action_new_version">Nova versão</string>
+    <string name="omr_assessment_list_action_configure_blocks">Configurar blocos</string>
+    <string name="omr_assessment_list_action_view_blocks">Ver blocos</string>
+    <string name="omr_assessment_list_structure_missing">Blocos curriculares ainda não configurados</string>
+    <plurals name="omr_assessment_list_structure_summary">
+        <item quantity="one">%1$d componente • %2$d questões</item>
+        <item quantity="other">%1$d componentes • %2$d questões</item>
+    </plurals>
 
     <string name="omr_assessment_registration_create_title">Cadastrar prova</string>
     <string name="omr_assessment_registration_revision_title">Publicar nova versão</string>
@@ -81,5 +89,49 @@
     <string name="omr_assessment_csv_too_large">O CSV excede o limite de 5 MB.</string>
     <string name="omr_assessment_csv_import_error">Não foi possível importar o CSV. Nenhuma versão foi gravada.</string>
     <string name="omr_assessment_csv_import_success">Importação concluída: %1$d versões novas e %2$d já existentes sem alteração.</string>
+
+    <string name="omr_assessment_structure_editor_title">Configurar blocos curriculares</string>
+    <string name="omr_assessment_structure_editor_target">%1$s • versão %2$d • %3$d questões</string>
+    <string name="omr_assessment_structure_editor_helper">A ordem dos componentes define suas faixas no cartão. Depois de publicar, os blocos desta versão não poderão ser alterados.</string>
+    <string name="omr_assessment_structure_area_label">Área (opcional)</string>
+    <string name="omr_assessment_structure_area_helper">Exemplo: Ciências da Natureza</string>
+    <string name="omr_assessment_structure_component_label">Componente curricular</string>
+    <string name="omr_assessment_structure_question_count_label">Quantidade de questões</string>
+    <string name="omr_assessment_structure_block_order">Bloco %1$d</string>
+    <string name="omr_assessment_structure_action_add_block">Adicionar componente</string>
+    <string name="omr_assessment_structure_action_remove_block">Remover</string>
+    <string name="omr_assessment_structure_action_publish">Publicar blocos</string>
+    <string name="omr_assessment_structure_action_cancel">Cancelar</string>
+    <string name="omr_assessment_structure_action_close">Fechar</string>
+    <string name="omr_assessment_structure_total">Total informado: %1$d de %2$d questões</string>
+    <string name="omr_assessment_structure_total_mismatch">A soma deve ser exatamente %1$d questões.</string>
+    <string name="omr_assessment_structure_error_component">Informe o componente curricular.</string>
+    <string name="omr_assessment_structure_error_question_count">Informe uma quantidade positiva.</string>
+    <string name="omr_assessment_structure_created">Blocos curriculares publicados.</string>
+    <string name="omr_assessment_structure_save_error">Não foi possível publicar os blocos.</string>
+    <string name="omr_assessment_structure_missing_answer_key">O gabarito exato desta prova não está disponível.</string>
+    <string name="omr_assessment_structure_read_only_title">Blocos curriculares publicados</string>
+    <string name="omr_assessment_structure_read_only_header">%1$s • versão %2$d</string>
+    <string name="omr_assessment_structure_read_only_row">%1$d. %2$s%3$s — questões %4$d a %5$d (%6$d itens)</string>
+    <string name="omr_assessment_structure_read_only_area"> • %1$s</string>
+    <string name="omr_assessment_structure_read_only_policy">A regra de nota está vinculada a esta versão e não será alterada silenciosamente.</string>
+
+    <string name="omr_assessment_blocks_csv_preview_title">Prévia da importação de blocos</string>
+    <string name="omr_assessment_blocks_csv_preview_error_title">O CSV de blocos precisa de correções</string>
+    <plurals name="omr_assessment_blocks_csv_preview_valid_rows">
+        <item quantity="one">%1$d bloco está pronto para importação.</item>
+        <item quantity="other">%1$d blocos estão prontos para importação.</item>
+    </plurals>
+    <string name="omr_assessment_blocks_csv_preview_row">%1$s v%2$d • bloco %3$d: %4$s (%5$d itens)</string>
+    <string name="omr_assessment_blocks_csv_preview_safety_note">A soma dos blocos será comparada ao gabarito exato. Estruturas já publicadas não serão substituídas.</string>
+    <string name="omr_assessment_blocks_csv_preview_technical">Codificação: %1$s • separador: %2$s</string>
+    <plurals name="omr_assessment_blocks_csv_preview_error_summary">
+        <item quantity="one">Foi encontrada %1$d inconsistência. Nada será importado.</item>
+        <item quantity="other">Foram encontradas %1$d inconsistências. Nada será importado.</item>
+    </plurals>
+    <string name="omr_assessment_blocks_csv_preview_issue">Linha %1$d: %2$s</string>
+    <string name="omr_assessment_blocks_csv_action_import">Importar blocos</string>
+    <string name="omr_assessment_blocks_csv_import_success">Blocos importados: %1$d estruturas novas, %2$d já existentes e %3$d componentes processados.</string>
+    <string name="omr_assessment_blocks_csv_import_error">Não foi possível importar os blocos. Nenhuma estrutura nova foi gravada.</string>
 
 </resources>

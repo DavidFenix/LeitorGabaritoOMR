@@ -8,6 +8,9 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlock;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
+import com.example.leitorgabaritoomr.domain.assessment.OmrProportionalScoringPolicy;
 
 import org.junit.Test;
 
@@ -112,6 +115,34 @@ public final class OmrAssessmentListViewStateTest {
         assertEquals(2, item.getAnswerKeyVersion());
         assertTrue(item.hasAssessmentId(" assessment-math "));
         assertFalse(item.hasAssessmentId(null));
+        assertFalse(item.hasPublishedStructure());
+        assertEquals(0, item.getBlockCount());
+        assertNull(item.getStructureOrNull());
+    }
+
+    @Test
+    public void itemExposesPublishedStructureAndSearchesItsMetadata() {
+        OmrAssessmentStructure structure = scienceStructure();
+        OmrAssessmentListViewState state =
+                OmrAssessmentListViewState.from(
+                        assessments(),
+                        Collections.singletonList(structure),
+                        "quimica"
+                );
+
+        assertEquals(1, state.getVisibleCount());
+        OmrAssessmentListViewState.AssessmentItem item =
+                state.getVisibleAssessments().get(0);
+        assertEquals("assessment-science", item.getAssessmentId());
+        assertTrue(item.hasPublishedStructure());
+        assertEquals(2, item.getBlockCount());
+        assertEquals(4, item.getStructureQuestionCount());
+        assertEquals(structure, item.getStructureOrNull());
+        assertEquals(1, OmrAssessmentListViewState.from(
+                assessments(),
+                Collections.singletonList(structure),
+                "natureza"
+        ).getVisibleCount());
     }
 
     @Test
@@ -150,6 +181,26 @@ public final class OmrAssessmentListViewStateTest {
         ));
         expectIllegalArgument(() -> OmrAssessmentListViewState.from(
                 Arrays.asList(assessmentMath(), null),
+                ""
+        ));
+        expectIllegalArgument(() -> OmrAssessmentListViewState.from(
+                assessments(),
+                null,
+                ""
+        ));
+        expectIllegalArgument(() -> OmrAssessmentListViewState.from(
+                assessments(),
+                Collections.singletonList(null),
+                ""
+        ));
+    }
+
+    @Test
+    public void rejectsRepeatedStructureIdentity() {
+        OmrAssessmentStructure structure = scienceStructure();
+        expectIllegalArgument(() -> OmrAssessmentListViewState.from(
+                assessments(),
+                Arrays.asList(structure, structure),
                 ""
         ));
     }
@@ -222,6 +273,38 @@ public final class OmrAssessmentListViewStateTest {
                 2026,
                 "key-math",
                 2
+        );
+    }
+
+    private static OmrAssessmentStructure scienceStructure() {
+        return new OmrAssessmentStructure(
+                "assessment-science",
+                1,
+                4,
+                Arrays.asList(
+                        new OmrAssessmentBlock(
+                                "block-chemistry",
+                                1,
+                                "Ciências da Natureza",
+                                "QUI",
+                                "Química",
+                                1,
+                                2,
+                                OmrProportionalScoringPolicy
+                                        .correctQuestionsToTenV1()
+                        ),
+                        new OmrAssessmentBlock(
+                                "block-physics",
+                                2,
+                                "Ciências da Natureza",
+                                "FIS",
+                                "Física",
+                                3,
+                                2,
+                                OmrProportionalScoringPolicy
+                                        .correctQuestionsToTenV1()
+                        )
+                )
         );
     }
 

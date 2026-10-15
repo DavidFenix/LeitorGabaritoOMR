@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="10dp"
+    android:background="#FFF9FAFB"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <TextView
+        android:id="@+id/textOmrAssessmentStructureBlockOrder"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#FF111827"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        tools:text="Bloco 1" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/inputLayoutOmrAssessmentStructureArea"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="7dp"
+        android:hint="@string/omr_assessment_structure_area_label"
+        app:helperText="@string/omr_assessment_structure_area_helper">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editOmrAssessmentStructureArea"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="actionNext"
+            android:inputType="textCapWords"
+            android:maxLength="120"
+            android:maxLines="1"
+            android:singleLine="true"
+            tools:text="Ciências da Natureza" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/inputLayoutOmrAssessmentStructureComponent"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="7dp"
+        android:hint="@string/omr_assessment_structure_component_label">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editOmrAssessmentStructureComponent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="actionNext"
+            android:inputType="textCapWords"
+            android:maxLength="120"
+            android:maxLines="1"
+            android:singleLine="true"
+            tools:text="Química" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/inputLayoutOmrAssessmentStructureQuestionCount"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="7dp"
+        android:hint="@string/omr_assessment_structure_question_count_label">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editOmrAssessmentStructureQuestionCount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="actionNext"
+            android:inputType="number"
+            android:maxLength="4"
+            android:maxLines="1"
+            android:singleLine="true"
+            tools:text="15" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <Button
+        android:id="@+id/buttonOmrAssessmentStructureRemoveBlock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:layout_marginTop="5dp"
+        android:minHeight="42dp"
+        android:text="@string/omr_assessment_structure_action_remove_block" />
+
+</LinearLayout>

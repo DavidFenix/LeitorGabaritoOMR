@@ -33,11 +33,14 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentCsvParser;
+import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentStructureCsvParser;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyEntry;
 import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesAnswerKeyRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentRepository;
+import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentStructureRepository;
 
 import org.junit.After;
 import org.junit.Before;
@@ -55,6 +58,7 @@ public final class OmrAssessmentListActivityInstrumentedTest {
     private String answerKeyNamespace;
     private OmrSQLiteAssessmentRepository assessmentRepository;
     private OmrSharedPreferencesAnswerKeyRepository answerKeyRepository;
+    private OmrSQLiteAssessmentStructureRepository structureRepository;
 
     @Before
     public void setUp() {
@@ -70,6 +74,11 @@ public final class OmrAssessmentListActivityInstrumentedTest {
                 applicationContext,
                 databaseName
         );
+        structureRepository =
+                new OmrSQLiteAssessmentStructureRepository(
+                        applicationContext,
+                        databaseName
+                );
         answerKeyRepository =
                 new OmrSharedPreferencesAnswerKeyRepository(
                         isolatedAnswerKeyContext()
@@ -81,6 +90,10 @@ public final class OmrAssessmentListActivityInstrumentedTest {
         if (assessmentRepository != null) {
             assessmentRepository.close();
             assessmentRepository = null;
+        }
+        if (structureRepository != null) {
+            structureRepository.close();
+            structureRepository = null;
         }
         clearAnswerKeyStorage();
         applicationContext.deleteDatabase(databaseName);
@@ -141,7 +154,190 @@ public final class OmrAssessmentListActivityInstrumentedTest {
                         activity,
                         R.id.buttonOmrAssessmentListImportCsv
                 ).isEnabled());
+                assertTrue(button(
+                        activity,
+                        R.id.buttonOmrAssessmentListImportBlocksCsv
+                ).isEnabled());
             });
+        }
+    }
+
+    @Test
+    public void manualStructureEditorPublishesSequentialBlocks() {
+        seedAnswerKeys();
+        assessmentRepository.save(assessment(
+                "assessment-science",
+                1,
+                "Caderno de Natureza",
+                "key-1",
+                1
+        ));
+
+        try (ActivityScenario<OmrAssessmentListActivity> scenario =
+                     ActivityScenario.launch(createActivityIntent())) {
+
+            scenario.onActivity(activity -> button(
+                    rowAt(activity, 0),
+                    R.id.buttonOmrAssessmentItemStructure
+            ).performClick());
+
+            onView(withId(
+                    R.id.editOmrAssessmentStructureArea
+            )).inRoot(isDialog()).perform(
+                    replaceText("Ciências da Natureza")
+            );
+            onView(withId(
+                    R.id.editOmrAssessmentStructureComponent
+            )).inRoot(isDialog()).perform(replaceText("Química"));
+            onView(withId(
+                    R.id.editOmrAssessmentStructureQuestionCount
+            )).inRoot(isDialog()).perform(replaceText("2"));
+
+            onView(withText(
+                    R.string.omr_assessment_structure_action_publish
+            )).inRoot(isDialog()).perform(click());
+
+            OmrAssessmentStructure stored = waitForStructure(
+                    "assessment-science",
+                    1
+            );
+            assertEquals(1, stored.getBlockCount());
+            assertEquals("Química", stored.getBlocks().get(0)
+                    .getComponentName());
+            assertEquals(1, stored.getBlocks().get(0)
+                    .getFirstQuestionPosition());
+            assertEquals(2, stored.getBlocks().get(0)
+                    .getLastQuestionPosition());
+
+            scenario.onActivity(activity -> assertRowText(
+                    rowAt(activity, 0),
+                    R.id.textOmrAssessmentItemStructure,
+                    "1 componente • 2 questões"
+            ));
+        }
+    }
+
+    @Test
+    public void structureEditorKeepsWrongTotalOpen() {
+        seedAnswerKeys();
+        assessmentRepository.save(assessment(
+                "assessment-science",
+                1,
+                "Caderno de Natureza",
+                "key-1",
+                1
+        ));
+
+        try (ActivityScenario<OmrAssessmentListActivity> scenario =
+                     ActivityScenario.launch(createActivityIntent())) {
+            scenario.onActivity(activity -> button(
+                    rowAt(activity, 0),
+                    R.id.buttonOmrAssessmentItemStructure
+            ).performClick());
+
+            onView(withId(
+                    R.id.editOmrAssessmentStructureComponent
+            )).inRoot(isDialog()).perform(replaceText("Química"));
+            onView(withId(
+                    R.id.editOmrAssessmentStructureQuestionCount
+            )).inRoot(isDialog()).perform(replaceText("1"));
+            onView(withText(
+                    R.string.omr_assessment_structure_action_publish
+            )).inRoot(isDialog()).perform(click());
+
+            onView(withText("A soma deve ser exatamente 2 questões."))
+                    .inRoot(isDialog())
+                    .check(matches(isDisplayed()));
+            assertTrue(structureRepository.loadStoredVersions(
+                    "assessment-science"
+            ).isEmpty());
+            onView(withText(
+                    R.string.omr_assessment_structure_action_cancel
+            )).inRoot(isDialog()).perform(click());
+        }
+    }
+
+    @Test
+    public void validBlocksCsvPreviewImportsAndUpdatesRow() {
+        seedAnswerKeys();
+        assessmentRepository.save(assessment(
+                "assessment-science",
+                1,
+                "Caderno de Natureza",
+                "key-1",
+                1
+        ));
+        OmrAssessmentStructureCsvParser.Preview preview =
+                new OmrAssessmentStructureCsvParser().parse(
+                        "codigo_prova;versao_prova;ordem_bloco;"
+                                + "codigo_bloco;area;codigo_componente;"
+                                + "componente;itens\n"
+                                + "assessment-science;1;1;QUI;Natureza;"
+                                + "QUI;Química;1\n"
+                                + "assessment-science;1;2;FIS;Natureza;"
+                                + "FIS;Física;1"
+                );
+
+        try (ActivityScenario<OmrAssessmentListActivity> scenario =
+                     ActivityScenario.launch(createActivityIntent())) {
+            scenario.onActivity(activity ->
+                    activity.showBlocksCsvPreview(preview)
+            );
+            onView(withText(containsString(
+                    "assessment-science v1 • bloco 1: Química"
+            ))).inRoot(isDialog()).check(matches(isDisplayed()));
+            onView(withText(
+                    R.string.omr_assessment_blocks_csv_action_import
+            )).inRoot(isDialog()).perform(click());
+
+            OmrAssessmentStructure stored = waitForStructure(
+                    "assessment-science",
+                    1
+            );
+            assertEquals(2, stored.getBlockCount());
+            scenario.onActivity(activity -> assertRowText(
+                    rowAt(activity, 0),
+                    R.id.textOmrAssessmentItemStructure,
+                    "2 componentes • 2 questões"
+            ));
+        }
+    }
+
+    @Test
+    public void publishedStructureOpensReadOnlySummary() {
+        seedAnswerKeys();
+        assessmentRepository.save(assessment(
+                "assessment-science",
+                1,
+                "Caderno de Natureza",
+                "key-1",
+                1
+        ));
+        structureRepository.save(
+                com.example.leitorgabaritoomr.domain.assessment
+                        .OmrAssessmentStructure.legacySingleBlock(
+                        "assessment-science",
+                        1,
+                        2
+                )
+        );
+
+        try (ActivityScenario<OmrAssessmentListActivity> scenario =
+                     ActivityScenario.launch(createActivityIntent())) {
+            scenario.onActivity(activity -> button(
+                    rowAt(activity, 0),
+                    R.id.buttonOmrAssessmentItemStructure
+            ).performClick());
+            onView(withText(
+                    R.string
+                            .omr_assessment_structure_read_only_title
+            )).inRoot(isDialog()).check(matches(isDisplayed()));
+            onView(withText(containsString(
+                    "1. Resultado geral — questões 1 a 2"
+            ))).inRoot(isDialog()).check(matches(isDisplayed()));
+            onView(withText(
+                    R.string.omr_assessment_structure_action_close
+            )).inRoot(isDialog()).perform(click());
         }
     }
 
@@ -575,6 +771,26 @@ public final class OmrAssessmentListActivityInstrumentedTest {
         }
         fail("A importação não atingiu "
                 + expectedCount + " versões de provas.");
+    }
+
+    private OmrAssessmentStructure waitForStructure(
+            String assessmentId,
+            int version
+    ) {
+        long deadline = System.currentTimeMillis() + 5000L;
+        while (System.currentTimeMillis() < deadline) {
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            OmrAssessmentStructure structure = structureRepository
+                    .findStoredOrNull(assessmentId, version);
+            if (structure != null) {
+                InstrumentationRegistry.getInstrumentation()
+                        .waitForIdleSync();
+                return structure;
+            }
+            sleepBriefly();
+        }
+        fail("A estrutura da prova nao foi gravada.");
+        return null;
     }
 
     private void waitForImportToFinish(

@@ -173,6 +173,14 @@
             android:minHeight="48dp"
             android:text="@string/omr_assessment_list_action_import_csv" />
 
+        <Button
+            android:id="@+id/buttonOmrAssessmentListImportBlocksCsv"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            android:text="@string/omr_assessment_list_action_import_blocks_csv" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -57,15 +57,42 @@
             android:textSize="12sp"
             tools:text="Gabarito: key-math • versão 2" />
 
+        <TextView
+            android:id="@+id/textOmrAssessmentItemStructure"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:maxLines="2"
+            android:textColor="#FFB45309"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            tools:text="3 componentes • 45 questões" />
+
     </LinearLayout>
 
-    <Button
-        android:id="@+id/buttonOmrAssessmentItemNewVersion"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
-        android:minHeight="44dp"
-        android:text="@string/omr_assessment_list_action_new_version"
-        android:textSize="11sp" />
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/buttonOmrAssessmentItemStructure"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="44dp"
+            android:text="@string/omr_assessment_list_action_configure_blocks"
+            android:textSize="10sp" />
+
+        <Button
+            android:id="@+id/buttonOmrAssessmentItemNewVersion"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:minHeight="44dp"
+            android:text="@string/omr_assessment_list_action_new_version"
+            android:textSize="10sp" />
+
+    </LinearLayout>
 
 </LinearLayout>

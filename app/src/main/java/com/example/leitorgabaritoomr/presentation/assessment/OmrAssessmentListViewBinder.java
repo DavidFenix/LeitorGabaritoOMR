@@ -26,6 +26,8 @@ public final class OmrAssessmentListViewBinder {
 
     public interface OnAssessmentActionListener {
         void onCreateNewVersion(String assessmentId);
+
+        void onManageStructure(String assessmentId);
     }
 
     public interface OnSearchQueryChangedListener {
@@ -43,6 +45,7 @@ public final class OmrAssessmentListViewBinder {
     private final Button backButton;
     private final Button createButton;
     private final Button importCsvButton;
+    private final Button importBlocksCsvButton;
     private final AssessmentAdapter adapter;
     private final TextWatcher searchWatcher;
 
@@ -104,6 +107,11 @@ public final class OmrAssessmentListViewBinder {
         importCsvButton = requireView(
                 rootView,
                 R.id.buttonOmrAssessmentListImportCsv,
+                Button.class
+        );
+        importBlocksCsvButton = requireView(
+                rootView,
+                R.id.buttonOmrAssessmentListImportBlocksCsv,
                 Button.class
         );
 
@@ -168,6 +176,7 @@ public final class OmrAssessmentListViewBinder {
         assessmentListView.setEnabled(!busy);
         createButton.setEnabled(!busy);
         importCsvButton.setEnabled(!busy);
+        importBlocksCsvButton.setEnabled(!busy);
         applyVisibility();
     }
 
@@ -200,6 +209,13 @@ public final class OmrAssessmentListViewBinder {
         importCsvButton.setOnClickListener(listener);
     }
 
+    public void setOnImportBlocksCsvClickListener(
+            View.OnClickListener listener
+    ) {
+        ensureNotReleased();
+        importBlocksCsvButton.setOnClickListener(listener);
+    }
+
     public void release() {
         if (released) {
             return;
@@ -212,6 +228,7 @@ public final class OmrAssessmentListViewBinder {
         backButton.setOnClickListener(null);
         createButton.setOnClickListener(null);
         importCsvButton.setOnClickListener(null);
+        importBlocksCsvButton.setOnClickListener(null);
         adapter.clear();
         assessmentListView.setAdapter(null);
     }
@@ -235,6 +252,15 @@ public final class OmrAssessmentListViewBinder {
         OnAssessmentActionListener listener = assessmentActionListener;
         if (listener != null && !busy) {
             listener.onCreateNewVersion(item.getAssessmentId());
+        }
+    }
+
+    private void notifyManageStructure(
+            OmrAssessmentListViewState.AssessmentItem item
+    ) {
+        OnAssessmentActionListener listener = assessmentActionListener;
+        if (listener != null && !busy) {
+            listener.onManageStructure(item.getAssessmentId());
         }
     }
 
@@ -376,9 +402,19 @@ public final class OmrAssessmentListViewBinder {
                     R.id.textOmrAssessmentItemAnswerKey,
                     TextView.class
             );
+            TextView structure = requireView(
+                    itemView,
+                    R.id.textOmrAssessmentItemStructure,
+                    TextView.class
+            );
             Button newVersion = requireView(
                     itemView,
                     R.id.buttonOmrAssessmentItemNewVersion,
+                    Button.class
+            );
+            Button manageStructure = requireView(
+                    itemView,
+                    R.id.buttonOmrAssessmentItemStructure,
                     Button.class
             );
 
@@ -399,8 +435,31 @@ public final class OmrAssessmentListViewBinder {
                     item.getAnswerKeyId(),
                     item.getAnswerKeyVersion()
             ));
+            if (item.hasPublishedStructure()) {
+                structure.setText(context.getResources().getQuantityString(
+                        R.plurals.omr_assessment_list_structure_summary,
+                        item.getBlockCount(),
+                        item.getBlockCount(),
+                        item.getStructureQuestionCount()
+                ));
+                structure.setTextColor(0xFF047857);
+                manageStructure.setText(
+                        R.string.omr_assessment_list_action_view_blocks
+                );
+            } else {
+                structure.setText(
+                        R.string.omr_assessment_list_structure_missing
+                );
+                structure.setTextColor(0xFFB45309);
+                manageStructure.setText(
+                        R.string.omr_assessment_list_action_configure_blocks
+                );
+            }
             newVersion.setOnClickListener(
                     view -> notifyCreateNewVersion(item)
+            );
+            manageStructure.setOnClickListener(
+                    view -> notifyManageStructure(item)
             );
 
             return itemView;

@@ -20,6 +20,9 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlock;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
+import com.example.leitorgabaritoomr.domain.assessment.OmrProportionalScoringPolicy;
 import com.google.android.material.textfield.TextInputEditText;
 
 import org.junit.After;
@@ -63,6 +66,9 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
             );
             binder.setOnImportCsvClickListener(
                     view -> actions.importCount++
+            );
+            binder.setOnImportBlocksCsvClickListener(
+                    view -> actions.importBlocksCount++
             );
         });
     }
@@ -143,6 +149,11 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
                     R.id.textOmrAssessmentItemAnswerKey,
                     "Gabarito: key-math • versão 2"
             );
+            assertRowText(
+                    first,
+                    R.id.textOmrAssessmentItemStructure,
+                    "Blocos curriculares ainda não configurados"
+            );
         });
     }
 
@@ -193,10 +204,14 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
             button(R.id.buttonOmrAssessmentListBack).performClick();
             button(R.id.buttonOmrAssessmentListCreate).performClick();
             button(R.id.buttonOmrAssessmentListImportCsv).performClick();
+            button(
+                    R.id.buttonOmrAssessmentListImportBlocksCsv
+            ).performClick();
 
             assertEquals(1, actions.backCount);
             assertEquals(1, actions.createCount);
             assertEquals(1, actions.importCount);
+            assertEquals(1, actions.importBlocksCount);
         });
     }
 
@@ -212,6 +227,36 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
 
             assertEquals(1, actions.revisionCount);
             assertEquals("assessment-science", actions.lastAssessmentId);
+
+            Button blocks = rowAt(0).findViewById(
+                    R.id.buttonOmrAssessmentItemStructure
+            );
+            blocks.performClick();
+            assertEquals(1, actions.structureCount);
+            assertEquals("assessment-math", actions.lastAssessmentId);
+        });
+    }
+
+    @Test
+    public void publishedStructureChangesRowSummaryAndAction() {
+        runOnMain(() -> {
+            binder.render(OmrAssessmentListViewState.from(
+                    assessments(),
+                    Collections.singletonList(scienceStructure()),
+                    ""
+            ));
+
+            View science = rowAt(1);
+            assertRowText(
+                    science,
+                    R.id.textOmrAssessmentItemStructure,
+                    "2 componentes • 4 questões"
+            );
+            assertRowText(
+                    science,
+                    R.id.buttonOmrAssessmentItemStructure,
+                    "Ver blocos"
+            );
         });
     }
 
@@ -232,6 +277,9 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
             ).isEnabled());
             assertFalse(button(
                     R.id.buttonOmrAssessmentListImportCsv
+            ).isEnabled());
+            assertFalse(button(
+                    R.id.buttonOmrAssessmentListImportBlocksCsv
             ).isEnabled());
 
             binder.setBusy(false);
@@ -316,6 +364,38 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
         );
     }
 
+    private static OmrAssessmentStructure scienceStructure() {
+        return new OmrAssessmentStructure(
+                "assessment-science",
+                1,
+                4,
+                Arrays.asList(
+                        new OmrAssessmentBlock(
+                                "chemistry",
+                                1,
+                                "Ciências da Natureza",
+                                "QUI",
+                                "Química",
+                                1,
+                                2,
+                                OmrProportionalScoringPolicy
+                                        .correctQuestionsToTenV1()
+                        ),
+                        new OmrAssessmentBlock(
+                                "physics",
+                                2,
+                                "Ciências da Natureza",
+                                "FIS",
+                                "Física",
+                                3,
+                                2,
+                                OmrProportionalScoringPolicy
+                                        .correctQuestionsToTenV1()
+                        )
+                )
+        );
+    }
+
     private ListView listView() {
         return rootView.findViewById(R.id.listOmrAssessments);
     }
@@ -387,12 +467,20 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
         private int backCount;
         private int createCount;
         private int importCount;
+        private int importBlocksCount;
+        private int structureCount;
         private String lastAssessmentId;
         private String lastQuery;
 
         @Override
         public void onCreateNewVersion(String assessmentId) {
             revisionCount++;
+            lastAssessmentId = assessmentId;
+        }
+
+        @Override
+        public void onManageStructure(String assessmentId) {
+            structureCount++;
             lastAssessmentId = assessmentId;
         }
 
