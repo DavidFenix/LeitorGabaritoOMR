@@ -5,6 +5,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
+import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentStructureBatchRepository;
 import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentStructureRepository;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlock;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
@@ -14,12 +15,15 @@ import com.example.leitorgabaritoomr.domain.assessment.OmrProportionalScoringPol
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /** Repositorio SQLite das estruturas curriculares versionadas das provas. */
 public final class OmrSQLiteAssessmentStructureRepository
         implements OmrAssessmentStructureRepository,
+        OmrAssessmentStructureBatchRepository,
         AutoCloseable {
 
     private static final String POLICY_TYPE_PROPORTIONAL =
@@ -120,19 +124,10 @@ public final class OmrSQLiteAssessmentStructureRepository
 
         SQLiteDatabase writable = database.getWritableDatabase();
 
-        if (findHealthyAssessmentOrNull(
-                writable,
-                structure.getAssessmentId(),
-                structure.getAssessmentVersion()
-        ) == null) {
-            throw new IllegalArgumentException(
-                    "A versao da prova deve existir e estar integra"
-                            + " antes de salvar sua estrutura."
-            );
-        }
-
         writable.beginTransaction();
         try {
+            requireHealthyAssessment(writable, structure);
+
             if (structureRowExists(
                     writable,
                     structure.getAssessmentId(),
@@ -142,43 +137,46 @@ public final class OmrSQLiteAssessmentStructureRepository
                 return false;
             }
 
-            for (OmrAssessmentBlock block : structure.getBlocks()) {
-                persistOrValidatePolicy(
+            persistNewStructure(writable, structure);
+
+            writable.setTransactionSuccessful();
+            return true;
+        } finally {
+            writable.endTransaction();
+        }
+    }
+
+    @Override
+    public void saveAllNew(
+            List<OmrAssessmentStructure> structures
+    ) {
+        validateBatch(structures);
+
+        SQLiteDatabase writable = database.getWritableDatabase();
+        writable.beginTransaction();
+        try {
+            for (OmrAssessmentStructure structure : structures) {
+                requireHealthyAssessment(writable, structure);
+
+                if (structureRowExists(
                         writable,
-                        block.getScoringPolicy()
-                );
-            }
-
-            long structureRow = writable.insertWithOnConflict(
-                    OmrSchoolDatabase.TABLE_ASSESSMENT_STRUCTURE,
-                    null,
-                    structureValuesOf(structure),
-                    SQLiteDatabase.CONFLICT_IGNORE
-            );
-
-            if (structureRow == -1L) {
-                throw new IllegalStateException(
-                        "Nao foi possivel inserir a estrutura da prova."
-                );
-            }
-
-            for (OmrAssessmentBlock block : structure.getBlocks()) {
-                long blockRow = writable.insert(
-                        OmrSchoolDatabase.TABLE_ASSESSMENT_BLOCK,
-                        null,
-                        blockValuesOf(structure, block)
-                );
-
-                if (blockRow == -1L) {
-                    throw new IllegalStateException(
-                            "Nao foi possivel inserir todos os blocos"
-                                    + " da estrutura."
+                        structure.getAssessmentId(),
+                        structure.getAssessmentVersion()
+                )) {
+                    throw new IllegalArgumentException(
+                            "O lote contem uma estrutura ja publicada: "
+                                    + structure.getAssessmentId()
+                                    + "@v"
+                                    + structure.getAssessmentVersion()
                     );
                 }
             }
 
+            for (OmrAssessmentStructure structure : structures) {
+                persistNewStructure(writable, structure);
+            }
+
             writable.setTransactionSuccessful();
-            return true;
         } finally {
             writable.endTransaction();
         }
@@ -284,6 +282,89 @@ public final class OmrSQLiteAssessmentStructureRepository
     @Override
     public void close() {
         database.close();
+    }
+
+    private void requireHealthyAssessment(
+            SQLiteDatabase readable,
+            OmrAssessmentStructure structure
+    ) {
+        if (findHealthyAssessmentOrNull(
+                readable,
+                structure.getAssessmentId(),
+                structure.getAssessmentVersion()
+        ) == null) {
+            throw new IllegalArgumentException(
+                    "A versao da prova deve existir e estar integra"
+                            + " antes de salvar sua estrutura."
+            );
+        }
+    }
+
+    private void persistNewStructure(
+            SQLiteDatabase writable,
+            OmrAssessmentStructure structure
+    ) {
+        for (OmrAssessmentBlock block : structure.getBlocks()) {
+            persistOrValidatePolicy(
+                    writable,
+                    block.getScoringPolicy()
+            );
+        }
+
+        long structureRow = writable.insertWithOnConflict(
+                OmrSchoolDatabase.TABLE_ASSESSMENT_STRUCTURE,
+                null,
+                structureValuesOf(structure),
+                SQLiteDatabase.CONFLICT_IGNORE
+        );
+
+        if (structureRow == -1L) {
+            throw new IllegalStateException(
+                    "Nao foi possivel inserir a estrutura da prova."
+            );
+        }
+
+        for (OmrAssessmentBlock block : structure.getBlocks()) {
+            long blockRow = writable.insert(
+                    OmrSchoolDatabase.TABLE_ASSESSMENT_BLOCK,
+                    null,
+                    blockValuesOf(structure, block)
+            );
+
+            if (blockRow == -1L) {
+                throw new IllegalStateException(
+                        "Nao foi possivel inserir todos os blocos"
+                                + " da estrutura."
+                );
+            }
+        }
+    }
+
+    private static void validateBatch(
+            List<OmrAssessmentStructure> structures
+    ) {
+        if (structures == null || structures.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "O lote de estruturas nao pode estar vazio."
+            );
+        }
+
+        Set<String> identities = new HashSet<>();
+        for (OmrAssessmentStructure structure : structures) {
+            if (structure == null) {
+                throw new IllegalArgumentException(
+                        "O lote de estruturas nao pode conter valores nulos."
+                );
+            }
+            String identity = structure.getAssessmentId()
+                    + "\u0000"
+                    + structure.getAssessmentVersion();
+            if (!identities.add(identity)) {
+                throw new IllegalArgumentException(
+                        "O lote possui uma estrutura de prova repetida."
+                );
+            }
+        }
     }
 
     private void persistOrValidatePolicy(
