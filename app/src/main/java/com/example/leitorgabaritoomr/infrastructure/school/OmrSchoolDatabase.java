@@ -16,7 +16,7 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
     static final String DEFAULT_DATABASE_NAME =
             "omr_school.db";
 
-    static final int DATABASE_VERSION = 5;
+    static final int DATABASE_VERSION = 6;
 
     static final String TABLE_ASSESSMENT =
             "omr_assessment";
@@ -40,6 +40,54 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
     static final String COLUMN_ANSWER_KEY_VERSION =
             "answer_key_version";
     static final String COLUMN_PAYLOAD =
+            "payload";
+
+    static final String TABLE_ASSESSMENT_SCORING_POLICY =
+            "omr_assessment_scoring_policy";
+
+    static final String COLUMN_POLICY_ID =
+            "policy_id";
+    static final String COLUMN_POLICY_VERSION =
+            "policy_version";
+    static final String COLUMN_POLICY_TYPE =
+            "policy_type";
+    static final String COLUMN_POLICY_BASIS =
+            "policy_basis";
+    static final String COLUMN_MAXIMUM_SCORE =
+            "maximum_score";
+    static final String COLUMN_DECIMAL_PLACES =
+            "decimal_places";
+    static final String COLUMN_ROUNDING_MODE =
+            "rounding_mode";
+    static final String COLUMN_POLICY_PAYLOAD =
+            "payload";
+
+    static final String TABLE_ASSESSMENT_STRUCTURE =
+            "omr_assessment_structure";
+
+    static final String COLUMN_STRUCTURE_QUESTION_COUNT =
+            "question_count";
+    static final String COLUMN_STRUCTURE_PAYLOAD =
+            "payload";
+
+    static final String TABLE_ASSESSMENT_BLOCK =
+            "omr_assessment_block";
+
+    static final String COLUMN_BLOCK_ID =
+            "block_id";
+    static final String COLUMN_BLOCK_ORDER =
+            "block_order";
+    static final String COLUMN_AREA_NAME =
+            "area_name";
+    static final String COLUMN_COMPONENT_CODE =
+            "component_code";
+    static final String COLUMN_COMPONENT_NAME =
+            "component_name";
+    static final String COLUMN_FIRST_QUESTION_POSITION =
+            "first_question_position";
+    static final String COLUMN_BLOCK_QUESTION_COUNT =
+            "question_count";
+    static final String COLUMN_BLOCK_PAYLOAD =
             "payload";
 
     static final String TABLE_STUDENT =
@@ -139,6 +187,9 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
             SQLiteDatabase database
     ) {
         createAssessmentTable(database);
+        createAssessmentScoringPolicyTable(database);
+        createAssessmentStructureTable(database);
+        createAssessmentBlockTable(database);
         createStudentTable(database);
         createClassGroupTable(database);
         createClassEnrollmentTable(database);
@@ -200,6 +251,144 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
                         + " ON " + TABLE_ASSESSMENT
                         + " (" + COLUMN_ANSWER_KEY_ID
                         + ", " + COLUMN_ANSWER_KEY_VERSION + ")"
+        );
+    }
+
+    static void createAssessmentScoringPolicyTable(
+            SQLiteDatabase database
+    ) {
+        database.execSQL(
+                "CREATE TABLE IF NOT EXISTS "
+                        + TABLE_ASSESSMENT_SCORING_POLICY + " ("
+                        + COLUMN_POLICY_ID
+                        + " TEXT NOT NULL, "
+                        + COLUMN_POLICY_VERSION
+                        + " INTEGER NOT NULL CHECK ("
+                        + COLUMN_POLICY_VERSION + " > 0), "
+                        + COLUMN_POLICY_TYPE
+                        + " TEXT NOT NULL, "
+                        + COLUMN_POLICY_BASIS
+                        + " TEXT NOT NULL, "
+                        + COLUMN_MAXIMUM_SCORE
+                        + " TEXT NOT NULL, "
+                        + COLUMN_DECIMAL_PLACES
+                        + " INTEGER NOT NULL CHECK ("
+                        + COLUMN_DECIMAL_PLACES
+                        + " >= 0 AND "
+                        + COLUMN_DECIMAL_PLACES + " <= 6), "
+                        + COLUMN_ROUNDING_MODE
+                        + " TEXT NOT NULL, "
+                        + COLUMN_POLICY_PAYLOAD
+                        + " BLOB NOT NULL, "
+                        + "PRIMARY KEY ("
+                        + COLUMN_POLICY_ID + ", "
+                        + COLUMN_POLICY_VERSION + ")"
+                        + ")"
+        );
+    }
+
+    static void createAssessmentStructureTable(
+            SQLiteDatabase database
+    ) {
+        database.execSQL(
+                "CREATE TABLE IF NOT EXISTS "
+                        + TABLE_ASSESSMENT_STRUCTURE + " ("
+                        + COLUMN_ASSESSMENT_ID
+                        + " TEXT NOT NULL, "
+                        + COLUMN_ASSESSMENT_VERSION
+                        + " INTEGER NOT NULL CHECK ("
+                        + COLUMN_ASSESSMENT_VERSION + " > 0), "
+                        + COLUMN_STRUCTURE_QUESTION_COUNT
+                        + " INTEGER NOT NULL CHECK ("
+                        + COLUMN_STRUCTURE_QUESTION_COUNT + " > 0), "
+                        + COLUMN_STRUCTURE_PAYLOAD
+                        + " BLOB NOT NULL, "
+                        + "PRIMARY KEY ("
+                        + COLUMN_ASSESSMENT_ID + ", "
+                        + COLUMN_ASSESSMENT_VERSION + "), "
+                        + "FOREIGN KEY ("
+                        + COLUMN_ASSESSMENT_ID + ", "
+                        + COLUMN_ASSESSMENT_VERSION
+                        + ") REFERENCES "
+                        + TABLE_ASSESSMENT + " ("
+                        + COLUMN_ASSESSMENT_ID + ", "
+                        + COLUMN_ASSESSMENT_VERSION + ")"
+                        + " ON UPDATE RESTRICT ON DELETE RESTRICT"
+                        + ")"
+        );
+    }
+
+    static void createAssessmentBlockTable(
+            SQLiteDatabase database
+    ) {
+        database.execSQL(
+                "CREATE TABLE IF NOT EXISTS "
+                        + TABLE_ASSESSMENT_BLOCK + " ("
+                        + COLUMN_ASSESSMENT_ID
+                        + " TEXT NOT NULL, "
+                        + COLUMN_ASSESSMENT_VERSION
+                        + " INTEGER NOT NULL CHECK ("
+                        + COLUMN_ASSESSMENT_VERSION + " > 0), "
+                        + COLUMN_BLOCK_ID
+                        + " TEXT NOT NULL, "
+                        + COLUMN_BLOCK_ORDER
+                        + " INTEGER NOT NULL CHECK ("
+                        + COLUMN_BLOCK_ORDER + " > 0), "
+                        + COLUMN_AREA_NAME
+                        + " TEXT, "
+                        + COLUMN_COMPONENT_CODE
+                        + " TEXT, "
+                        + COLUMN_COMPONENT_NAME
+                        + " TEXT NOT NULL, "
+                        + COLUMN_FIRST_QUESTION_POSITION
+                        + " INTEGER NOT NULL CHECK ("
+                        + COLUMN_FIRST_QUESTION_POSITION + " > 0), "
+                        + COLUMN_BLOCK_QUESTION_COUNT
+                        + " INTEGER NOT NULL CHECK ("
+                        + COLUMN_BLOCK_QUESTION_COUNT + " > 0), "
+                        + COLUMN_POLICY_ID
+                        + " TEXT NOT NULL, "
+                        + COLUMN_POLICY_VERSION
+                        + " INTEGER NOT NULL CHECK ("
+                        + COLUMN_POLICY_VERSION + " > 0), "
+                        + COLUMN_BLOCK_PAYLOAD
+                        + " BLOB NOT NULL, "
+                        + "PRIMARY KEY ("
+                        + COLUMN_ASSESSMENT_ID + ", "
+                        + COLUMN_ASSESSMENT_VERSION + ", "
+                        + COLUMN_BLOCK_ID + "), "
+                        + "UNIQUE ("
+                        + COLUMN_ASSESSMENT_ID + ", "
+                        + COLUMN_ASSESSMENT_VERSION + ", "
+                        + COLUMN_BLOCK_ORDER + "), "
+                        + "FOREIGN KEY ("
+                        + COLUMN_ASSESSMENT_ID + ", "
+                        + COLUMN_ASSESSMENT_VERSION
+                        + ") REFERENCES "
+                        + TABLE_ASSESSMENT_STRUCTURE + " ("
+                        + COLUMN_ASSESSMENT_ID + ", "
+                        + COLUMN_ASSESSMENT_VERSION + ")"
+                        + " ON UPDATE RESTRICT ON DELETE RESTRICT, "
+                        + "FOREIGN KEY ("
+                        + COLUMN_POLICY_ID + ", "
+                        + COLUMN_POLICY_VERSION
+                        + ") REFERENCES "
+                        + TABLE_ASSESSMENT_SCORING_POLICY + " ("
+                        + COLUMN_POLICY_ID + ", "
+                        + COLUMN_POLICY_VERSION + ")"
+                        + " ON UPDATE RESTRICT ON DELETE RESTRICT"
+                        + ")"
+        );
+
+        database.execSQL(
+                "CREATE INDEX IF NOT EXISTS "
+                        + "index_omr_assessment_block_component"
+                        + " ON " + TABLE_ASSESSMENT_BLOCK
+                        + " (" + COLUMN_COMPONENT_NAME
+                        + " COLLATE NOCASE, "
+                        + COLUMN_AREA_NAME + " COLLATE NOCASE, "
+                        + COLUMN_ASSESSMENT_ID + ", "
+                        + COLUMN_ASSESSMENT_VERSION + ")"
         );
     }
 
@@ -488,6 +677,12 @@ final class OmrSchoolDatabase extends SQLiteOpenHelper {
 
         if (oldVersion < 5) {
             createAssessmentAttemptTable(database);
+        }
+
+        if (oldVersion < 6) {
+            createAssessmentScoringPolicyTable(database);
+            createAssessmentStructureTable(database);
+            createAssessmentBlockTable(database);
         }
     }
 }

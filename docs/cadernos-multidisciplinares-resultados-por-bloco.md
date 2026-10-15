@@ -38,7 +38,7 @@ posicao logica das questoes ja produzida pela correcao OMR.
 
 ## Checkpoints
 
-### 1. Dominio e calculo (este pacote)
+### 1. Dominio e calculo (concluido)
 
 - estrutura versionada da prova;
 - blocos curriculares e faixas de questoes;
@@ -47,12 +47,18 @@ posicao logica das questoes ja produzida pela correcao OMR.
 - adaptador legado de bloco unico;
 - testes unitarios puros, sem Android, SQLite ou OpenCV.
 
-### 2. Persistencia
+### 2. Persistencia (checkpoint atual)
 
-- tabelas/codec para estruturas, blocos e politicas;
-- migracao aditiva, sem alterar registros historicos;
-- resolucao automatica do bloco legado quando nao houver estrutura gravada;
-- testes instrumentados de SQLite, versoes e reinicializacao.
+- banco escolar evoluido de v5 para v6 por migracao apenas aditiva;
+- tabelas normalizadas para estruturas, blocos e politicas versionadas;
+- payloads binarios independentes, versionados e protegidos por CRC32;
+- gravacao transacional: uma estrutura nunca fica salva pela metade;
+- uma identidade de politica nao pode receber outra formula silenciosamente;
+- resolucao automatica do bloco legado quando uma prova integra nao possuir
+  estrutura gravada;
+- falha fechada quando uma estrutura, bloco ou politica estiver corrompido;
+- testes unitarios dos codecs e testes instrumentados de SQLite, versoes,
+  reinicializacao e migracao real de banco v5.
 
 ### 3. Cadastro e resultados
 
@@ -69,7 +75,9 @@ posicao logica das questoes ja produzida pela correcao OMR.
 - campo opcional de nota para o SIGE, preservando a nota calculada;
 - politica de nota identificada em toda exportacao auditavel.
 
-## Fora do checkpoint 1
+## Fora dos checkpoints 1 e 2
 
-Este pacote nao muda banco de dados, CSV atual de provas, telas, exportacoes,
-cartao-resposta, reconhecimento OMR ou fluxos de correcao ja publicados.
+Estes checkpoints ainda nao mudam o CSV atual de provas, telas, exportacoes,
+cartao-resposta, reconhecimento OMR ou fluxos de correcao ja publicados. A
+versao 6 do banco apenas acrescenta as novas tabelas e preserva os registros
+historicos existentes.
