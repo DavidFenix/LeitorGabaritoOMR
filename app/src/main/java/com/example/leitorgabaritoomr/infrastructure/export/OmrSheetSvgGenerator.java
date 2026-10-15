@@ -41,8 +41,11 @@ public final class OmrSheetSvgGenerator {
     private static final double STANDARD_V2_HEADER_OFFSET_Y = 42.0;
 
     private static final int FLEXIBLE_V3_TEMPLATE_VERSION = 3;
+    private static final int FLEXIBLE_V4_TEMPLATE_VERSION = 4;
     private static final String FLEXIBLE_V3_TEMPLATE_ID_PREFIX =
             "omr-flex-";
+    private static final double FLEXIBLE_V3_TITLE_Y = 20.0;
+    private static final double FLEXIBLE_V3_INSTRUCTION_Y = 44.0;
 
     private static final double BUBBLE_RADIUS_SCALE = 0.78;
     private static final double BUBBLE_STROKE_WIDTH = 3.2;
@@ -50,9 +53,24 @@ public final class OmrSheetSvgGenerator {
     public OmrSheetSvgDocument generate(
             OmrSheetTemplateSpec spec
     ) {
+        return generate(
+                spec,
+                OmrSheetTextCustomization.defaults()
+        );
+    }
+
+    public OmrSheetSvgDocument generate(
+            OmrSheetTemplateSpec spec,
+            OmrSheetTextCustomization textCustomization
+    ) {
         if (spec == null) {
             throw new IllegalArgumentException(
                     "A especificacao do modelo e obrigatoria."
+            );
+        }
+        if (textCustomization == null) {
+            throw new IllegalArgumentException(
+                    "A personalizacao dos textos e obrigatoria."
             );
         }
 
@@ -100,9 +118,9 @@ public final class OmrSheetSvgGenerator {
                 .append(format(outerMargin))
                 .append(")\">\n");
 
-        appendTitle(svg, spec, layout);
+        appendTitle(svg, spec, layout, textCustomization);
         appendBlocks(svg, spec, layout);
-        appendFooter(svg, spec, layout);
+        appendFooter(svg, spec, layout, textCustomization);
         appendMarkers(svg, layout, markerSide);
 
         svg.append("  </g>\n");
@@ -155,7 +173,7 @@ public final class OmrSheetSvgGenerator {
                     .append("\"");
         }
 
-        if (isFlexibleV3(spec)) {
+        if (isFlexible(spec)) {
             svg.append(" data-questions-per-column=\"")
                     .append(spec.getQuestionsPerBlock())
                     .append("\"");
@@ -189,42 +207,67 @@ public final class OmrSheetSvgGenerator {
     private void appendTitle(
             StringBuilder svg,
             OmrSheetTemplateSpec spec,
-            OmrLayoutDefinition layout
+            OmrLayoutDefinition layout,
+            OmrSheetTextCustomization textCustomization
     ) {
         double centerX = layout.getCanonicalWidth() / 2.0;
 
-        double titleY = isPhysicalStandard(spec)
-                ? STANDARD_V2_TITLE_Y
-                : layout.getCanonicalHeight() * 0.070;
+        double titleY;
+        double instructionY;
 
-        double instructionY = isPhysicalStandard(spec)
-                ? STANDARD_V2_INSTRUCTION_Y
-                : layout.getCanonicalHeight() * 0.105;
+        if (isFlexible(spec)) {
+            titleY = FLEXIBLE_V3_TITLE_Y;
+            instructionY = FLEXIBLE_V3_INSTRUCTION_Y;
+        } else if (isPhysicalStandard(spec)) {
+            titleY = STANDARD_V2_TITLE_Y;
+            instructionY = STANDARD_V2_INSTRUCTION_Y;
+        } else {
+            titleY = layout.getCanonicalHeight() * 0.070;
+            instructionY = layout.getCanonicalHeight() * 0.105;
+        }
 
-        String instruction = isSingleColumnFlexibleV3(spec)
-                ? "Marque apenas uma alternativa"
-                : "Preencha completamente apenas uma alternativa por questão";
+        int columnCount = isSingleColumnFlexible(spec) ? 1 : 2;
+        String header = textCustomization.resolveHeaderText();
+        String instruction = textCustomization.resolveInstructionText(
+                columnCount
+        );
+        double availableWidth = calculateAvailableTextWidth(
+                spec,
+                layout
+        );
 
-        svg.append("    <text class=\"omr-title\"")
-                .append(" x=\"")
-                .append(format(centerX))
-                .append("\" y=\"")
-                .append(format(titleY))
-                .append("\" text-anchor=\"middle\"")
-                .append(" font-family=\"Arial, sans-serif\"")
-                .append(" font-size=\"24\" font-weight=\"700\"")
-                .append(" fill=\"#000000\">CARTÃO-RESPOSTA</text>\n");
+        if (!header.isEmpty()) {
+            appendCenteredText(
+                    svg,
+                    "omr-title",
+                    header,
+                    centerX,
+                    titleY,
+                    24.0,
+                    "700",
+                    "#000000",
+                    availableWidth,
+                    !isFlexible(spec)
+                            && !textCustomization.hasHeaderOverride()
+            );
+        }
 
-        svg.append("    <text class=\"omr-instruction\"")
-                .append(" x=\"")
-                .append(format(centerX))
-                .append("\" y=\"")
-                .append(format(instructionY))
-                .append("\" text-anchor=\"middle\"")
-                .append(" font-family=\"Arial, sans-serif\"")
-                .append(" font-size=\"15\" fill=\"#222222\">")
-                .append(instruction)
-                .append("</text>\n");
+        if (!instruction.isEmpty()) {
+            appendCenteredText(
+                    svg,
+                    "omr-instruction",
+                    instruction,
+                    centerX,
+                    instructionY,
+                    15.0,
+                    null,
+                    "#222222",
+                    availableWidth,
+                    !isFlexible(spec)
+                            && !textCustomization
+                            .hasInstructionOverride()
+            );
+        }
     }
 
     private void appendBlocks(
@@ -416,26 +459,33 @@ public final class OmrSheetSvgGenerator {
     private void appendFooter(
             StringBuilder svg,
             OmrSheetTemplateSpec spec,
-            OmrLayoutDefinition layout
+            OmrLayoutDefinition layout,
+            OmrSheetTextCustomization textCustomization
     ) {
         double centerX = layout.getCanonicalWidth() / 2.0;
         double warningY = layout.getCanonicalHeight() - 34.0;
         double codeY = layout.getCanonicalHeight() - 12.0;
 
-        String warning = isSingleColumnFlexibleV3(spec)
-                ? "Mantenha a proporção"
-                : "Mantenha a proporção original ao redimensionar";
+        int columnCount = isSingleColumnFlexible(spec) ? 1 : 2;
+        String warning = textCustomization.resolveFooterText(
+                columnCount
+        );
 
-        svg.append("    <text class=\"omr-resize-warning\"")
-                .append(" x=\"")
-                .append(format(centerX))
-                .append("\" y=\"")
-                .append(format(warningY))
-                .append("\" text-anchor=\"middle\"")
-                .append(" font-family=\"Arial, sans-serif\"")
-                .append(" font-size=\"13\" fill=\"#333333\">")
-                .append(warning)
-                .append("</text>\n");
+        if (!warning.isEmpty()) {
+            appendCenteredText(
+                    svg,
+                    "omr-resize-warning",
+                    warning,
+                    centerX,
+                    warningY,
+                    13.0,
+                    null,
+                    "#333333",
+                    calculateAvailableTextWidth(spec, layout),
+                    !isFlexible(spec)
+                            && !textCustomization.hasFooterOverride()
+            );
+        }
 
         svg.append("    <text class=\"omr-template-code\"")
                 .append(" x=\"")
@@ -449,6 +499,70 @@ public final class OmrSheetSvgGenerator {
                 .append("@v")
                 .append(spec.getTemplateVersion())
                 .append("</text>\n");
+    }
+
+    private void appendCenteredText(
+            StringBuilder svg,
+            String cssClass,
+            String text,
+            double centerX,
+            double y,
+            double fontSize,
+            String fontWeight,
+            String fill,
+            double availableWidth,
+            boolean preserveDefaultMarkup
+    ) {
+        svg.append("    <text class=\"")
+                .append(cssClass)
+                .append("\" x=\"")
+                .append(format(centerX))
+                .append("\" y=\"")
+                .append(format(y))
+                .append("\" text-anchor=\"middle\"")
+                .append(" font-family=\"Arial, sans-serif\"")
+                .append(" font-size=\"")
+                .append(formatFontSize(fontSize))
+                .append("\"");
+
+        if (fontWeight != null) {
+            svg.append(" font-weight=\"")
+                    .append(fontWeight)
+                    .append("\"");
+        }
+
+        double estimatedWidth = text.length() * fontSize * 0.58;
+        if (!preserveDefaultMarkup && estimatedWidth > availableWidth) {
+            svg.append(" textLength=\"")
+                    .append(format(availableWidth))
+                    .append("\" lengthAdjust=\"spacingAndGlyphs\"");
+        }
+
+        svg.append(" fill=\"")
+                .append(fill)
+                .append("\">")
+                .append(escapeXml(text))
+                .append("</text>\n");
+    }
+
+    private double calculateAvailableTextWidth(
+            OmrSheetTemplateSpec spec,
+            OmrLayoutDefinition layout
+    ) {
+        double markerSide = calculateMarkerSide(spec, layout);
+        return Math.max(
+                80.0,
+                layout.getCanonicalWidth()
+                        - markerSide
+                        - 16.0
+        );
+    }
+
+    private String formatFontSize(double value) {
+        if (value == Math.rint(value)) {
+            return Integer.toString((int) value);
+        }
+        return format(value);
     }
 
     private void appendMarkers(
@@ -518,7 +632,7 @@ public final class OmrSheetSvgGenerator {
             OmrSheetTemplateSpec spec,
             double viewWidth
     ) {
-        if (isFlexibleV3(spec)) {
+        if (isFlexible(spec)) {
             return viewWidth
                     * STANDARD_PHYSICAL_SCALE_MILLIMETERS_PER_UNIT;
         }
@@ -536,11 +650,12 @@ public final class OmrSheetSvgGenerator {
                 );
     }
 
-    private boolean isFlexibleV3(
+    private boolean isFlexible(
             OmrSheetTemplateSpec spec
     ) {
-        return spec.getTemplateVersion()
-                == FLEXIBLE_V3_TEMPLATE_VERSION
+        int version = spec.getTemplateVersion();
+        return (version == FLEXIBLE_V3_TEMPLATE_VERSION
+                || version == FLEXIBLE_V4_TEMPLATE_VERSION)
                 && spec.getTemplateId().startsWith(
                         FLEXIBLE_V3_TEMPLATE_ID_PREFIX
                 );
@@ -549,13 +664,13 @@ public final class OmrSheetSvgGenerator {
     private boolean isPhysicalStandard(
             OmrSheetTemplateSpec spec
     ) {
-        return isStandardV2(spec) || isFlexibleV3(spec);
+        return isStandardV2(spec) || isFlexible(spec);
     }
 
-    private boolean isSingleColumnFlexibleV3(
+    private boolean isSingleColumnFlexible(
             OmrSheetTemplateSpec spec
     ) {
-        return isFlexibleV3(spec)
+        return isFlexible(spec)
                 && spec.getBlockCount() == 1;
     }
 
@@ -572,7 +687,7 @@ public final class OmrSheetSvgGenerator {
             );
         }
 
-        if (isFlexibleV3(spec)) {
+        if (isFlexible(spec)) {
             return String.format(
                     Locale.US,
                     "cartao-resposta-%03d-itens-%d-alternativas-"

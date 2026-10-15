@@ -1,5 +1,6 @@
 package com.example.leitorgabaritoomr.presentation.export;
 
+import com.example.leitorgabaritoomr.infrastructure.export.OmrSheetTextCustomization;
 import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateCatalog;
 
 /**
@@ -22,11 +23,13 @@ public final class OmrSheetExportViewState {
     private final int questionCount;
     private final int optionCount;
     private final int configuredQuestionsPerColumn;
+    private final OmrSheetTextCustomization textCustomization;
 
     private OmrSheetExportViewState(
             int questionCount,
             int optionCount,
-            int configuredQuestionsPerColumn
+            int configuredQuestionsPerColumn,
+            OmrSheetTextCustomization textCustomization
     ) {
         validateQuestionCount(questionCount);
         validateOptionCount(optionCount);
@@ -39,13 +42,20 @@ public final class OmrSheetExportViewState {
         this.optionCount = optionCount;
         this.configuredQuestionsPerColumn =
                 configuredQuestionsPerColumn;
+        if (textCustomization == null) {
+            throw new IllegalArgumentException(
+                    "A personalizacao dos textos e obrigatoria."
+            );
+        }
+        this.textCustomization = textCustomization;
     }
 
     public static OmrSheetExportViewState defaultState() {
         return new OmrSheetExportViewState(
                 DEFAULT_QUESTION_COUNT,
                 DEFAULT_OPTION_COUNT,
-                AUTOMATIC_QUESTIONS_PER_COLUMN
+                AUTOMATIC_QUESTIONS_PER_COLUMN,
+                OmrSheetTextCustomization.defaults()
         );
     }
 
@@ -74,10 +84,25 @@ public final class OmrSheetExportViewState {
             int optionCount,
             int configuredQuestionsPerColumn
     ) {
+        return fromSelection(
+                questionCount,
+                optionCount,
+                configuredQuestionsPerColumn,
+                OmrSheetTextCustomization.defaults()
+        );
+    }
+
+    public static OmrSheetExportViewState fromSelection(
+            int questionCount,
+            int optionCount,
+            int configuredQuestionsPerColumn,
+            OmrSheetTextCustomization textCustomization
+    ) {
         return new OmrSheetExportViewState(
                 questionCount,
                 optionCount,
-                configuredQuestionsPerColumn
+                configuredQuestionsPerColumn,
+                textCustomization
         );
     }
 
@@ -153,7 +178,8 @@ public final class OmrSheetExportViewState {
         return fromSelection(
                 newQuestionCount,
                 optionCount,
-                adjustedQuestionsPerColumn
+                adjustedQuestionsPerColumn,
+                textCustomization
         );
     }
 
@@ -167,7 +193,8 @@ public final class OmrSheetExportViewState {
         return fromSelection(
                 questionCount,
                 newOptionCount,
-                configuredQuestionsPerColumn
+                configuredQuestionsPerColumn,
+                textCustomization
         );
     }
 
@@ -182,7 +209,27 @@ public final class OmrSheetExportViewState {
         return fromSelection(
                 questionCount,
                 optionCount,
-                newConfiguredQuestionsPerColumn
+                newConfiguredQuestionsPerColumn,
+                textCustomization
+        );
+    }
+
+    public OmrSheetExportViewState withTextCustomization(
+            OmrSheetTextCustomization newTextCustomization
+    ) {
+        if (newTextCustomization == null) {
+            throw new IllegalArgumentException(
+                    "A personalizacao dos textos e obrigatoria."
+            );
+        }
+        if (newTextCustomization.equals(textCustomization)) {
+            return this;
+        }
+        return fromSelection(
+                questionCount,
+                optionCount,
+                configuredQuestionsPerColumn,
+                newTextCustomization
         );
     }
 
@@ -208,6 +255,26 @@ public final class OmrSheetExportViewState {
 
     public int getConfiguredQuestionsPerColumn() {
         return configuredQuestionsPerColumn;
+    }
+
+    public OmrSheetTextCustomization getTextCustomization() {
+        return textCustomization;
+    }
+
+    public String getHeaderText() {
+        return textCustomization.resolveHeaderText();
+    }
+
+    public String getInstructionText() {
+        return textCustomization.resolveInstructionText(
+                getColumnCount()
+        );
+    }
+
+    public String getFooterText() {
+        return textCustomization.resolveFooterText(
+                getColumnCount()
+        );
     }
 
     public boolean isAutomaticQuestionsPerColumn() {

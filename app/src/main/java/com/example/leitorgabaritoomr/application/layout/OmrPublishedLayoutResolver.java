@@ -21,8 +21,9 @@ import java.util.regex.Pattern;
 public final class OmrPublishedLayoutResolver {
 
     private static final int FLEXIBLE_V3_LAYOUT_VERSION = 3;
+    private static final int FLEXIBLE_V4_LAYOUT_VERSION = 4;
 
-    private static final Pattern FLEXIBLE_V3_LAYOUT_ID_PATTERN =
+    private static final Pattern FLEXIBLE_LAYOUT_ID_PATTERN =
             Pattern.compile(
                     "^omr-flex-(ad|ae)-q(\\d{3})-r(\\d{3})$"
             );
@@ -63,11 +64,29 @@ public final class OmrPublishedLayoutResolver {
             );
         }
 
-        OmrLayoutDefinition flexibleV3 =
-                createFlexibleV3CandidateOrNull(
+        OmrLayoutDefinition flexibleV4 =
+                createFlexibleCandidateOrNull(
                         normalizedLayoutId,
                         layoutVersion,
-                        questionCount
+                        questionCount,
+                        FLEXIBLE_V4_LAYOUT_VERSION
+                );
+
+        if (hasIdentity(
+                flexibleV4,
+                normalizedLayoutId,
+                layoutVersion,
+                questionCount
+        )) {
+            return flexibleV4;
+        }
+
+        OmrLayoutDefinition flexibleV3 =
+                createFlexibleCandidateOrNull(
+                        normalizedLayoutId,
+                        layoutVersion,
+                        questionCount,
+                        FLEXIBLE_V3_LAYOUT_VERSION
                 );
 
         if (hasIdentity(
@@ -143,18 +162,19 @@ public final class OmrPublishedLayoutResolver {
     }
 
     private OmrLayoutDefinition
-    createFlexibleV3CandidateOrNull(
+    createFlexibleCandidateOrNull(
             String layoutId,
             int layoutVersion,
-            int questionCount
+            int questionCount,
+            int expectedVersion
     ) {
-        if (layoutVersion != FLEXIBLE_V3_LAYOUT_VERSION
+        if (layoutVersion != expectedVersion
                 || !isPublishedQuestionCount(questionCount)) {
             return null;
         }
 
         Matcher matcher =
-                FLEXIBLE_V3_LAYOUT_ID_PATTERN.matcher(layoutId);
+                FLEXIBLE_LAYOUT_ID_PATTERN.matcher(layoutId);
 
         if (!matcher.matches()) {
             return null;
@@ -177,13 +197,20 @@ public final class OmrPublishedLayoutResolver {
                 Integer.parseInt(matcher.group(3));
 
         try {
-            return createLayout(
-                    OmrSheetTemplateCatalog.flexibleOptionsV3(
-                            questionCount,
-                            optionCount,
-                            questionsPerColumn
-                    )
+            OmrSheetTemplateSpec spec = expectedVersion
+                    == FLEXIBLE_V4_LAYOUT_VERSION
+                    ? OmrSheetTemplateCatalog.flexibleOptionsV4(
+                    questionCount,
+                    optionCount,
+                    questionsPerColumn
+            )
+                    : OmrSheetTemplateCatalog.flexibleOptionsV3(
+                    questionCount,
+                    optionCount,
+                    questionsPerColumn
             );
+
+            return createLayout(spec);
 
         } catch (IllegalArgumentException invalidGeometry) {
             return null;

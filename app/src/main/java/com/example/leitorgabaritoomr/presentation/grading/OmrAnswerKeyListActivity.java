@@ -514,13 +514,13 @@ public final class OmrAnswerKeyListActivity
         Intent intent = configuredQuestionsPerColumn
                 == AUTOMATIC_QUESTIONS_PER_COLUMN
                 ? OmrManualAnswerKeyActivity
-                .createFlexibleV3Intent(
+                .createFlexibleV4Intent(
                         this,
                         questionCount,
                         optionCount
                 )
                 : OmrManualAnswerKeyActivity
-                .createFlexibleV3Intent(
+                .createFlexibleV4Intent(
                         this,
                         questionCount,
                         optionCount,

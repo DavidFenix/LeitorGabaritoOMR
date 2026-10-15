@@ -148,6 +148,78 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:text="@string/omr_sheet_export_text_customization_title"
+                    android:textColor="#FF111827"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:text="@string/omr_sheet_export_text_customization_message"
+                    android:textColor="#FF6B7280"
+                    android:textSize="13sp" />
+
+                <EditText
+                    android:id="@+id/editOmrSheetHeaderText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:hint="@string/omr_sheet_export_header_hint"
+                    android:inputType="textCapSentences"
+                    android:maxLength="80"
+                    android:maxLines="1"
+                    android:minHeight="48dp"
+                    android:singleLine="true" />
+
+                <EditText
+                    android:id="@+id/editOmrSheetInstructionText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/omr_sheet_export_instruction_hint"
+                    android:inputType="textCapSentences"
+                    android:maxLength="80"
+                    android:maxLines="1"
+                    android:minHeight="48dp"
+                    android:singleLine="true" />
+
+                <EditText
+                    android:id="@+id/editOmrSheetFooterText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/omr_sheet_export_footer_hint"
+                    android:inputType="textCapSentences"
+                    android:maxLength="80"
+                    android:maxLines="1"
+                    android:minHeight="48dp"
+                    android:singleLine="true" />
+
+                <Button
+                    android:id="@+id/buttonOmrSheetRestoreDefaultTexts"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:layout_marginTop="8dp"
+                    android:minHeight="48dp"
+                    android:text="@string/omr_sheet_export_restore_default_texts" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="#FFFFFFFF"
+                android:elevation="2dp"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:text="@string/omr_sheet_export_file_title"
                     android:textColor="#FF111827"
                     android:textSize="17sp"
@@ -170,7 +242,7 @@
                     android:textColor="#FF111827"
                     android:textIsSelectable="true"
                     android:textSize="14sp"
-                    tools:text="cartao-resposta-010-itens-4-alternativas-010-por-coluna-v3.svg" />
+                    tools:text="cartao-resposta-010-itens-4-alternativas-010-por-coluna-v4.svg" />
 
                 <TextView
                     android:layout_width="match_parent"

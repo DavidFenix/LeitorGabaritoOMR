@@ -17,6 +17,7 @@ import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.view.View;
@@ -29,6 +30,7 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.appcompat.app.AlertDialog;
 
 import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentCorrectionContext;
@@ -340,16 +342,27 @@ public final class OmrAssessmentApplicationRosterActivityInstrumentedTest {
         try (ActivityScenario<OmrAssessmentApplicationRosterActivity>
                      scenario = ActivityScenario.launch(
                 createActivityIntent("application-1"))) {
-            scenario.onActivity(activity -> button(
-                    rowAt(activity, 0),
-                    R.id.buttonOmrApplicationParticipantCorrect
-            ).performClick());
+            scenario.onActivity(activity -> {
+                button(
+                        rowAt(activity, 0),
+                        R.id.buttonOmrApplicationParticipantCorrect
+                ).performClick();
 
-            assertTrue(monitor.getHits() == 0);
-            onView(withText("Criar nova revisão?")).check(
-                    matches(isDisplayed())
-            );
-            onView(withText("Corrigir novamente")).perform(click());
+                AlertDialog dialog = revisionDialog(activity);
+                assertNotNull(dialog);
+                assertTrue(dialog.isShowing());
+
+                Button confirm = dialog.getButton(
+                        DialogInterface.BUTTON_POSITIVE
+                );
+                assertNotNull(confirm);
+                assertEquals(
+                        "Corrigir novamente",
+                        confirm.getText().toString()
+                );
+                assertTrue(monitor.getHits() == 0);
+                confirm.performClick();
+            });
 
             Activity capture = monitor.waitForActivityWithTimeout(5_000L);
             assertNotNull(capture);
@@ -551,6 +564,21 @@ public final class OmrAssessmentApplicationRosterActivityInstrumentedTest {
         InstrumentationRegistry.getInstrumentation().runOnMainSync(
                 activity::finish
         );
+    }
+
+    private static AlertDialog revisionDialog(Activity activity) {
+        try {
+            java.lang.reflect.Field field =
+                    OmrAssessmentApplicationRosterActivity.class
+                            .getDeclaredField("revisionDialog");
+            field.setAccessible(true);
+            return (AlertDialog) field.get(activity);
+        } catch (ReflectiveOperationException exception) {
+            throw new AssertionError(
+                    "Não foi possível acessar o diálogo de revisão.",
+                    exception
+            );
+        }
     }
 
     private static void assertText(

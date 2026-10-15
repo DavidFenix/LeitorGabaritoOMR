@@ -1,10 +1,13 @@
 package com.example.leitorgabaritoomr.presentation.export;
 
 import android.content.Context;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -12,6 +15,7 @@ import android.widget.TextView;
 import androidx.annotation.IdRes;
 
 import com.example.leitorgabaritoomr.R;
+import com.example.leitorgabaritoomr.infrastructure.export.OmrSheetTextCustomization;
 import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateCatalog;
 
 /**
@@ -32,9 +36,16 @@ public final class OmrSheetExportViewBinder {
     private final Spinner questionsPerColumnSpinner;
     private final TextView selectedCountTextView;
     private final TextView fileNameTextView;
+    private final EditText headerEditText;
+    private final EditText instructionEditText;
+    private final EditText footerEditText;
+    private final Button restoreDefaultTextsButton;
     private final ProgressBar progressBar;
     private final Button backButton;
     private final Button saveButton;
+    private final TextWatcher headerTextWatcher;
+    private final TextWatcher instructionTextWatcher;
+    private final TextWatcher footerTextWatcher;
 
     private OmrSheetExportViewState currentViewState;
     private OnSelectionChangedListener
@@ -84,6 +95,27 @@ public final class OmrSheetExportViewBinder {
                 TextView.class
         );
 
+        headerEditText = requireView(
+                rootView,
+                R.id.editOmrSheetHeaderText,
+                EditText.class
+        );
+        instructionEditText = requireView(
+                rootView,
+                R.id.editOmrSheetInstructionText,
+                EditText.class
+        );
+        footerEditText = requireView(
+                rootView,
+                R.id.editOmrSheetFooterText,
+                EditText.class
+        );
+        restoreDefaultTextsButton = requireView(
+                rootView,
+                R.id.buttonOmrSheetRestoreDefaultTexts,
+                Button.class
+        );
+
         progressBar = requireView(
                 rootView,
                 R.id.progressOmrSheetExport,
@@ -104,6 +136,19 @@ public final class OmrSheetExportViewBinder {
 
         currentViewState =
                 OmrSheetExportViewState.defaultState();
+
+        headerTextWatcher = createTextWatcher(0);
+        instructionTextWatcher = createTextWatcher(1);
+        footerTextWatcher = createTextWatcher(2);
+
+        headerEditText.addTextChangedListener(headerTextWatcher);
+        instructionEditText.addTextChangedListener(
+                instructionTextWatcher
+        );
+        footerEditText.addTextChangedListener(footerTextWatcher);
+        restoreDefaultTextsButton.setOnClickListener(
+                view -> restoreDefaultTexts()
+        );
 
         configureQuestionCountSpinner();
         configureOptionCountSpinner();
@@ -238,6 +283,7 @@ public final class OmrSheetExportViewBinder {
             }
 
             renderSelectionSummary(viewState);
+            renderTextCustomization(viewState);
 
         } finally {
             rendering = false;
@@ -264,6 +310,9 @@ public final class OmrSheetExportViewBinder {
                         selectionIndex,
                         optionSelectionIndex,
                         questionsPerColumnSelectionIndex
+                )
+                .withTextCustomization(
+                        currentViewState.getTextCustomization()
                 );
     }
 
@@ -275,6 +324,10 @@ public final class OmrSheetExportViewBinder {
         questionCountSpinner.setEnabled(!exportInProgress);
         optionCountSpinner.setEnabled(!exportInProgress);
         questionsPerColumnSpinner.setEnabled(!exportInProgress);
+        headerEditText.setEnabled(!exportInProgress);
+        instructionEditText.setEnabled(!exportInProgress);
+        footerEditText.setEnabled(!exportInProgress);
+        restoreDefaultTextsButton.setEnabled(!exportInProgress);
         backButton.setEnabled(!exportInProgress);
         saveButton.setEnabled(!exportInProgress);
 
@@ -323,6 +376,12 @@ public final class OmrSheetExportViewBinder {
         questionCountSpinner.setOnItemSelectedListener(null);
         optionCountSpinner.setOnItemSelectedListener(null);
         questionsPerColumnSpinner.setOnItemSelectedListener(null);
+        headerEditText.removeTextChangedListener(headerTextWatcher);
+        instructionEditText.removeTextChangedListener(
+                instructionTextWatcher
+        );
+        footerEditText.removeTextChangedListener(footerTextWatcher);
+        restoreDefaultTextsButton.setOnClickListener(null);
         backButton.setOnClickListener(null);
         saveButton.setOnClickListener(null);
     }
@@ -519,7 +578,7 @@ public final class OmrSheetExportViewBinder {
     }
 
     private void notifySelectionChanged() {
-
+        renderTextCustomization(currentViewState);
         renderSelectionSummary(currentViewState);
 
         OnSelectionChangedListener listener =
@@ -529,6 +588,117 @@ public final class OmrSheetExportViewBinder {
             listener.onSelectionChanged(
                     currentViewState
             );
+        }
+    }
+
+    private TextWatcher createTextWatcher(
+            int field
+    ) {
+        return new TextWatcher() {
+            @Override
+            public void beforeTextChanged(
+                    CharSequence sequence,
+                    int start,
+                    int count,
+                    int after
+            ) {
+                // Nenhuma preparacao necessaria.
+            }
+
+            @Override
+            public void onTextChanged(
+                    CharSequence sequence,
+                    int start,
+                    int before,
+                    int count
+            ) {
+                // A atualizacao ocorre quando o texto estiver completo.
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                if (rendering || released) {
+                    return;
+                }
+
+                OmrSheetTextCustomization customization =
+                        currentViewState.getTextCustomization();
+                String value = editable == null
+                        ? ""
+                        : editable.toString();
+
+                if (field == 0) {
+                    customization =
+                            customization.withHeaderOverride(value);
+                } else if (field == 1) {
+                    customization = customization
+                            .withInstructionOverride(value);
+                } else {
+                    customization =
+                            customization.withFooterOverride(value);
+                }
+
+                currentViewState = currentViewState
+                        .withTextCustomization(customization);
+                notifySelectionChangedWithoutRenderingTexts();
+            }
+        };
+    }
+
+    private void restoreDefaultTexts() {
+        if (released) {
+            return;
+        }
+
+        currentViewState = currentViewState
+                .withTextCustomization(
+                        OmrSheetTextCustomization.defaults()
+                );
+        renderTextCustomization(currentViewState);
+        notifySelectionChangedWithoutRenderingTexts();
+    }
+
+    private void renderTextCustomization(
+            OmrSheetExportViewState viewState
+    ) {
+        boolean previousRendering = rendering;
+        rendering = true;
+
+        try {
+            setTextIfDifferent(
+                    headerEditText,
+                    viewState.getHeaderText()
+            );
+            setTextIfDifferent(
+                    instructionEditText,
+                    viewState.getInstructionText()
+            );
+            setTextIfDifferent(
+                    footerEditText,
+                    viewState.getFooterText()
+            );
+        } finally {
+            rendering = previousRendering;
+        }
+    }
+
+    private void setTextIfDifferent(
+            EditText editText,
+            String text
+    ) {
+        if (!editText.getText().toString().equals(text)) {
+            editText.setText(text);
+            editText.setSelection(editText.length());
+        }
+    }
+
+    private void notifySelectionChangedWithoutRenderingTexts() {
+        renderSelectionSummary(currentViewState);
+
+        OnSelectionChangedListener listener =
+                selectionChangedListener;
+        if (listener != null) {
+            listener.onSelectionChanged(currentViewState);
         }
     }
 

@@ -12,6 +12,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -95,7 +96,7 @@ public final class OmrSheetExportActivityInstrumentedTest {
                         );
 
                         assertEquals(
-                                "cartao-resposta-010-itens-4-alternativas-010-por-coluna-v3.svg",
+                                "cartao-resposta-010-itens-4-alternativas-010-por-coluna-v4.svg",
                                 textOf(
                                         activity,
                                         R.id.textOmrSheetExportFileName
@@ -179,7 +180,7 @@ public final class OmrSheetExportActivityInstrumentedTest {
 
                             assertEquals(
                                     String.format(
-                                            "cartao-resposta-%03d-itens-4-alternativas-%03d-por-coluna-v3.svg",
+                                            "cartao-resposta-%03d-itens-4-alternativas-%03d-por-coluna-v4.svg",
                                             selectedCount,
                                             expectedRows
                                     ),
@@ -282,7 +283,7 @@ public final class OmrSheetExportActivityInstrumentedTest {
                         );
 
                         assertEquals(
-                                "cartao-resposta-090-itens-5-alternativas-030-por-coluna-v3.svg",
+                                "cartao-resposta-090-itens-5-alternativas-030-por-coluna-v4.svg",
                                 textOf(
                                         activity,
                                         R.id.textOmrSheetExportFileName
@@ -294,7 +295,7 @@ public final class OmrSheetExportActivityInstrumentedTest {
     }
 
     @Test
-    public void exportUsesSelectedFlexibleV3ModelForEveryCount() {
+    public void exportUsesSelectedFlexibleV4ModelForEveryCount() {
         assertEquals(
                 4,
                 OmrSheetExportActivity
@@ -332,7 +333,7 @@ public final class OmrSheetExportActivityInstrumentedTest {
                         ),
                         spec.getTemplateId()
                 );
-                assertEquals(3, spec.getTemplateVersion());
+                assertEquals(4, spec.getTemplateVersion());
                 assertEquals(
                         questionCount,
                         spec.getQuestionCount()
@@ -406,7 +407,7 @@ public final class OmrSheetExportActivityInstrumentedTest {
                         );
 
                         assertEquals(
-                                "cartao-resposta-045-itens-4-alternativas-015-por-coluna-v3.svg",
+                                "cartao-resposta-045-itens-4-alternativas-015-por-coluna-v4.svg",
                                 textOf(
                                         activity,
                                         R.id.textOmrSheetExportFileName
@@ -533,6 +534,183 @@ public final class OmrSheetExportActivityInstrumentedTest {
 
         } catch (IllegalArgumentException expected) {
             assertFalse(expected.getMessage().isEmpty());
+        }
+    }
+
+    @Test
+    public void defaultEditableTextsAreVisible() {
+        try (ActivityScenario<OmrSheetExportActivity> scenario =
+                     ActivityScenario.launch(createActivityIntent())) {
+            scenario.onActivity(
+                    activity -> {
+                        assertEquals(
+                                "CARTÃO-RESPOSTA",
+                                textOf(
+                                        activity,
+                                        R.id.editOmrSheetHeaderText
+                                )
+                        );
+                        assertEquals(
+                                "Marque apenas uma alternativa",
+                                textOf(
+                                        activity,
+                                        R.id.editOmrSheetInstructionText
+                                )
+                        );
+                        assertEquals(
+                                "Mantenha a proporção",
+                                textOf(
+                                        activity,
+                                        R.id.editOmrSheetFooterText
+                                )
+                        );
+                    }
+            );
+        }
+    }
+
+    @Test
+    public void defaultTextsTrackColumnCount() {
+        try (ActivityScenario<OmrSheetExportActivity> scenario =
+                     ActivityScenario.launch(createActivityIntent())) {
+            scenario.onActivity(
+                    activity -> requireView(
+                            activity,
+                            R.id.spinnerOmrSheetQuestionCount,
+                            Spinner.class
+                    ).setSelection(44)
+            );
+            scenario.onActivity(
+                    activity -> {
+                        assertEquals(
+                                "Preencha completamente apenas uma alternativa por questão",
+                                textOf(
+                                        activity,
+                                        R.id.editOmrSheetInstructionText
+                                )
+                        );
+                        assertEquals(
+                                "Mantenha a proporção original ao redimensionar",
+                                textOf(
+                                        activity,
+                                        R.id.editOmrSheetFooterText
+                                )
+                        );
+                    }
+            );
+        }
+    }
+
+    @Test
+    public void customAndBlankTextsSurviveRecreation() {
+        try (ActivityScenario<OmrSheetExportActivity> scenario =
+                     ActivityScenario.launch(createActivityIntent())) {
+            scenario.onActivity(
+                    activity -> {
+                        requireView(
+                                activity,
+                                R.id.editOmrSheetHeaderText,
+                                EditText.class
+                        ).setText("Escola Ubiratan");
+                        requireView(
+                                activity,
+                                R.id.editOmrSheetInstructionText,
+                                EditText.class
+                        ).setText("");
+                        requireView(
+                                activity,
+                                R.id.editOmrSheetFooterText,
+                                EditText.class
+                        ).setText("Boa prova");
+                    }
+            );
+
+            scenario.recreate();
+
+            scenario.onActivity(
+                    activity -> {
+                        assertEquals(
+                                "Escola Ubiratan",
+                                textOf(activity, R.id.editOmrSheetHeaderText)
+                        );
+                        assertEquals(
+                                "",
+                                textOf(
+                                        activity,
+                                        R.id.editOmrSheetInstructionText
+                                )
+                        );
+                        assertEquals(
+                                "Boa prova",
+                                textOf(activity, R.id.editOmrSheetFooterText)
+                        );
+                    }
+            );
+        }
+    }
+
+    @Test
+    public void blankInstructionRemainsBlankAfterCountChange() {
+        try (ActivityScenario<OmrSheetExportActivity> scenario =
+                     ActivityScenario.launch(createActivityIntent())) {
+            scenario.onActivity(
+                    activity -> {
+                        requireView(
+                                activity,
+                                R.id.editOmrSheetInstructionText,
+                                EditText.class
+                        ).setText("");
+                        requireView(
+                                activity,
+                                R.id.spinnerOmrSheetQuestionCount,
+                                Spinner.class
+                        ).setSelection(44);
+                    }
+            );
+            scenario.onActivity(
+                    activity -> assertEquals(
+                            "",
+                            textOf(
+                                    activity,
+                                    R.id.editOmrSheetInstructionText
+                            )
+                    )
+            );
+        }
+    }
+
+    @Test
+    public void restoreButtonUsesDefaultsForCurrentLayout() {
+        try (ActivityScenario<OmrSheetExportActivity> scenario =
+                     ActivityScenario.launch(createActivityIntent())) {
+            scenario.onActivity(
+                    activity -> {
+                        requireView(
+                                activity,
+                                R.id.spinnerOmrSheetQuestionCount,
+                                Spinner.class
+                        ).setSelection(44);
+                        requireView(
+                                activity,
+                                R.id.editOmrSheetInstructionText,
+                                EditText.class
+                        ).setText("Texto temporário");
+                        requireView(
+                                activity,
+                                R.id.buttonOmrSheetRestoreDefaultTexts,
+                                Button.class
+                        ).performClick();
+                    }
+            );
+            scenario.onActivity(
+                    activity -> assertEquals(
+                            "Preencha completamente apenas uma alternativa por questão",
+                            textOf(
+                                    activity,
+                                    R.id.editOmrSheetInstructionText
+                            )
+                    )
+            );
         }
     }
 

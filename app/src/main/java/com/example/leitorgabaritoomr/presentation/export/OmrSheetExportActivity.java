@@ -14,6 +14,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.leitorgabaritoomr.R;
+import com.example.leitorgabaritoomr.infrastructure.export.OmrSheetTextCustomization;
 import com.example.leitorgabaritoomr.infrastructure.export.OmrSheetSvgDocument;
 import com.example.leitorgabaritoomr.infrastructure.export.OmrSheetSvgGenerator;
 import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateCatalog;
@@ -24,7 +25,7 @@ import java.io.OutputStream;
 
 /**
  * Permite escolher de 1 a 90 questões, quatro ou cinco alternativas, a
- * quantidade de itens por coluna e salvar o cartão flexível v3 pelo seletor
+ * quantidade de itens por coluna e salvar o cartão flexível v4 pelo seletor
  * nativo.
  *
  * O Storage Access Framework concede acesso somente ao destino escolhido pelo
@@ -54,6 +55,31 @@ public final class OmrSheetExportActivity
             STATE_PENDING_QUESTIONS_PER_COLUMN =
             "omr.sheet_export.pending_questions_per_column";
 
+    private static final String STATE_HEADER_OVERRIDDEN =
+            "omr.sheet_export.header_overridden";
+    private static final String STATE_HEADER_TEXT =
+            "omr.sheet_export.header_text";
+    private static final String STATE_INSTRUCTION_OVERRIDDEN =
+            "omr.sheet_export.instruction_overridden";
+    private static final String STATE_INSTRUCTION_TEXT =
+            "omr.sheet_export.instruction_text";
+    private static final String STATE_FOOTER_OVERRIDDEN =
+            "omr.sheet_export.footer_overridden";
+    private static final String STATE_FOOTER_TEXT =
+            "omr.sheet_export.footer_text";
+    private static final String STATE_PENDING_HEADER_OVERRIDDEN =
+            "omr.sheet_export.pending_header_overridden";
+    private static final String STATE_PENDING_HEADER_TEXT =
+            "omr.sheet_export.pending_header_text";
+    private static final String STATE_PENDING_INSTRUCTION_OVERRIDDEN =
+            "omr.sheet_export.pending_instruction_overridden";
+    private static final String STATE_PENDING_INSTRUCTION_TEXT =
+            "omr.sheet_export.pending_instruction_text";
+    private static final String STATE_PENDING_FOOTER_OVERRIDDEN =
+            "omr.sheet_export.pending_footer_overridden";
+    private static final String STATE_PENDING_FOOTER_TEXT =
+            "omr.sheet_export.pending_footer_text";
+
     private OmrSheetSvgGenerator svgGenerator;
     private OmrSheetExportViewState viewState;
     private OmrSheetExportViewBinder viewBinder;
@@ -61,6 +87,8 @@ public final class OmrSheetExportActivity
     private int pendingQuestionCount;
     private int pendingOptionCount;
     private int pendingQuestionsPerColumn;
+    private OmrSheetTextCustomization pendingTextCustomization =
+            OmrSheetTextCustomization.defaults();
 
     private final ActivityResultLauncher<String>
             createDocumentLauncher =
@@ -126,6 +154,16 @@ public final class OmrSheetExportActivity
                                 .AUTOMATIC_QUESTIONS_PER_COLUMN
                 );
 
+        pendingTextCustomization = restoreTextCustomization(
+                savedInstanceState,
+                STATE_PENDING_HEADER_OVERRIDDEN,
+                STATE_PENDING_HEADER_TEXT,
+                STATE_PENDING_INSTRUCTION_OVERRIDDEN,
+                STATE_PENDING_INSTRUCTION_TEXT,
+                STATE_PENDING_FOOTER_OVERRIDDEN,
+                STATE_PENDING_FOOTER_TEXT
+        );
+
         View rootView = findViewById(
                 android.R.id.content
         );
@@ -166,7 +204,8 @@ public final class OmrSheetExportActivity
                             viewState.getQuestionCount(),
                             viewState.getOptionCount(),
                             viewState
-                                    .getConfiguredQuestionsPerColumn()
+                                    .getConfiguredQuestionsPerColumn(),
+                            viewState.getTextCustomization()
                     );
 
             pendingQuestionCount =
@@ -177,6 +216,8 @@ public final class OmrSheetExportActivity
 
             pendingQuestionsPerColumn =
                     viewState.getConfiguredQuestionsPerColumn();
+            pendingTextCustomization =
+                    viewState.getTextCustomization();
 
             viewBinder.setExportInProgress(true);
 
@@ -185,11 +226,7 @@ public final class OmrSheetExportActivity
             );
 
         } catch (RuntimeException exception) {
-            pendingQuestionCount = 0;
-            pendingOptionCount = 0;
-            pendingQuestionsPerColumn =
-                    OmrSheetExportViewState
-                            .AUTOMATIC_QUESTIONS_PER_COLUMN;
+            clearPendingExport();
             viewBinder.setExportInProgress(false);
 
             Log.e(
@@ -212,11 +249,7 @@ public final class OmrSheetExportActivity
         }
 
         if (destinationUri == null) {
-            pendingQuestionCount = 0;
-            pendingOptionCount = 0;
-            pendingQuestionsPerColumn =
-                    OmrSheetExportViewState
-                            .AUTOMATIC_QUESTIONS_PER_COLUMN;
+            clearPendingExport();
 
             showMessage(
                     R.string.omr_sheet_export_cancelled
@@ -229,12 +262,15 @@ public final class OmrSheetExportActivity
         int optionCount = pendingOptionCount;
         int configuredQuestionsPerColumn =
                 pendingQuestionsPerColumn;
+        OmrSheetTextCustomization textCustomization =
+                pendingTextCustomization;
 
         if (questionCount <= 0 && viewState != null) {
             questionCount = viewState.getQuestionCount();
             optionCount = viewState.getOptionCount();
             configuredQuestionsPerColumn =
                     viewState.getConfiguredQuestionsPerColumn();
+            textCustomization = viewState.getTextCustomization();
         }
 
         try {
@@ -242,7 +278,8 @@ public final class OmrSheetExportActivity
                     generateDocument(
                             questionCount,
                             optionCount,
-                            configuredQuestionsPerColumn
+                            configuredQuestionsPerColumn,
+                            textCustomization
                     );
 
             writeDocument(
@@ -273,18 +310,15 @@ public final class OmrSheetExportActivity
             );
 
         } finally {
-            pendingQuestionCount = 0;
-            pendingOptionCount = 0;
-            pendingQuestionsPerColumn =
-                    OmrSheetExportViewState
-                            .AUTOMATIC_QUESTIONS_PER_COLUMN;
+            clearPendingExport();
         }
     }
 
     private OmrSheetSvgDocument generateDocument(
             int questionCount,
             int optionCount,
-            int configuredQuestionsPerColumn
+            int configuredQuestionsPerColumn,
+            OmrSheetTextCustomization textCustomization
     ) {
         OmrSheetTemplateSpec spec =
                 createExportTemplate(
@@ -293,7 +327,7 @@ public final class OmrSheetExportActivity
                         configuredQuestionsPerColumn
                 );
 
-        return svgGenerator.generate(spec);
+        return svgGenerator.generate(spec, textCustomization);
     }
 
     /**
@@ -332,14 +366,14 @@ public final class OmrSheetExportActivity
                 .AUTOMATIC_QUESTIONS_PER_COLUMN) {
 
             return OmrSheetTemplateCatalog
-                    .flexibleOptionsV3(
+                    .flexibleOptionsV4(
                             questionCount,
                             optionCount
                     );
         }
 
         return OmrSheetTemplateCatalog
-                .flexibleOptionsV3(
+                .flexibleOptionsV4(
                         questionCount,
                         optionCount,
                         configuredQuestionsPerColumn
@@ -393,12 +427,24 @@ public final class OmrSheetExportActivity
                                 .AUTOMATIC_QUESTIONS_PER_COLUMN
                 );
 
+        OmrSheetTextCustomization textCustomization =
+                restoreTextCustomization(
+                        savedInstanceState,
+                        STATE_HEADER_OVERRIDDEN,
+                        STATE_HEADER_TEXT,
+                        STATE_INSTRUCTION_OVERRIDDEN,
+                        STATE_INSTRUCTION_TEXT,
+                        STATE_FOOTER_OVERRIDDEN,
+                        STATE_FOOTER_TEXT
+                );
+
         try {
             return OmrSheetExportViewState
                     .fromSelection(
                             questionCount,
                             optionCount,
-                            configuredQuestionsPerColumn
+                            configuredQuestionsPerColumn,
+                            textCustomization
                     );
 
         } catch (IllegalArgumentException exception) {
@@ -435,6 +481,17 @@ public final class OmrSheetExportActivity
                     STATE_QUESTIONS_PER_COLUMN,
                     viewState.getConfiguredQuestionsPerColumn()
             );
+
+            saveTextCustomization(
+                    outState,
+                    viewState.getTextCustomization(),
+                    STATE_HEADER_OVERRIDDEN,
+                    STATE_HEADER_TEXT,
+                    STATE_INSTRUCTION_OVERRIDDEN,
+                    STATE_INSTRUCTION_TEXT,
+                    STATE_FOOTER_OVERRIDDEN,
+                    STATE_FOOTER_TEXT
+            );
         }
 
         outState.putInt(
@@ -452,7 +509,134 @@ public final class OmrSheetExportActivity
                 pendingQuestionsPerColumn
         );
 
+        saveTextCustomization(
+                outState,
+                pendingTextCustomization,
+                STATE_PENDING_HEADER_OVERRIDDEN,
+                STATE_PENDING_HEADER_TEXT,
+                STATE_PENDING_INSTRUCTION_OVERRIDDEN,
+                STATE_PENDING_INSTRUCTION_TEXT,
+                STATE_PENDING_FOOTER_OVERRIDDEN,
+                STATE_PENDING_FOOTER_TEXT
+        );
+
         super.onSaveInstanceState(outState);
+    }
+
+    private OmrSheetTextCustomization restoreTextCustomization(
+            @Nullable Bundle state,
+            String headerOverriddenKey,
+            String headerTextKey,
+            String instructionOverriddenKey,
+            String instructionTextKey,
+            String footerOverriddenKey,
+            String footerTextKey
+    ) {
+        if (state == null) {
+            return OmrSheetTextCustomization.defaults();
+        }
+
+        String headerOverride = state.getBoolean(
+                headerOverriddenKey,
+                false
+        ) ? readSavedText(state, headerTextKey) : null;
+        String instructionOverride = state.getBoolean(
+                instructionOverriddenKey,
+                false
+        ) ? readSavedText(state, instructionTextKey) : null;
+        String footerOverride = state.getBoolean(
+                footerOverriddenKey,
+                false
+        ) ? readSavedText(state, footerTextKey) : null;
+
+        try {
+            return OmrSheetTextCustomization.fromOverrides(
+                    headerOverride,
+                    instructionOverride,
+                    footerOverride
+            );
+        } catch (IllegalArgumentException exception) {
+            Log.w(
+                    TAG,
+                    "Textos salvos da exportacao eram invalidos.",
+                    exception
+            );
+            return OmrSheetTextCustomization.defaults();
+        }
+    }
+
+    private String readSavedText(
+            Bundle state,
+            String key
+    ) {
+        String value = state.getString(key);
+        return value == null ? "" : value;
+    }
+
+    private void saveTextCustomization(
+            Bundle state,
+            OmrSheetTextCustomization customization,
+            String headerOverriddenKey,
+            String headerTextKey,
+            String instructionOverriddenKey,
+            String instructionTextKey,
+            String footerOverriddenKey,
+            String footerTextKey
+    ) {
+        state.putBoolean(
+                headerOverriddenKey,
+                customization.hasHeaderOverride()
+        );
+        state.putBoolean(
+                instructionOverriddenKey,
+                customization.hasInstructionOverride()
+        );
+        state.putBoolean(
+                footerOverriddenKey,
+                customization.hasFooterOverride()
+        );
+
+        saveOptionalText(
+                state,
+                headerTextKey,
+                customization.hasHeaderOverride(),
+                customization.getHeaderOverride()
+        );
+        saveOptionalText(
+                state,
+                instructionTextKey,
+                customization.hasInstructionOverride(),
+                customization.getInstructionOverride()
+        );
+        saveOptionalText(
+                state,
+                footerTextKey,
+                customization.hasFooterOverride(),
+                customization.getFooterOverride()
+        );
+    }
+
+    private void saveOptionalText(
+            Bundle state,
+            String key,
+            boolean overridden,
+            String value
+    ) {
+        if (overridden) {
+            state.putString(key, value);
+        } else {
+            state.remove(key);
+        }
+    }
+
+    private void clearPendingExport() {
+        pendingQuestionCount = 0;
+        pendingOptionCount = 0;
+        pendingQuestionsPerColumn =
+                OmrSheetExportViewState
+                        .AUTOMATIC_QUESTIONS_PER_COLUMN;
+        pendingTextCustomization =
+                OmrSheetTextCustomization.defaults();
     }
 
     @Override

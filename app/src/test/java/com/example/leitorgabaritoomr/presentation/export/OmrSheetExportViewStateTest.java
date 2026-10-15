@@ -5,6 +5,8 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
 
+import com.example.leitorgabaritoomr.infrastructure.export.OmrSheetTextCustomization;
+
 import org.junit.Test;
 
 public final class OmrSheetExportViewStateTest {
@@ -348,6 +350,109 @@ public final class OmrSheetExportViewStateTest {
         assertSame(
                 changed,
                 changed.withOptionCount(5)
+        );
+    }
+
+    @Test
+    public void defaultTextsMatchSingleColumnLayout() {
+        OmrSheetExportViewState state =
+                OmrSheetExportViewState.defaultState();
+
+        assertEquals("CARTÃO-RESPOSTA", state.getHeaderText());
+        assertEquals(
+                "Marque apenas uma alternativa",
+                state.getInstructionText()
+        );
+        assertEquals(
+                "Mantenha a proporção",
+                state.getFooterText()
+        );
+    }
+
+    @Test
+    public void defaultInstructionTracksMultipleColumns() {
+        OmrSheetExportViewState state =
+                OmrSheetExportViewState.fromSelection(45, 5);
+
+        assertEquals(
+                "Preencha completamente apenas uma alternativa por questão",
+                state.getInstructionText()
+        );
+        assertEquals(
+                "Mantenha a proporção original ao redimensionar",
+                state.getFooterText()
+        );
+    }
+
+    @Test
+    public void customTextsArePreservedWhenSelectionChanges() {
+        OmrSheetTextCustomization customization =
+                OmrSheetTextCustomization.custom(
+                        "Escola Ubiratan",
+                        "Use caneta azul",
+                        "Boa prova"
+                );
+        OmrSheetExportViewState state =
+                OmrSheetExportViewState.defaultState()
+                        .withTextCustomization(customization)
+                        .withQuestionCount(45)
+                        .withOptionCount(5)
+                        .withQuestionsPerColumn(15);
+
+        assertSame(customization, state.getTextCustomization());
+        assertEquals("Escola Ubiratan", state.getHeaderText());
+        assertEquals("Use caneta azul", state.getInstructionText());
+        assertEquals("Boa prova", state.getFooterText());
+    }
+
+    @Test
+    public void blankOverridesRemainBlank() {
+        OmrSheetExportViewState state =
+                OmrSheetExportViewState.defaultState()
+                        .withTextCustomization(
+                                OmrSheetTextCustomization.custom(
+                                        "",
+                                        "",
+                                        ""
+                                )
+                        );
+
+        assertEquals("", state.getHeaderText());
+        assertEquals("", state.getInstructionText());
+        assertEquals("", state.getFooterText());
+    }
+
+    @Test
+    public void unchangedCustomizationReturnsSameState() {
+        OmrSheetExportViewState state =
+                OmrSheetExportViewState.defaultState();
+
+        assertSame(
+                state,
+                state.withTextCustomization(
+                        state.getTextCustomization()
+                )
+        );
+    }
+
+    @Test
+    public void nullCustomizationIsRejectedByWithMethod() {
+        expectIllegalArgument(
+                () -> OmrSheetExportViewState.defaultState()
+                        .withTextCustomization(null)
+        );
+    }
+
+    @Test
+    public void nullCustomizationIsRejectedByFactory() {
+        expectIllegalArgument(
+                () -> OmrSheetExportViewState.fromSelection(
+                        10,
+                        4,
+                        OmrSheetExportViewState
+                                .AUTOMATIC_QUESTIONS_PER_COLUMN,
+                        null
+                )
         );
     }
 

@@ -203,7 +203,7 @@ OmrAnswerKeyDynamicCreationFlowInstrumentedTest {
                                 layoutText.getText()
                                         .toString()
                                         .contains(
-                                                "Cartao flexivel v3"
+                                                "Cartao flexivel v4 compacto"
                                         )
                         );
                         assertTrue(

@@ -142,6 +142,16 @@ public final class OmrSheetTemplateCatalog {
             STANDARD_V2_CANONICAL_WIDTH
                     / STANDARD_V2_LAYOUT_COLUMN_COUNT;
 
+    /*
+     * O v4 preserva escala, largura das colunas, espacamento das linhas,
+     * tamanho das bolhas e marcadores do v3. Apenas reduz, de forma fixa,
+     * as reservas verticais superior e inferior. A nova versao impede que
+     * cartoes v3 ja impressos sejam interpretados com a geometria compacta.
+     */
+    private static final int FLEXIBLE_V4_TEMPLATE_VERSION = 4;
+    private static final double FLEXIBLE_V4_FIRST_ROW = 110.0;
+    private static final double FLEXIBLE_V4_BOTTOM_RESERVE = 70.0;
+
     private OmrSheetTemplateCatalog() {
     }
 
@@ -386,6 +396,66 @@ public final class OmrSheetTemplateCatalog {
         );
     }
 
+    /**
+     * Cria a geometria compacta v4 usando a mesma distribuicao automatica
+     * publicada pelo v3. O v3 permanece disponivel para cartoes e gabaritos
+     * ja existentes.
+     */
+    public static OmrSheetTemplateSpec flexibleOptionsV4(
+            int questionCount,
+            int optionCount
+    ) {
+        return flexibleOptionsV4(
+                questionCount,
+                optionCount,
+                getFlexibleV3AutomaticQuestionsPerColumn(
+                        questionCount
+                )
+        );
+    }
+
+    /**
+     * Cria a geometria compacta v4 com quantidade explicita de itens por
+     * coluna. A posicao das bolhas independe dos textos opcionais do cartao.
+     */
+    public static OmrSheetTemplateSpec flexibleOptionsV4(
+            int questionCount,
+            int optionCount,
+            int questionsPerColumn
+    ) {
+        validatePublishedQuestionCount(questionCount);
+        validateFlexibleV3QuestionsPerColumn(
+                questionCount,
+                questionsPerColumn
+        );
+
+        if (optionCount == STANDARD_V2_FOUR_OPTION_COUNT) {
+            return createFlexibleV4(
+                    questionCount,
+                    questionsPerColumn,
+                    "ad",
+                    "alternativas A-D",
+                    FOUR_OPTION_LABELS,
+                    STANDARD_V2_FOUR_OPTION_LOCAL_X
+            );
+        }
+
+        if (optionCount == STANDARD_V2_FIVE_OPTION_COUNT) {
+            return createFlexibleV4(
+                    questionCount,
+                    questionsPerColumn,
+                    "ae",
+                    "alternativas A-E",
+                    FIVE_OPTION_LABELS,
+                    STANDARD_V2_FIVE_OPTION_LOCAL_X
+            );
+        }
+
+        throw new IllegalArgumentException(
+                "O modelo flexivel v4 aceita 4 ou 5 alternativas."
+        );
+    }
+
     public static int getFlexibleV3AutomaticQuestionsPerColumn(
             int questionCount
     ) {
@@ -517,6 +587,61 @@ public final class OmrSheetTemplateCatalog {
                 optionLabels,
                 optionLocalX,
                 STANDARD_V2_FIRST_ROW / canonicalHeight,
+                STANDARD_V2_ROW_SPACING / canonicalHeight,
+                STANDARD_V2_SAMPLING_RADIUS / canonicalWidth,
+                STANDARD_V2_SAMPLING_RADIUS / canonicalHeight,
+                1
+        );
+    }
+
+    private static OmrSheetTemplateSpec createFlexibleV4(
+            int questionCount,
+            int questionsPerColumn,
+            String optionCode,
+            String optionDescription,
+            String[] optionLabels,
+            double[] optionLocalX
+    ) {
+        int columnCount = (questionCount
+                + questionsPerColumn
+                - 1)
+                / questionsPerColumn;
+
+        int canonicalWidth =
+                columnCount * FLEXIBLE_V3_COLUMN_WIDTH;
+
+        int canonicalHeight = (int) Math.round(
+                FLEXIBLE_V4_FIRST_ROW
+                        + (questionsPerColumn - 1)
+                        * STANDARD_V2_ROW_SPACING
+                        + FLEXIBLE_V4_BOTTOM_RESERVE
+        );
+
+        return new OmrSheetTemplateSpec(
+                createFlexibleV3TemplateId(
+                        optionCode,
+                        questionCount,
+                        questionsPerColumn
+                ),
+                FLEXIBLE_V4_TEMPLATE_VERSION,
+                "Cartao flexivel v4 compacto - "
+                        + questionCount
+                        + (questionCount == 1
+                        ? " questao - "
+                        : " questoes - ")
+                        + questionsPerColumn
+                        + (questionsPerColumn == 1
+                        ? " item por coluna - "
+                        : " itens por coluna - ")
+                        + optionDescription,
+                questionCount,
+                canonicalWidth,
+                canonicalHeight,
+                questionsPerColumn,
+                columnCount,
+                optionLabels,
+                optionLocalX,
+                FLEXIBLE_V4_FIRST_ROW / canonicalHeight,
                 STANDARD_V2_ROW_SPACING / canonicalHeight,
                 STANDARD_V2_SAMPLING_RADIUS / canonicalWidth,
                 STANDARD_V2_SAMPLING_RADIUS / canonicalHeight,

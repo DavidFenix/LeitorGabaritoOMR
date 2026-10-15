@@ -83,7 +83,31 @@
     </plurals>
 
     <string name="omr_sheet_export_file_title">
-        2. Salve o arquivo SVG
+        3. Salve o arquivo SVG
+    </string>
+
+    <string name="omr_sheet_export_text_customization_title">
+        2. Personalize os textos (opcional)
+    </string>
+
+    <string name="omr_sheet_export_text_customization_message">
+        Edite o cabeçalho, a instrução técnica e o rodapé. Apague todo o conteúdo de um campo para não imprimir aquele texto. A identificação técnica do modelo permanece fixa.
+    </string>
+
+    <string name="omr_sheet_export_header_hint">
+        Cabeçalho do cartão
+    </string>
+
+    <string name="omr_sheet_export_instruction_hint">
+        Instrução técnica
+    </string>
+
+    <string name="omr_sheet_export_footer_hint">
+        Rodapé do cartão
+    </string>
+
+    <string name="omr_sheet_export_restore_default_texts">
+        Restaurar textos padrão
     </string>
 
     <string name="omr_sheet_export_format_description">
@@ -91,7 +115,7 @@
     </string>
 
     <string name="omr_sheet_export_filename_format">
-        cartao-resposta-%1$03d-itens-%2$d-alternativas-%3$03d-por-coluna-v3.svg
+        cartao-resposta-%1$03d-itens-%2$d-alternativas-%3$03d-por-coluna-v4.svg
     </string>
 
     <string name="omr_sheet_export_size_description">
