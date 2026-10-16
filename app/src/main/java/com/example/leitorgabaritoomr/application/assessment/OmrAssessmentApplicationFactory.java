@@ -2,6 +2,7 @@ package com.example.leitorgabaritoomr.application.assessment;
 
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
 import com.example.leitorgabaritoomr.domain.classroom.OmrClassGroup;
 
 /**
@@ -14,6 +15,22 @@ public final class OmrAssessmentApplicationFactory {
             long createdAtEpochMillis,
             OmrAssessmentDefinition assessment,
             OmrClassGroup classGroup
+    ) {
+        return create(
+                applicationId,
+                createdAtEpochMillis,
+                assessment,
+                classGroup,
+                null
+        );
+    }
+
+    public OmrAssessmentApplication create(
+            String applicationId,
+            long createdAtEpochMillis,
+            OmrAssessmentDefinition assessment,
+            OmrClassGroup classGroup,
+            OmrAssessmentStructure frozenStructure
     ) {
         if (assessment == null) {
             throw new IllegalArgumentException(
@@ -40,12 +57,23 @@ public final class OmrAssessmentApplicationFactory {
             );
         }
 
+        if (frozenStructure != null
+                && !frozenStructure.hasAssessmentIdentity(
+                assessment.getAssessmentId(),
+                assessment.getVersion()
+        )) {
+            throw new IllegalArgumentException(
+                    "A estrutura não pertence à versão exata da prova."
+            );
+        }
+
         return new OmrAssessmentApplication(
                 applicationId,
                 assessment.getAssessmentId(),
                 assessment.getVersion(),
                 classGroup.getClassGroupId(),
-                createdAtEpochMillis
+                createdAtEpochMillis,
+                frozenStructure
         );
     }
 }

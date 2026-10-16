@@ -28,7 +28,9 @@
     <string name="omr_assessment_result_grade">%1$.2f de %2$.2f • %3$.2f%%</string>
     <string name="omr_assessment_result_corrected">Corrigido • revisão %1$d • %2$s</string>
     <string name="omr_assessment_result_review">Requer revisão • revisão %1$d • %2$s</string>
-    <string name="omr_assessment_result_missing_history">Inconsistência: histórico da revisão %1$d indisponível</string>
+    <string name="omr_assessment_result_zero">Corrigido com nota zero • revisão %1$d • %2$s</string>
+    <string name="omr_assessment_result_missing_history">Ausente: histórico da revisão %1$d não foi localizado</string>
+    <string name="omr_assessment_result_inconsistent">Inconsistência: não foi possível relacionar os blocos à revisão %1$d</string>
     <string name="omr_assessment_result_pending">Pendente de correção</string>
     <string name="omr_assessment_result_no_grade">Sem nota disponível</string>
     <string name="omr_assessment_result_export_csv">CSV</string>

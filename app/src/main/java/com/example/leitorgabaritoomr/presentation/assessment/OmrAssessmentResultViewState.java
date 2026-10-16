@@ -1,6 +1,7 @@
 package com.example.leitorgabaritoomr.presentation.assessment;
 
 import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentResultReport;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlockResult;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -55,26 +56,51 @@ public final class OmrAssessmentResultViewState {
             OmrAssessmentResultReport.Row row,
             String query
     ) {
-        String searchable = row.getParticipant().getStudentName() + " "
-                + row.getParticipant().getRegistration() + " "
-                + row.getParticipant().getStudentId() + " "
-                + row.getParticipant().getRosterPosition() + " "
-                + row.getStatus().name() + " "
-                + statusLabel(row) + " revisão " + row.getRevision();
-        return searchable(searchable).contains(query);
+        StringBuilder searchable = new StringBuilder()
+                .append(row.getParticipant().getStudentName()).append(' ')
+                .append(row.getParticipant().getRegistration()).append(' ')
+                .append(row.getParticipant().getStudentId()).append(' ')
+                .append(row.getParticipant().getRosterPosition()).append(' ')
+                .append(row.getStatus().name()).append(' ')
+                .append(row.getDetailStatus().name()).append(' ')
+                .append(statusLabel(row)).append(" revisão ")
+                .append(row.getRevision());
+        if (row.hasBlockBreakdown()) {
+            for (OmrAssessmentBlockResult result
+                    : row.getBlockBreakdownOrNull().getBlockResults()) {
+                searchable.append(' ')
+                        .append(result.getBlock().getBlockId()).append(' ')
+                        .append(result.getBlock().getComponentName());
+                if (result.getBlock().hasAreaName()) {
+                    searchable.append(' ')
+                            .append(result.getBlock().getAreaName());
+                }
+                if (result.getBlock().hasComponentCode()) {
+                    searchable.append(' ')
+                            .append(result.getBlock().getComponentCode());
+                }
+            }
+        }
+        return searchable(searchable.toString()).contains(query);
     }
 
     private static String statusLabel(OmrAssessmentResultReport.Row row) {
-        if (row.getStatus() == OmrAssessmentResultReport.Status.PENDING) {
-            return "pendente";
+        switch (row.getDetailStatus()) {
+            case PENDING:
+                return "pendente";
+            case ABSENT:
+                return "ausente histórico indisponível";
+            case INCONSISTENT:
+                return "inconsistente estrutura inválida";
+            case IN_REVIEW:
+                return "corrigido em revisão provisório";
+            case ZERO:
+                return "corrigido zero nota zero";
+            case FINAL:
+                return "corrigido final";
+            default:
+                throw new IllegalStateException("Situação desconhecida.");
         }
-        if (row.getStatus()
-                == OmrAssessmentResultReport.Status.MISSING_HISTORY) {
-            return "inconsistente histórico indisponível";
-        }
-        return row.requiresReview()
-                ? "corrigido revisão manual"
-                : "corrigido final";
     }
 
     private static String searchable(String value) {

@@ -50,7 +50,15 @@ public final class OmrAssessmentResultViewStateTest {
     public void filtersOperationalStatuses() {
         assertEquals(1, state("pendente").getVisibleCount());
         assertEquals(1, state("corrigido").getVisibleCount());
-        assertEquals(1, state("inconsistente").getVisibleCount());
+        assertEquals(1, state("ausente").getVisibleCount());
+    }
+
+    @Test
+    public void filtersStructuredResultsByAreaCodeAndComponent() {
+        assertStructuredQuery("ciencias da natureza");
+        assertStructuredQuery("qui");
+        assertStructuredQuery("quimica");
+        assertStructuredQuery("fisica");
     }
 
     @Test
@@ -65,5 +73,16 @@ public final class OmrAssessmentResultViewStateTest {
         return OmrAssessmentResultViewState.from(
                 OmrAssessmentResultTestData.report(), query
         );
+    }
+
+    private static void assertStructuredQuery(String query) {
+        OmrAssessmentResultViewState state =
+                OmrAssessmentResultViewState.from(
+                        OmrAssessmentResultTestData.structuredReport(),
+                        query
+                );
+        assertEquals(1, state.getVisibleCount());
+        assertEquals("student-1", state.getVisibleRows().get(0)
+                .getParticipant().getStudentId());
     }
 }

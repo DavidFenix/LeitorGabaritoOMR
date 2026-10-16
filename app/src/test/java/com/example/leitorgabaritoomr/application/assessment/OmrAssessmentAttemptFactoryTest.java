@@ -66,6 +66,9 @@ public final class OmrAssessmentAttemptFactoryTest {
                 history.getStoredAtEpochMillis(),
                 attempt.getRecordedAtEpochMillis()
         );
+        assertTrue(attempt.hasFrozenStructure());
+        assertTrue(attempt.getFrozenStructureOrNull()
+                .isLegacySingleBlock());
     }
 
     @Test

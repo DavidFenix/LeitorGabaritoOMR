@@ -1,6 +1,7 @@
 package com.example.leitorgabaritoomr.infrastructure.school;
 
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentAttempt;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -17,7 +18,8 @@ import java.util.zip.CRC32;
 public final class OmrAssessmentAttemptBinaryCodec {
 
     private static final int MAGIC = 0x4F4D5254;
-    private static final int FORMAT_VERSION = 1;
+    private static final int LEGACY_FORMAT_VERSION = 1;
+    private static final int FORMAT_VERSION = 2;
 
     private static final int HEADER_BYTE_COUNT =
             Integer.BYTES
@@ -91,7 +93,8 @@ public final class OmrAssessmentAttemptBinaryCodec {
 
             int formatVersion = input.readInt();
 
-            if (formatVersion != FORMAT_VERSION) {
+            if (formatVersion != LEGACY_FORMAT_VERSION
+                    && formatVersion != FORMAT_VERSION) {
                 throw new IllegalArgumentException(
                         "Versão de tentativa armazenada não suportada: "
                                 + formatVersion
@@ -123,7 +126,7 @@ public final class OmrAssessmentAttemptBinaryCodec {
                 throw invalidPayload(null);
             }
 
-            return decodeBody(body);
+            return decodeBody(body, formatVersion);
 
         } catch (EOFException exception) {
             throw invalidPayload(exception);
@@ -158,6 +161,16 @@ public final class OmrAssessmentAttemptBinaryCodec {
             output.writeInt(attempt.getRevision());
             writeText(output, attempt.getHistoryRecordId());
             output.writeLong(attempt.getRecordedAtEpochMillis());
+            OmrAssessmentStructure structure = attempt
+                    .getFrozenStructureOrNull();
+            output.writeByte(structure == null ? 0 : 1);
+            if (structure != null) {
+                writeNestedPayload(
+                        output,
+                        new OmrAssessmentStructureBinaryCodec()
+                                .encode(structure)
+                );
+            }
             output.flush();
 
         } catch (IOException exception) {
@@ -171,21 +184,42 @@ public final class OmrAssessmentAttemptBinaryCodec {
     }
 
     private static OmrAssessmentAttempt decodeBody(
-            byte[] body
+            byte[] body,
+            int formatVersion
     ) throws IOException {
         try (DataInputStream input =
                      new DataInputStream(
                              new ByteArrayInputStream(body)
                      )) {
 
+            String attemptId = readText(input);
+            String applicationId = readText(input);
+            String studentId = readText(input);
+            int revision = readPositiveInt(input);
+            String historyRecordId = readText(input);
+            long recordedAtEpochMillis = readPositiveLong(input);
+            OmrAssessmentStructure structure = null;
+
+            if (formatVersion >= FORMAT_VERSION) {
+                int marker = input.readUnsignedByte();
+                if (marker > 1) {
+                    throw invalidPayload(null);
+                }
+                if (marker == 1) {
+                    structure = new OmrAssessmentStructureBinaryCodec()
+                            .decode(readNestedPayload(input));
+                }
+            }
+
             OmrAssessmentAttempt attempt =
                     new OmrAssessmentAttempt(
-                            readText(input),
-                            readText(input),
-                            readText(input),
-                            readPositiveInt(input),
-                            readText(input),
-                            readPositiveLong(input)
+                            attemptId,
+                            applicationId,
+                            studentId,
+                            revision,
+                            historyRecordId,
+                            recordedAtEpochMillis,
+                            structure
                     );
 
             if (input.read() != -1) {
@@ -194,6 +228,33 @@ public final class OmrAssessmentAttemptBinaryCodec {
 
             return attempt;
         }
+    }
+
+    private static void writeNestedPayload(
+            DataOutputStream output,
+            byte[] payload
+    ) throws IOException {
+        if (payload == null
+                || payload.length == 0
+                || payload.length > MAX_BODY_BYTES) {
+            throw new IllegalArgumentException(
+                    "A estrutura congelada excede o tamanho permitido."
+            );
+        }
+        output.writeInt(payload.length);
+        output.write(payload);
+    }
+
+    private static byte[] readNestedPayload(
+            DataInputStream input
+    ) throws IOException {
+        int byteCount = input.readInt();
+        if (byteCount <= 0 || byteCount > MAX_BODY_BYTES) {
+            throw invalidPayload(null);
+        }
+        byte[] bytes = new byte[byteCount];
+        input.readFully(bytes);
+        return bytes;
     }
 
     private static void writeText(

@@ -23,6 +23,7 @@ public final class OmrAssessmentAttempt
     private final int revision;
     private final String historyRecordId;
     private final long recordedAtEpochMillis;
+    private final OmrAssessmentStructure frozenStructure;
 
     public OmrAssessmentAttempt(
             String attemptId,
@@ -31,6 +32,30 @@ public final class OmrAssessmentAttempt
             int revision,
             String historyRecordId,
             long recordedAtEpochMillis
+    ) {
+        this(
+                attemptId,
+                applicationId,
+                studentId,
+                revision,
+                historyRecordId,
+                recordedAtEpochMillis,
+                null
+        );
+    }
+
+    /**
+     * Cria uma revisão com a fotografia curricular efetivamente usada na
+     * correção. O valor nulo existe somente para tentativas legadas.
+     */
+    public OmrAssessmentAttempt(
+            String attemptId,
+            String applicationId,
+            String studentId,
+            int revision,
+            String historyRecordId,
+            long recordedAtEpochMillis,
+            OmrAssessmentStructure frozenStructure
     ) {
         this.attemptId = requireText(
                 "attemptId",
@@ -64,6 +89,7 @@ public final class OmrAssessmentAttempt
 
         this.revision = revision;
         this.recordedAtEpochMillis = recordedAtEpochMillis;
+        this.frozenStructure = frozenStructure;
     }
 
     private static String requireText(
@@ -101,6 +127,14 @@ public final class OmrAssessmentAttempt
 
     public long getRecordedAtEpochMillis() {
         return recordedAtEpochMillis;
+    }
+
+    public boolean hasFrozenStructure() {
+        return frozenStructure != null;
+    }
+
+    public OmrAssessmentStructure getFrozenStructureOrNull() {
+        return frozenStructure;
     }
 
     public boolean hasAttemptId(

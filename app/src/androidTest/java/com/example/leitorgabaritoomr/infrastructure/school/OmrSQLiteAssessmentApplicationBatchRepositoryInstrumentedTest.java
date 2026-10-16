@@ -14,6 +14,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
 import com.example.leitorgabaritoomr.domain.classroom.OmrClassGroup;
 import com.example.leitorgabaritoomr.domain.student.OmrStudentProfile;
 
@@ -263,6 +264,33 @@ OmrSQLiteAssessmentApplicationBatchRepositoryInstrumentedTest {
                 .findByIdOrNull("application-001"));
         assertEquals(participant(), participantRepository
                 .findOrNull("application-001", "student-001"));
+    }
+
+    @Test
+    public void frozenStructurePersistsInsideApplicationSnapshot() {
+        prepareAssessmentAndClass();
+        OmrAssessmentStructure structure =
+                OmrAssessmentStructure.legacySingleBlock(
+                        "assessment-001", 2, 45
+                );
+        OmrAssessmentApplication structured =
+                new OmrAssessmentApplication(
+                        "application-001", "assessment-001", 2,
+                        "class-001", 1_000L, structure
+                );
+        batchRepository.saveAllNew(
+                Collections.singletonList(structured),
+                Collections.singletonList(participant())
+        );
+
+        closeRepositories();
+        openRepositories();
+
+        OmrAssessmentApplication restored = applicationRepository
+                .findByIdOrNull("application-001");
+        assertNotNull(restored);
+        assertTrue(restored.hasFrozenStructure());
+        assertEquals(structure, restored.getFrozenStructureOrNull());
     }
 
     @Test

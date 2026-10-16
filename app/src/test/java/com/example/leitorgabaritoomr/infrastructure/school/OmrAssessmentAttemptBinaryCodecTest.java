@@ -7,16 +7,21 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentAttempt;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
 
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.zip.CRC32;
 
 public final class OmrAssessmentAttemptBinaryCodecTest {
 
     private static final int ATTEMPT_MAGIC = 0x4F4D5254;
-    private static final int FORMAT_VERSION = 1;
+    private static final int FORMAT_VERSION = 2;
     private static final int HEADER_BYTE_COUNT = 20;
 
     private final OmrAssessmentAttemptBinaryCodec codec =
@@ -41,6 +46,32 @@ public final class OmrAssessmentAttemptBinaryCodecTest {
         assertCompleteAttempt(original, restored);
         assertEquals("attempt-001", restored.getAttemptId());
         assertEquals("history-001", restored.getHistoryRecordId());
+    }
+
+    @Test
+    public void roundTripPreservesFrozenStructure() {
+        OmrAssessmentStructure structure =
+                OmrAssessmentStructure.legacySingleBlock(
+                        "assessment-001", 2, 45
+                );
+        OmrAssessmentAttempt original = new OmrAssessmentAttempt(
+                "attempt-001", "application-001", "student-001",
+                1, "history-001", 2_000L, structure
+        );
+
+        OmrAssessmentAttempt restored = codec.decode(codec.encode(original));
+
+        assertTrue(restored.hasFrozenStructure());
+        assertEquals(structure, restored.getFrozenStructureOrNull());
+    }
+
+    @Test
+    public void readsLegacyV1AttemptWithoutFrozenStructure()
+            throws Exception {
+        OmrAssessmentAttempt restored = codec.decode(legacyPayload());
+
+        assertEquals("attempt-legacy", restored.getAttemptId());
+        assertFalse(restored.hasFrozenStructure());
     }
 
     @Test
@@ -176,6 +207,39 @@ public final class OmrAssessmentAttemptBinaryCodecTest {
         return codec.encode(attempt());
     }
 
+    private byte[] legacyPayload() throws Exception {
+        ByteArrayOutputStream bodyBytes = new ByteArrayOutputStream();
+        try (DataOutputStream body = new DataOutputStream(bodyBytes)) {
+            writeLegacyText(body, "attempt-legacy");
+            writeLegacyText(body, "application-legacy");
+            writeLegacyText(body, "student-legacy");
+            body.writeInt(2);
+            writeLegacyText(body, "history-legacy");
+            body.writeLong(2_000L);
+        }
+        byte[] bytes = bodyBytes.toByteArray();
+        CRC32 checksum = new CRC32();
+        checksum.update(bytes);
+        ByteArrayOutputStream payloadBytes = new ByteArrayOutputStream();
+        try (DataOutputStream payload = new DataOutputStream(payloadBytes)) {
+            payload.writeInt(ATTEMPT_MAGIC);
+            payload.writeInt(1);
+            payload.writeInt(bytes.length);
+            payload.writeLong(checksum.getValue());
+            payload.write(bytes);
+        }
+        return payloadBytes.toByteArray();
+    }
+
+    private static void writeLegacyText(
+            DataOutputStream output,
+            String value
+    ) throws Exception {
+        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+        output.writeInt(bytes.length);
+        output.write(bytes);
+    }
+
     private OmrAssessmentAttempt attempt() {
         return new OmrAssessmentAttempt(
                 "attempt-001",
@@ -203,6 +267,10 @@ public final class OmrAssessmentAttemptBinaryCodecTest {
         assertEquals(
                 expected.getRecordedAtEpochMillis(),
                 actual.getRecordedAtEpochMillis()
+        );
+        assertEquals(
+                expected.getFrozenStructureOrNull(),
+                actual.getFrozenStructureOrNull()
         );
     }
 

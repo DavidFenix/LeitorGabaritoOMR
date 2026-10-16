@@ -56,11 +56,22 @@
             tools:text="8,00 de 10,00 • 80,00%" />
 
         <TextView
+            android:id="@+id/textOmrAssessmentResultItemBlocks"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:textColor="#FF374151"
+            android:textSize="13sp"
+            android:visibility="gone"
+            tools:text="Ciências da Natureza • QUI — Química: 8/15 acertos • nota 5,3/10,0&#10;Ciências da Natureza • FIS — Física: 12/15 acertos • nota 8,0/10,0"
+            tools:visibility="visible" />
+
+        <TextView
             android:id="@+id/textOmrAssessmentResultItemStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
-            android:maxLines="2"
+            android:maxLines="3"
             android:textColor="#FF047857"
             android:textSize="12sp"
             tools:text="Corrigido • revisão 2 • 13/10/2026 09:30" />

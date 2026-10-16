@@ -12,6 +12,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.Arrays;
 
 public final class OmrAssessmentApplicationTest {
 
@@ -45,6 +46,35 @@ public final class OmrAssessmentApplicationTest {
                 CREATED_AT,
                 application.getCreatedAtEpochMillis()
         );
+    }
+
+    @Test
+    public void preservesFrozenMultidisciplinaryStructure() {
+        OmrAssessmentStructure structure = structure();
+        OmrAssessmentApplication application =
+                new OmrAssessmentApplication(
+                        "application-001",
+                        "assessment-001",
+                        2,
+                        "class-001",
+                        CREATED_AT,
+                        structure
+                );
+
+        assertTrue(application.hasFrozenStructure());
+        assertEquals(structure, application.getFrozenStructureOrNull());
+    }
+
+    @Test
+    public void rejectsFrozenStructureFromAnotherAssessmentVersion() {
+        expectIllegalArgument(() -> new OmrAssessmentApplication(
+                "application-001",
+                "assessment-001",
+                3,
+                "class-001",
+                CREATED_AT,
+                structure()
+        ));
     }
 
     @Test
@@ -275,6 +305,28 @@ public final class OmrAssessmentApplicationTest {
                 2,
                 "class-001",
                 CREATED_AT
+        );
+    }
+
+    private OmrAssessmentStructure structure() {
+        return new OmrAssessmentStructure(
+                "assessment-001",
+                2,
+                2,
+                Arrays.asList(
+                        new OmrAssessmentBlock(
+                                "qui", 1, "Natureza", "QUI", "Química",
+                                1, 1,
+                                OmrProportionalScoringPolicy
+                                        .correctQuestionsToTenV1()
+                        ),
+                        new OmrAssessmentBlock(
+                                "fis", 2, "Natureza", "FIS", "Física",
+                                2, 1,
+                                OmrProportionalScoringPolicy
+                                        .correctQuestionsToTenV1()
+                        )
+                )
         );
     }
 

@@ -4,6 +4,7 @@ import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentAttempt;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlockBreakdown;
 import com.example.leitorgabaritoomr.domain.history.OmrGradingHistoryRecord;
 
 import java.util.ArrayList;
@@ -21,15 +22,66 @@ public final class OmrAssessmentResultReport {
         MISSING_HISTORY
     }
 
+    /** Situação detalhada sem confundir ausência de dado com nota zero. */
+    public enum DetailStatus {
+        PENDING,
+        ABSENT,
+        INCONSISTENT,
+        IN_REVIEW,
+        ZERO,
+        FINAL
+    }
+
     public static final class Row {
         private final OmrAssessmentParticipant participant;
         private final OmrAssessmentAttempt latestAttempt;
         private final OmrGradingHistoryRecord historyRecord;
+        private final OmrAssessmentBlockBreakdown blockBreakdown;
+        private final DetailStatus detailStatus;
 
         public Row(
                 OmrAssessmentParticipant participant,
                 OmrAssessmentAttempt latestAttempt,
                 OmrGradingHistoryRecord historyRecord
+        ) {
+            this(
+                    participant,
+                    latestAttempt,
+                    historyRecord,
+                    null,
+                    inferDetailStatus(
+                            latestAttempt,
+                            historyRecord,
+                            null
+                    )
+            );
+        }
+
+        public Row(
+                OmrAssessmentParticipant participant,
+                OmrAssessmentAttempt latestAttempt,
+                OmrGradingHistoryRecord historyRecord,
+                OmrAssessmentBlockBreakdown blockBreakdown
+        ) {
+            this(
+                    participant,
+                    latestAttempt,
+                    historyRecord,
+                    blockBreakdown,
+                    inferDetailStatus(
+                            latestAttempt,
+                            historyRecord,
+                            blockBreakdown
+                    )
+            );
+        }
+
+        public Row(
+                OmrAssessmentParticipant participant,
+                OmrAssessmentAttempt latestAttempt,
+                OmrGradingHistoryRecord historyRecord,
+                OmrAssessmentBlockBreakdown blockBreakdown,
+                DetailStatus detailStatus
         ) {
             if (participant == null) {
                 throw new IllegalArgumentException(
@@ -60,9 +112,105 @@ public final class OmrAssessmentResultReport {
                         "O histórico não pertence à tentativa e ao aluno."
                 );
             }
+            if (blockBreakdown != null
+                    && (historyRecord == null
+                    || !blockBreakdown.getGradingResult().equals(
+                    historyRecord.getGradingResult()
+            ))) {
+                throw new IllegalArgumentException(
+                        "O detalhamento não corresponde ao histórico."
+                );
+            }
+            if (detailStatus == null) {
+                throw new IllegalArgumentException(
+                        "A situação detalhada é obrigatória."
+                );
+            }
+            validateDetailStatus(
+                    latestAttempt,
+                    historyRecord,
+                    blockBreakdown,
+                    detailStatus
+            );
             this.participant = participant;
             this.latestAttempt = latestAttempt;
             this.historyRecord = historyRecord;
+            this.blockBreakdown = blockBreakdown;
+            this.detailStatus = detailStatus;
+        }
+
+        private static DetailStatus inferDetailStatus(
+                OmrAssessmentAttempt attempt,
+                OmrGradingHistoryRecord history,
+                OmrAssessmentBlockBreakdown breakdown
+        ) {
+            if (attempt == null) {
+                return DetailStatus.PENDING;
+            }
+            if (history == null) {
+                return DetailStatus.ABSENT;
+            }
+            boolean requiresReview = breakdown == null
+                    ? history.requiresReview()
+                    : breakdown.requiresReview();
+            if (requiresReview) {
+                return DetailStatus.IN_REVIEW;
+            }
+            return history.getAwardedPoints() == 0.0
+                    ? DetailStatus.ZERO
+                    : DetailStatus.FINAL;
+        }
+
+        private static void validateDetailStatus(
+                OmrAssessmentAttempt attempt,
+                OmrGradingHistoryRecord history,
+                OmrAssessmentBlockBreakdown breakdown,
+                DetailStatus detailStatus
+        ) {
+            switch (detailStatus) {
+                case PENDING:
+                    if (attempt != null || history != null) {
+                        throw invalidDetailStatus();
+                    }
+                    break;
+                case ABSENT:
+                    if (attempt == null || history != null) {
+                        throw invalidDetailStatus();
+                    }
+                    break;
+                case INCONSISTENT:
+                    if (attempt == null || breakdown != null) {
+                        throw invalidDetailStatus();
+                    }
+                    break;
+                case IN_REVIEW:
+                    if (history == null || !history.requiresReview()) {
+                        throw invalidDetailStatus();
+                    }
+                    break;
+                case ZERO:
+                    if (history == null
+                            || history.requiresReview()
+                            || history.getAwardedPoints() != 0.0) {
+                        throw invalidDetailStatus();
+                    }
+                    break;
+                case FINAL:
+                    if (history == null
+                            || history.requiresReview()
+                            || history.getAwardedPoints() == 0.0) {
+                        throw invalidDetailStatus();
+                    }
+                    break;
+                default:
+                    throw invalidDetailStatus();
+            }
+        }
+
+        private static IllegalArgumentException invalidDetailStatus() {
+            return new IllegalArgumentException(
+                    "A situação detalhada não corresponde aos dados da linha."
+            );
         }
 
         public OmrAssessmentParticipant getParticipant() {
@@ -75,6 +223,18 @@ public final class OmrAssessmentResultReport {
 
         public OmrGradingHistoryRecord getHistoryRecord() {
             return historyRecord;
+        }
+
+        public OmrAssessmentBlockBreakdown getBlockBreakdownOrNull() {
+            return blockBreakdown;
+        }
+
+        public boolean hasBlockBreakdown() {
+            return blockBreakdown != null;
+        }
+
+        public DetailStatus getDetailStatus() {
+            return detailStatus;
         }
 
         public Status getStatus() {
@@ -158,6 +318,7 @@ public final class OmrAssessmentResultReport {
     private final int correctedCount;
     private final int pendingCount;
     private final int missingHistoryCount;
+    private final int inconsistentCount;
     private final double averagePercentage;
 
     public OmrAssessmentResultReport(
@@ -226,18 +387,28 @@ public final class OmrAssessmentResultReport {
         int corrected = 0;
         int pending = 0;
         int missing = 0;
+        int inconsistent = 0;
         double accumulatedPercentage = 0.0;
         for (Row row : this.rows) {
-            switch (row.getStatus()) {
-                case CORRECTED:
+            switch (row.getDetailStatus()) {
+                case FINAL:
+                case ZERO:
+                case IN_REVIEW:
                     corrected++;
                     accumulatedPercentage += row.getAwardedPercentage();
                     break;
                 case PENDING:
                     pending++;
                     break;
-                case MISSING_HISTORY:
+                case ABSENT:
                     missing++;
+                    break;
+                case INCONSISTENT:
+                    inconsistent++;
+                    if (row.getHistoryRecord() != null) {
+                        corrected++;
+                        accumulatedPercentage += row.getAwardedPercentage();
+                    }
                     break;
                 default:
                     throw new IllegalStateException("Status desconhecido.");
@@ -246,6 +417,7 @@ public final class OmrAssessmentResultReport {
         correctedCount = corrected;
         pendingCount = pending;
         missingHistoryCount = missing;
+        inconsistentCount = inconsistent;
         averagePercentage = corrected == 0
                 ? 0.0 : accumulatedPercentage / corrected;
     }
@@ -286,11 +458,19 @@ public final class OmrAssessmentResultReport {
         return missingHistoryCount;
     }
 
+    public int getInconsistentCount() {
+        return inconsistentCount;
+    }
+
+    public int getDataIntegrityIssueCount() {
+        return missingHistoryCount + inconsistentCount;
+    }
+
     public double getAveragePercentage() {
         return averagePercentage;
     }
 
     public boolean hasDataIntegrityIssue() {
-        return missingHistoryCount > 0;
+        return missingHistoryCount > 0 || inconsistentCount > 0;
     }
 }

@@ -5,6 +5,9 @@ import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentAttempt;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlockBreakdown;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlockScorer;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
 import com.example.leitorgabaritoomr.domain.history.OmrGradingHistoryRecord;
 
 import java.util.ArrayList;
@@ -21,6 +24,7 @@ public final class OmrAssessmentResultReportService {
     private final OmrAssessmentParticipantRepository participantRepository;
     private final OmrAssessmentAttemptRepository attemptRepository;
     private final OmrGradingHistoryRepository historyRepository;
+    private final OmrAssessmentBlockScorer blockScorer;
 
     public OmrAssessmentResultReportService(
             OmrAssessmentApplicationRepository applicationRepository,
@@ -43,6 +47,7 @@ public final class OmrAssessmentResultReportService {
         this.participantRepository = participantRepository;
         this.attemptRepository = attemptRepository;
         this.historyRepository = historyRepository;
+        blockScorer = new OmrAssessmentBlockScorer();
     }
 
     public OmrAssessmentResultReport build(String applicationId) {
@@ -124,14 +129,12 @@ public final class OmrAssessmentResultReportService {
                     : historyRepository.findByIdOrNull(
                     attempt.getHistoryRecordId()
             );
-            if (history != null
-                    && !isCompatible(history, participant, assessment)) {
-                history = null;
-            }
-            rows.add(new OmrAssessmentResultReport.Row(
+            rows.add(buildRow(
                     participant,
                     attempt,
-                    history
+                    history,
+                    application,
+                    assessment
             ));
         }
 
@@ -142,6 +145,96 @@ public final class OmrAssessmentResultReportService {
                 generatedAtEpochMillis,
                 rows
         );
+    }
+
+    private OmrAssessmentResultReport.Row buildRow(
+            OmrAssessmentParticipant participant,
+            OmrAssessmentAttempt attempt,
+            OmrGradingHistoryRecord history,
+            OmrAssessmentApplication application,
+            OmrAssessmentDefinition assessment
+    ) {
+        if (attempt == null) {
+            return new OmrAssessmentResultReport.Row(
+                    participant,
+                    null,
+                    null
+            );
+        }
+
+        if (history == null) {
+            return new OmrAssessmentResultReport.Row(
+                    participant,
+                    attempt,
+                    null
+            );
+        }
+
+        if (!isCompatible(history, participant, assessment)) {
+            return new OmrAssessmentResultReport.Row(
+                    participant,
+                    attempt,
+                    null,
+                    null,
+                    OmrAssessmentResultReport.DetailStatus.INCONSISTENT
+            );
+        }
+
+        try {
+            OmrAssessmentStructure structure = resolveStructure(
+                    attempt,
+                    application,
+                    assessment,
+                    history
+            );
+            OmrAssessmentBlockBreakdown breakdown = blockScorer.calculate(
+                    structure,
+                    history.getGradingResult()
+            );
+            return new OmrAssessmentResultReport.Row(
+                    participant,
+                    attempt,
+                    history,
+                    breakdown
+            );
+        } catch (RuntimeException inconsistentStructure) {
+            return new OmrAssessmentResultReport.Row(
+                    participant,
+                    attempt,
+                    history,
+                    null,
+                    OmrAssessmentResultReport.DetailStatus.INCONSISTENT
+            );
+        }
+    }
+
+    private static OmrAssessmentStructure resolveStructure(
+            OmrAssessmentAttempt attempt,
+            OmrAssessmentApplication application,
+            OmrAssessmentDefinition assessment,
+            OmrGradingHistoryRecord history
+    ) {
+        OmrAssessmentStructure structure = attempt
+                .getFrozenStructureOrNull();
+        if (structure == null) {
+            structure = application.getFrozenStructureOrNull();
+        }
+        if (structure == null) {
+            structure = OmrAssessmentStructure.legacySingleBlock(
+                    assessment.getAssessmentId(),
+                    assessment.getVersion(),
+                    history.getGradingResult().getQuestionCount()
+            );
+        }
+        if (!structure.hasAssessmentIdentity(
+                assessment.getAssessmentId(),
+                assessment.getVersion()
+        )) {
+            throw new IllegalStateException(
+                    "A estrutura congelada pertence a outra prova."
+            );
+        }
+        return structure;
     }
 
     public static boolean isCompatible(

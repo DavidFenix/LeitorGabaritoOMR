@@ -48,6 +48,32 @@ public final class OmrAssessmentAttemptTest {
     }
 
     @Test
+    public void preservesFrozenStructureUsedByRevision() {
+        OmrAssessmentStructure structure =
+                OmrAssessmentStructure.legacySingleBlock(
+                        "assessment-001", 2, 10
+                );
+        OmrAssessmentAttempt attempt = new OmrAssessmentAttempt(
+                "attempt-001",
+                "application-001",
+                "student-001",
+                1,
+                "history-001",
+                RECORDED_AT,
+                structure
+        );
+
+        assertTrue(attempt.hasFrozenStructure());
+        assertEquals(structure, attempt.getFrozenStructureOrNull());
+    }
+
+    @Test
+    public void legacyAttemptHasNoFrozenStructure() {
+        assertFalse(attempt().hasFrozenStructure());
+        assertEquals(null, attempt().getFrozenStructureOrNull());
+    }
+
+    @Test
     public void identityUsesAttemptIdOnly() {
         OmrAssessmentAttempt original = attempt();
 

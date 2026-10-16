@@ -19,6 +19,7 @@ import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentAttempt;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
 import com.example.leitorgabaritoomr.domain.classroom.OmrClassEnrollment;
 import com.example.leitorgabaritoomr.domain.classroom.OmrClassGroup;
 import com.example.leitorgabaritoomr.domain.student.OmrStudentProfile;
@@ -267,6 +268,32 @@ OmrSQLiteAssessmentAttemptRepositoryInstrumentedTest {
                 original,
                 repository.findByIdOrNull("attempt-001")
         );
+    }
+
+    @Test
+    public void frozenStructurePersistsInsideAttemptRevision() {
+        prepareApplicationWithRoster(
+                Collections.singletonList(participant())
+        );
+        OmrAssessmentStructure structure =
+                OmrAssessmentStructure.legacySingleBlock(
+                        "assessment-001", 2, 45
+                );
+        OmrAssessmentAttempt original = new OmrAssessmentAttempt(
+                "attempt-structured", "application-001", "student-001",
+                1, "history-structured", 2_000L, structure
+        );
+        assertTrue(repository.save(original));
+
+        closeRepository();
+        openRepository();
+
+        OmrAssessmentAttempt restored = repository.findByIdOrNull(
+                "attempt-structured"
+        );
+        assertNotNull(restored);
+        assertTrue(restored.hasFrozenStructure());
+        assertEquals(structure, restored.getFrozenStructureOrNull());
     }
 
     @Test
@@ -1057,6 +1084,10 @@ OmrSQLiteAssessmentAttemptRepositoryInstrumentedTest {
                 expected.getRecordedAtEpochMillis(),
                 actual.getRecordedAtEpochMillis()
         );
+        assertEquals(
+                expected.getFrozenStructureOrNull(),
+                actual.getFrozenStructureOrNull()
+        );
     }
 
     private void assertCompleteApplication(
@@ -1074,6 +1105,10 @@ OmrSQLiteAssessmentAttemptRepositoryInstrumentedTest {
         assertEquals(
                 expected.getCreatedAtEpochMillis(),
                 actual.getCreatedAtEpochMillis()
+        );
+        assertEquals(
+                expected.getFrozenStructureOrNull(),
+                actual.getFrozenStructureOrNull()
         );
     }
 

@@ -22,8 +22,20 @@ import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentResultReport;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentAttempt;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlock;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlockBreakdown;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlockScorer;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
+import com.example.leitorgabaritoomr.domain.assessment.OmrProportionalScoringPolicy;
+import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
+import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyEntry;
+import com.example.leitorgabaritoomr.domain.grading.OmrGradingResult;
+import com.example.leitorgabaritoomr.domain.grading.OmrReadingGrader;
+import com.example.leitorgabaritoomr.domain.history.OmrGradingHistoryRecord;
+import com.example.leitorgabaritoomr.domain.reading.OmrQuestionResult;
+import com.example.leitorgabaritoomr.domain.reading.OmrReadingResult;
 
 import org.junit.After;
 import org.junit.Before;
@@ -31,6 +43,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 @RunWith(AndroidJUnit4.class)
 public final class OmrAssessmentResultViewBinderInstrumentedTest {
@@ -133,7 +146,35 @@ public final class OmrAssessmentResultViewBinderInstrumentedTest {
             View missing = rowAt(1);
             assertRowText(missing,
                     R.id.textOmrAssessmentResultItemStatus,
-                    "Inconsistência: histórico da revisão 1 indisponível");
+                    "Ausente: histórico da revisão 1 não foi localizado");
+        });
+    }
+
+    @Test
+    public void rendersEveryComponentWithoutHidingOverallGrade() {
+        runOnMain(() -> {
+            binder.render(structuredState());
+
+            View row = rowAt(0);
+            TextView grade = row.findViewById(
+                    R.id.textOmrAssessmentResultItemGrade
+            );
+            TextView blocks = row.findViewById(
+                    R.id.textOmrAssessmentResultItemBlocks
+            );
+
+            assertEquals(View.VISIBLE, blocks.getVisibility());
+            assertTrue(grade.getText().toString().contains("50"));
+            String details = blocks.getText().toString();
+            assertTrue(details.contains(
+                    "Ciências da Natureza • QUI — Química"
+            ));
+            assertTrue(details.contains("Química: 1/1 acertos"));
+            assertTrue(details.contains(
+                    "Ciências da Natureza • FIS — Física"
+            ));
+            assertTrue(details.contains("Física: 0/1 acertos"));
+            assertTrue(details.contains("zero"));
         });
     }
 
@@ -240,6 +281,122 @@ public final class OmrAssessmentResultViewBinderInstrumentedTest {
                 )
         );
         return OmrAssessmentResultViewState.from(report, query);
+    }
+
+    private OmrAssessmentResultViewState structuredState() {
+        OmrAssessmentStructure structure = new OmrAssessmentStructure(
+                "assessment-1",
+                1,
+                2,
+                Arrays.asList(
+                        new OmrAssessmentBlock(
+                                "qui", 1, "Ciências da Natureza",
+                                "QUI", "Química", 1, 1,
+                                OmrProportionalScoringPolicy
+                                        .correctQuestionsToTenV1()
+                        ),
+                        new OmrAssessmentBlock(
+                                "fis", 2, "Ciências da Natureza",
+                                "FIS", "Física", 2, 1,
+                                OmrProportionalScoringPolicy
+                                        .correctQuestionsToTenV1()
+                        )
+                )
+        );
+        OmrAssessmentApplication application =
+                new OmrAssessmentApplication(
+                        "application-1", "assessment-1", 1,
+                        "class-1", 1_000L, structure
+                );
+        OmrAssessmentDefinition assessment =
+                new OmrAssessmentDefinition(
+                        "assessment-1", 1, "Caderno Natureza",
+                        "Natureza", "9º ano", "1º bimestre",
+                        2026, "key-1", 1
+                );
+        OmrAssessmentParticipant participant =
+                new OmrAssessmentParticipant(
+                        "application-1", "student-1", "MAT-001",
+                        "Ana", "9º A", 1
+                );
+        OmrQuestionResult first = question(
+                1, "question-001", "question-001-option-01", "A"
+        );
+        OmrQuestionResult second = question(
+                2, "question-002", "question-002-option-02", "B"
+        );
+        OmrReadingResult reading = new OmrReadingResult(
+                "reading-1", 2_000L, "omr-flex-ad-q002-r001", 3,
+                "Cartão flexível", Arrays.asList(first, second)
+        );
+        OmrAnswerKeyDefinition answerKey =
+                new OmrAnswerKeyDefinition(
+                        "key-1", 1, "Gabarito",
+                        "omr-flex-ad-q002-r001", 3,
+                        Arrays.asList(
+                                OmrAnswerKeyEntry.singleAnswer(
+                                        "question-001",
+                                        "question-001-option-01",
+                                        1.0
+                                ),
+                                OmrAnswerKeyEntry.singleAnswer(
+                                        "question-002",
+                                        "question-002-option-01",
+                                        1.0
+                                )
+                        )
+                );
+        OmrGradingResult grading = new OmrReadingGrader().grade(
+                reading,
+                answerKey
+        );
+        OmrGradingHistoryRecord history =
+                new OmrGradingHistoryRecord(
+                        "history-1", 3_000L,
+                        participant.toStudentIdentity(), grading
+                );
+        OmrAssessmentAttempt attempt = new OmrAssessmentAttempt(
+                "attempt-1", "application-1", "student-1",
+                1, "history-1", 3_000L, structure
+        );
+        OmrAssessmentBlockBreakdown breakdown =
+                new OmrAssessmentBlockScorer().calculate(
+                        structure,
+                        grading
+                );
+        OmrAssessmentResultReport report =
+                new OmrAssessmentResultReport(
+                        application,
+                        assessment,
+                        "9º A",
+                        4_000L,
+                        Collections.singletonList(
+                                new OmrAssessmentResultReport.Row(
+                                        participant,
+                                        attempt,
+                                        history,
+                                        breakdown
+                                )
+                        )
+                );
+        return OmrAssessmentResultViewState.from(report, "");
+    }
+
+    private static OmrQuestionResult question(
+            int position,
+            String questionId,
+            String optionId,
+            String label
+    ) {
+        return new OmrQuestionResult(
+                position,
+                questionId,
+                OmrQuestionResult.Status.SINGLE_MARK,
+                Collections.singletonList(
+                        new OmrQuestionResult.Option(optionId, label)
+                ),
+                0.99
+        );
     }
 
     private ListView list() {

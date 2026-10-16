@@ -12,6 +12,7 @@ import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentAttempt;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
 import com.example.leitorgabaritoomr.domain.history.OmrGradingHistoryRecord;
 
 import org.junit.Before;
@@ -139,6 +140,7 @@ public final class OmrAssessmentResultReportServiceTest {
         assertEquals(1, report.getCorrectedCount());
         assertEquals(1, report.getPendingCount());
         assertEquals(0, report.getMissingHistoryCount());
+        assertEquals(0, report.getInconsistentCount());
         assertEquals(100.0, report.getAveragePercentage(), 0.0001);
         assertFalse(report.hasDataIntegrityIssue());
     }
@@ -154,13 +156,15 @@ public final class OmrAssessmentResultReportServiceTest {
         assertEquals(0, report.getCorrectedCount());
         assertEquals(1, report.getPendingCount());
         assertEquals(1, report.getMissingHistoryCount());
+        assertEquals(OmrAssessmentResultReport.DetailStatus.ABSENT,
+                report.getRows().get(0).getDetailStatus());
         assertTrue(report.hasDataIntegrityIssue());
         assertEquals(OmrAssessmentResultReport.Status.MISSING_HISTORY,
                 report.getRows().get(0).getStatus());
     }
 
     @Test
-    public void rejectsHistoryBelongingToAnotherStudentSnapshot() {
+    public void exposesInconsistentHistoryBelongingToAnotherStudentSnapshot() {
         memory.attempts.add(OmrAssessmentResultTestData.attempt(
                 "student-1", 1, "history-wrong", 3_000L
         ));
@@ -172,7 +176,94 @@ public final class OmrAssessmentResultReportServiceTest {
         ).getRows().get(0);
         assertEquals(OmrAssessmentResultReport.Status.MISSING_HISTORY,
                 row.getStatus());
+        assertEquals(OmrAssessmentResultReport.DetailStatus.INCONSISTENT,
+                row.getDetailStatus());
         assertNull(row.getHistoryRecord());
+        OmrAssessmentResultReport report = service.build(
+                "application-1", 4_001L
+        );
+        assertEquals(0, report.getMissingHistoryCount());
+        assertEquals(1, report.getInconsistentCount());
+    }
+
+    @Test
+    public void calculatesAndExposesResultsForEveryFrozenBlock() {
+        memory.application = OmrAssessmentResultTestData
+                .structuredApplication();
+        OmrAssessmentParticipant ana = memory.participants.get(1);
+        memory.attempts.add(OmrAssessmentResultTestData.attempt(
+                "student-1", 1, "history-blocks", 3_000L
+        ));
+        memory.histories.add(OmrAssessmentResultTestData.structuredHistory(
+                ana, "history-blocks", 3_000L, true
+        ));
+
+        OmrAssessmentResultReport.Row row = service.build(
+                "application-1", 4_000L
+        ).getRows().get(0);
+
+        assertTrue(row.hasBlockBreakdown());
+        assertEquals(2, row.getBlockBreakdownOrNull().getBlockCount());
+        assertEquals(1, row.getBlockBreakdownOrNull()
+                .findResultByBlockId("qui").getCorrectCount());
+        assertEquals(0, row.getBlockBreakdownOrNull()
+                .findResultByBlockId("fis").getCorrectCount());
+        assertEquals("10.0", row.getBlockBreakdownOrNull()
+                .findResultByBlockId("qui")
+                .getCalculatedScore().toPlainString());
+        assertEquals("0.0", row.getBlockBreakdownOrNull()
+                .findResultByBlockId("fis")
+                .getCalculatedScore().toPlainString());
+    }
+
+    @Test
+    public void explicitZeroIsNotReportedAsPendingOrAbsent() {
+        memory.application = OmrAssessmentResultTestData
+                .structuredApplication();
+        OmrAssessmentParticipant ana = memory.participants.get(1);
+        memory.attempts.add(OmrAssessmentResultTestData.attempt(
+                "student-1", 1, "history-zero", 3_000L
+        ));
+        memory.histories.add(OmrAssessmentResultTestData.structuredHistory(
+                ana, "history-zero", 3_000L, false
+        ));
+
+        OmrAssessmentResultReport.Row row = service.build(
+                "application-1", 4_000L
+        ).getRows().get(0);
+
+        assertEquals(OmrAssessmentResultReport.DetailStatus.ZERO,
+                row.getDetailStatus());
+        assertEquals(0.0, row.getAwardedPoints(), 0.0);
+        assertTrue(row.isCorrected());
+    }
+
+    @Test
+    public void corruptRevisionStructureIsFlaggedWithoutLosingTotalGrade() {
+        memory.application = OmrAssessmentResultTestData
+                .structuredApplication();
+        OmrAssessmentParticipant ana = memory.participants.get(1);
+        OmrAssessmentStructure wrongIdentity =
+                OmrAssessmentStructure.legacySingleBlock(
+                        "another-assessment", 1, 2
+                );
+        memory.attempts.add(new OmrAssessmentAttempt(
+                "attempt-broken", "application-1", "student-1", 1,
+                "history-broken", 3_000L, wrongIdentity
+        ));
+        memory.histories.add(OmrAssessmentResultTestData.structuredHistory(
+                ana, "history-broken", 3_000L, true
+        ));
+
+        OmrAssessmentResultReport.Row row = service.build(
+                "application-1", 4_000L
+        ).getRows().get(0);
+
+        assertEquals(OmrAssessmentResultReport.DetailStatus.INCONSISTENT,
+                row.getDetailStatus());
+        assertNotNull(row.getHistoryRecord());
+        assertFalse(row.hasBlockBreakdown());
+        assertEquals(50.0, row.getAwardedPercentage(), 0.0001);
     }
 
     @Test

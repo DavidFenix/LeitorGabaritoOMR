@@ -7,12 +7,18 @@ import static org.junit.Assert.assertTrue;
 
 import com.example.leitorgabaritoomr.application.classroom.OmrClassEnrollmentRepository;
 import com.example.leitorgabaritoomr.application.classroom.OmrClassGroupRepository;
+import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyRepository;
 import com.example.leitorgabaritoomr.application.student.OmrStudentRepository;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlock;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
+import com.example.leitorgabaritoomr.domain.assessment.OmrProportionalScoringPolicy;
 import com.example.leitorgabaritoomr.domain.classroom.OmrClassEnrollment;
 import com.example.leitorgabaritoomr.domain.classroom.OmrClassGroup;
+import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
+import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyEntry;
 import com.example.leitorgabaritoomr.domain.student.OmrStudentProfile;
 
 import org.junit.Test;
@@ -25,6 +31,7 @@ import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Arrays;
 
 public final class OmrAssessmentApplicationRegistrationServiceTest {
 
@@ -74,6 +81,50 @@ public final class OmrAssessmentApplicationRegistrationServiceTest {
         assertNotNull(fixture.applications.findByIdOrNull(
                 "application-1"
         ));
+    }
+
+    @Test
+    public void productionRegistrationFreezesPublishedStructure() {
+        Fixture fixture = new Fixture();
+        OmrAssessmentStructure published = fixture.multidisciplinaryStructure();
+        fixture.structures.stored = published;
+
+        OmrAssessmentApplication application = fixture.snapshotService()
+                .registerNew("assessment-1", 2, "class-1")
+                .getApplication();
+
+        assertTrue(application.hasFrozenStructure());
+        assertEquals(published, application.getFrozenStructureOrNull());
+    }
+
+    @Test
+    public void productionRegistrationFreezesLegacyBlockWhenNoStructureExists() {
+        Fixture fixture = new Fixture();
+
+        OmrAssessmentApplication application = fixture.snapshotService()
+                .registerNew("assessment-1", 2, "class-1")
+                .getApplication();
+
+        assertTrue(application.hasFrozenStructure());
+        assertTrue(application.getFrozenStructureOrNull()
+                .isLegacySingleBlock());
+        assertEquals(2, application.getFrozenStructureOrNull()
+                .getQuestionCount());
+    }
+
+    @Test
+    public void laterStructurePublicationDoesNotChangeApplicationSnapshot() {
+        Fixture fixture = new Fixture();
+        OmrAssessmentApplication application = fixture.snapshotService()
+                .registerNew("assessment-1", 2, "class-1")
+                .getApplication();
+        OmrAssessmentStructure frozen = application
+                .getFrozenStructureOrNull();
+
+        fixture.structures.stored = fixture.multidisciplinaryStructure();
+
+        assertTrue(frozen.isLegacySingleBlock());
+        assertEquals(frozen, application.getFrozenStructureOrNull());
     }
 
     @Test
@@ -199,6 +250,26 @@ public final class OmrAssessmentApplicationRegistrationServiceTest {
         assertNotNull(fixture.applications.findByIdOrNull(
                 "application-csv:MAT-9A"
         ));
+    }
+
+    @Test
+    public void csvApplicationFreezesPublishedStructure() {
+        Fixture fixture = new Fixture();
+        OmrAssessmentStructure structure =
+                fixture.multidisciplinaryStructure();
+        fixture.structures.save(structure);
+
+        OmrAssessmentApplicationRegistrationService.ImportSummary summary =
+                fixture.snapshotService().importPreview(preview(
+                        "codigo_aplicacao;prova;versao_prova;turma\n"
+                                + "APP-NAT;assessment-1;2;class-1\n"
+                ));
+
+        assertEquals(1, summary.getCreatedApplicationCount());
+        OmrAssessmentApplication created = summary
+                .getCreatedApplications().get(0);
+        assertTrue(created.hasFrozenStructure());
+        assertEquals(structure, created.getFrozenStructureOrNull());
     }
 
     @Test
@@ -428,6 +499,10 @@ public final class OmrAssessmentApplicationRegistrationServiceTest {
                 new MemoryParticipantRepository();
         private final MemoryBatchRepository batch =
                 new MemoryBatchRepository(applications, participants);
+        private final MemoryStructureRepository structures =
+                new MemoryStructureRepository();
+        private final MemoryAnswerKeyRepository answerKeys =
+                new MemoryAnswerKeyRepository();
         private final Deque<String> generatedIds = new ArrayDeque<>();
 
         private Fixture() {
@@ -467,6 +542,17 @@ public final class OmrAssessmentApplicationRegistrationServiceTest {
                     "class-2", "student-2", 1
             ));
             generatedIds.add("application-1");
+            answerKeys.save(new OmrAnswerKeyDefinition(
+                    "key-1", 1, "Gabarito", "layout-2", 1,
+                    Arrays.asList(
+                            OmrAnswerKeyEntry.singleAnswer(
+                                    "question-1", "A", 1.0
+                            ),
+                            OmrAnswerKeyEntry.singleAnswer(
+                                    "question-2", "B", 1.0
+                            )
+                    )
+            ));
         }
 
         private OmrAssessmentApplicationRegistrationService service() {
@@ -483,6 +569,157 @@ public final class OmrAssessmentApplicationRegistrationServiceTest {
                             : generatedIds.removeFirst(),
                     () -> 1000L
             );
+        }
+
+        private OmrAssessmentApplicationRegistrationService
+        snapshotService() {
+            return new OmrAssessmentApplicationRegistrationService(
+                    assessments,
+                    classes,
+                    enrollments,
+                    students,
+                    applications,
+                    participants,
+                    batch,
+                    structures,
+                    answerKeys,
+                    () -> generatedIds.isEmpty()
+                            ? "application-generated"
+                            : generatedIds.removeFirst(),
+                    () -> 1000L
+            );
+        }
+
+        private OmrAssessmentStructure multidisciplinaryStructure() {
+            return new OmrAssessmentStructure(
+                    "assessment-1", 2, 2,
+                    Arrays.asList(
+                            new OmrAssessmentBlock(
+                                    "qui", 1, "Natureza", "QUI", "Química",
+                                    1, 1,
+                                    OmrProportionalScoringPolicy
+                                            .correctQuestionsToTenV1()
+                            ),
+                            new OmrAssessmentBlock(
+                                    "fis", 2, "Natureza", "FIS", "Física",
+                                    2, 1,
+                                    OmrProportionalScoringPolicy
+                                            .correctQuestionsToTenV1()
+                            )
+                    )
+            );
+        }
+    }
+
+    private static final class MemoryStructureRepository
+            implements OmrAssessmentStructureRepository {
+        private OmrAssessmentStructure stored;
+
+        @Override
+        public boolean save(OmrAssessmentStructure structure) {
+            if (stored != null) {
+                return false;
+            }
+            stored = structure;
+            return true;
+        }
+
+        @Override
+        public OmrAssessmentStructure findStoredOrNull(
+                String assessmentId,
+                int assessmentVersion
+        ) {
+            return stored != null && stored.hasAssessmentIdentity(
+                    assessmentId, assessmentVersion
+            ) ? stored : null;
+        }
+
+        @Override
+        public List<OmrAssessmentStructure> loadStoredVersions(
+                String assessmentId
+        ) {
+            return stored == null
+                    ? Collections.emptyList()
+                    : Collections.singletonList(stored);
+        }
+
+        @Override
+        public OmrAssessmentStructure resolveOrLegacy(
+                String assessmentId,
+                int assessmentVersion,
+                int questionCount
+        ) {
+            if (stored != null) {
+                return stored.hasAssessmentIdentity(
+                        assessmentId, assessmentVersion
+                ) && stored.getQuestionCount() == questionCount
+                        ? stored : null;
+            }
+            return OmrAssessmentStructure.legacySingleBlock(
+                    assessmentId, assessmentVersion, questionCount
+            );
+        }
+    }
+
+    private static final class MemoryAnswerKeyRepository
+            implements OmrAnswerKeyRepository {
+        private OmrAnswerKeyDefinition value;
+        private OmrAnswerKeyDefinition active;
+
+        @Override
+        public void save(OmrAnswerKeyDefinition answerKeyDefinition) {
+            value = answerKeyDefinition;
+        }
+
+        @Override
+        public List<OmrAnswerKeyDefinition> loadAll() {
+            return value == null
+                    ? Collections.emptyList()
+                    : Collections.singletonList(value);
+        }
+
+        @Override
+        public OmrAnswerKeyDefinition findOrNull(String id, int version) {
+            return value != null
+                    && value.getId().equals(id)
+                    && value.getVersion() == version
+                    ? value : null;
+        }
+
+        @Override
+        public void selectActive(String id, int version) {
+            active = findOrNull(id, version);
+            if (active == null) {
+                throw new IllegalArgumentException("Gabarito ausente.");
+            }
+        }
+
+        @Override
+        public boolean delete(String id, int version) {
+            if (findOrNull(id, version) == null) {
+                return false;
+            }
+            if (active == value) {
+                active = null;
+            }
+            value = null;
+            return true;
+        }
+
+        @Override
+        public void saveActive(OmrAnswerKeyDefinition answerKeyDefinition) {
+            save(answerKeyDefinition);
+            active = answerKeyDefinition;
+        }
+
+        @Override
+        public OmrAnswerKeyDefinition loadActiveOrNull() {
+            return active;
+        }
+
+        @Override
+        public void clearActive() {
+            active = null;
         }
     }
 

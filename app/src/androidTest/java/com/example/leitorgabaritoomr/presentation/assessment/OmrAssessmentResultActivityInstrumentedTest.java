@@ -20,9 +20,19 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentAttempt;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlock;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
+import com.example.leitorgabaritoomr.domain.assessment.OmrProportionalScoringPolicy;
 import com.example.leitorgabaritoomr.domain.classroom.OmrClassGroup;
+import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
+import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyEntry;
+import com.example.leitorgabaritoomr.domain.grading.OmrGradingResult;
+import com.example.leitorgabaritoomr.domain.grading.OmrReadingGrader;
+import com.example.leitorgabaritoomr.domain.history.OmrGradingHistoryRecord;
+import com.example.leitorgabaritoomr.domain.reading.OmrQuestionResult;
+import com.example.leitorgabaritoomr.domain.reading.OmrReadingResult;
 import com.example.leitorgabaritoomr.infrastructure.history.OmrSQLiteGradingHistoryRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentApplicationRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentAttemptRepository;
@@ -36,6 +46,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -161,7 +172,7 @@ public final class OmrAssessmentResultActivityInstrumentedTest {
                         R.id.textOmrAssessmentResultItemStatus
                 );
                 assertEquals(
-                        "Inconsistência: histórico da revisão 1 indisponível",
+                        "Ausente: histórico da revisão 1 não foi localizado",
                         status.getText().toString()
                 );
             });
@@ -185,6 +196,36 @@ public final class OmrAssessmentResultActivityInstrumentedTest {
                 );
                 search.setText("MAT-001");
                 assertEquals(1, list(activity).getAdapter().getCount());
+            });
+        }
+    }
+
+    @Test
+    public void loadsFrozenComponentBreakdownFromPersistedRevision() {
+        seedStructuredReport();
+
+        try (ActivityScenario<OmrAssessmentResultActivity> scenario =
+                     ActivityScenario.launch(createIntent(
+                             "application-blocks"
+                     ))) {
+            awaitListCount(scenario, 1);
+            scenario.onActivity(activity -> {
+                View row = list(activity).getAdapter().getView(
+                        0, null, list(activity)
+                );
+                TextView grade = row.findViewById(
+                        R.id.textOmrAssessmentResultItemGrade
+                );
+                TextView blocks = row.findViewById(
+                        R.id.textOmrAssessmentResultItemBlocks
+                );
+
+                assertEquals(View.VISIBLE, blocks.getVisibility());
+                assertTrue(grade.getText().toString().contains("50"));
+                String details = blocks.getText().toString();
+                assertTrue(details.contains("Química: 1/1 acertos"));
+                assertTrue(details.contains("Física: 0/1 acertos"));
+                assertTrue(details.contains("zero"));
             });
         }
     }
@@ -220,10 +261,130 @@ public final class OmrAssessmentResultActivityInstrumentedTest {
         )));
     }
 
+    private void seedStructuredReport() {
+        OmrAssessmentStructure structure = new OmrAssessmentStructure(
+                "assessment-1",
+                2,
+                2,
+                Arrays.asList(
+                        new OmrAssessmentBlock(
+                                "qui", 1, "Ciências da Natureza",
+                                "QUI", "Química", 1, 1,
+                                OmrProportionalScoringPolicy
+                                        .correctQuestionsToTenV1()
+                        ),
+                        new OmrAssessmentBlock(
+                                "fis", 2, "Ciências da Natureza",
+                                "FIS", "Física", 2, 1,
+                                OmrProportionalScoringPolicy
+                                        .correctQuestionsToTenV1()
+                        )
+                )
+        );
+        OmrAssessmentApplication application =
+                new OmrAssessmentApplication(
+                        "application-blocks", "assessment-1", 2,
+                        "class-1", 4_000L, structure
+                );
+        OmrAssessmentParticipant participant =
+                new OmrAssessmentParticipant(
+                        "application-blocks", "student-blocks", "MAT-003",
+                        "Carla", "9º A", 1
+                );
+        assertTrue(applications.save(application));
+        assertTrue(participants.saveRoster(
+                application.getApplicationId(),
+                Collections.singletonList(participant)
+        ));
+
+        OmrReadingResult reading = new OmrReadingResult(
+                "reading-blocks",
+                4_100L,
+                "omr-flex-ad-q002-r001",
+                3,
+                "Cartão flexível",
+                Arrays.asList(
+                        question(
+                                1,
+                                "question-001",
+                                "question-001-option-01",
+                                "A"
+                        ),
+                        question(
+                                2,
+                                "question-002",
+                                "question-002-option-02",
+                                "B"
+                        )
+                )
+        );
+        OmrAnswerKeyDefinition key = new OmrAnswerKeyDefinition(
+                "key-1",
+                3,
+                "Gabarito",
+                "omr-flex-ad-q002-r001",
+                3,
+                Arrays.asList(
+                        OmrAnswerKeyEntry.singleAnswer(
+                                "question-001",
+                                "question-001-option-01",
+                                1.0
+                        ),
+                        OmrAnswerKeyEntry.singleAnswer(
+                                "question-002",
+                                "question-002-option-01",
+                                1.0
+                        )
+                )
+        );
+        OmrGradingResult grading = new OmrReadingGrader().grade(
+                reading,
+                key
+        );
+        OmrGradingHistoryRecord history =
+                new OmrGradingHistoryRecord(
+                        "history-blocks",
+                        4_200L,
+                        participant.toStudentIdentity(),
+                        grading
+                );
+        assertTrue(histories.save(history));
+        assertTrue(attempts.save(new OmrAssessmentAttempt(
+                "attempt-blocks",
+                application.getApplicationId(),
+                participant.getStudentId(),
+                1,
+                history.getHistoryRecordId(),
+                history.getStoredAtEpochMillis(),
+                structure
+        )));
+    }
+
+    private static OmrQuestionResult question(
+            int position,
+            String questionId,
+            String optionId,
+            String label
+    ) {
+        return new OmrQuestionResult(
+                position,
+                questionId,
+                OmrQuestionResult.Status.SINGLE_MARK,
+                Collections.singletonList(
+                        new OmrQuestionResult.Option(optionId, label)
+                ),
+                0.99
+        );
+    }
+
     private Intent createIntent() {
+        return createIntent("application-1");
+    }
+
+    private Intent createIntent(String applicationId) {
         return OmrAssessmentResultActivity.createIsolatedStorageIntent(
                 context,
-                "application-1",
+                applicationId,
                 databaseName,
                 historyDatabaseName
         );

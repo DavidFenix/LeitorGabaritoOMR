@@ -18,6 +18,8 @@ import static org.junit.Assert.fail;
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
+import android.content.ContextWrapper;
+import android.content.SharedPreferences;
 import android.os.SystemClock;
 import android.view.View;
 import android.widget.Button;
@@ -38,6 +40,8 @@ import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
 import com.example.leitorgabaritoomr.domain.classroom.OmrClassEnrollment;
 import com.example.leitorgabaritoomr.domain.classroom.OmrClassGroup;
+import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
+import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyEntry;
 import com.example.leitorgabaritoomr.domain.student.OmrStudentProfile;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentApplicationBatchRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentApplicationRepository;
@@ -47,6 +51,7 @@ import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentRe
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteClassEnrollmentRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteClassGroupRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteStudentRepository;
+import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesAnswerKeyRepository;
 
 import org.junit.After;
 import org.junit.Before;
@@ -62,6 +67,7 @@ public final class OmrAssessmentApplicationListActivityInstrumentedTest {
 
     private Context applicationContext;
     private String databaseName;
+    private String answerKeyNamespace;
     private OmrSQLiteAssessmentRepository assessmentRepository;
     private OmrSQLiteClassGroupRepository classRepository;
     private OmrSQLiteClassEnrollmentRepository enrollmentRepository;
@@ -70,12 +76,14 @@ public final class OmrAssessmentApplicationListActivityInstrumentedTest {
     private OmrSQLiteAssessmentParticipantRepository participantRepository;
     private OmrSQLiteAssessmentAttemptRepository attemptRepository;
     private OmrSQLiteAssessmentApplicationBatchRepository batchRepository;
+    private OmrSharedPreferencesAnswerKeyRepository answerKeyRepository;
 
     @Before
     public void setUp() {
         applicationContext = ApplicationProvider.getApplicationContext();
         databaseName = "omr_application_list_activity_"
                 + UUID.randomUUID() + ".db";
+        answerKeyNamespace = "application_list_" + UUID.randomUUID();
         applicationContext.deleteDatabase(databaseName);
         assessmentRepository = new OmrSQLiteAssessmentRepository(
                 applicationContext, databaseName
@@ -104,10 +112,18 @@ public final class OmrAssessmentApplicationListActivityInstrumentedTest {
                 new OmrSQLiteAssessmentApplicationBatchRepository(
                         applicationContext, databaseName
                 );
+        answerKeyRepository = new OmrSharedPreferencesAnswerKeyRepository(
+                answerKeyContext()
+        );
     }
 
     @After
     public void tearDown() {
+        if (answerKeyRepository != null) {
+            answerKeyRepository.delete("key-1", 1);
+            answerKeyRepository.clearActive();
+            answerKeyRepository = null;
+        }
         if (batchRepository != null) {
             batchRepository.close();
         }
@@ -284,6 +300,9 @@ public final class OmrAssessmentApplicationListActivityInstrumentedTest {
             assertEquals(1, applicationRepository.loadAll().size());
             OmrAssessmentApplication application =
                     applicationRepository.loadAll().get(0);
+            assertTrue(application.hasFrozenStructure());
+            assertTrue(application.getFrozenStructureOrNull()
+                    .isLegacySingleBlock());
             assertEquals(2, participantRepository.loadForApplication(
                     application.getApplicationId()
             ).size());
@@ -375,7 +394,9 @@ public final class OmrAssessmentApplicationListActivityInstrumentedTest {
     private android.content.Intent createActivityIntent() {
         return OmrAssessmentApplicationListActivity
                 .createIsolatedStorageIntent(
-                        applicationContext, databaseName
+                        applicationContext,
+                        databaseName,
+                        answerKeyNamespace
                 );
     }
 
@@ -384,6 +405,14 @@ public final class OmrAssessmentApplicationListActivityInstrumentedTest {
                 "assessment-1", 2, "Avaliação bimestral",
                 "Matemática", "9º ano", "2º bimestre", 2026,
                 "key-1", 1
+        ));
+        answerKeyRepository.save(new OmrAnswerKeyDefinition(
+                "key-1", 1, "Gabarito", "layout-1", 1,
+                Collections.singletonList(
+                        OmrAnswerKeyEntry.singleAnswer(
+                                "question-1", "A", 1.0
+                        )
+                )
         ));
         classRepository.save(new OmrClassGroup(
                 "class-1", "9º A atual", "9º ano", 2026
@@ -423,6 +452,28 @@ public final class OmrAssessmentApplicationListActivityInstrumentedTest {
                         )
                 )
         );
+    }
+
+    private Context answerKeyContext() {
+        Context baseContext = applicationContext;
+        String suffix = "." + answerKeyNamespace;
+        return new ContextWrapper(baseContext) {
+            @Override
+            public Context getApplicationContext() {
+                return this;
+            }
+
+            @Override
+            public SharedPreferences getSharedPreferences(
+                    String name,
+                    int mode
+            ) {
+                return baseContext.getSharedPreferences(
+                        name + suffix,
+                        mode
+                );
+            }
+        };
     }
 
     private static ListView listView(Activity activity) {

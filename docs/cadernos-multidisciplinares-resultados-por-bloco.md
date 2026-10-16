@@ -87,7 +87,7 @@ NAT-1;1;3;BIO;Ciencias da Natureza;BIO;Biologia;15
 `componente` e a quantidade positiva de `itens` sao obrigatorios. O nucleo
 estabelece a operacao validada e transacional usada pelas telas.
 
-### 3B1. Cadastro de blocos nas telas (checkpoint atual)
+### 3B1. Cadastro de blocos nas telas (concluido)
 
 - cada prova informa se a estrutura curricular ainda precisa ser configurada;
 - editor manual permite ordenar componentes, informar area opcional e definir
@@ -99,11 +99,35 @@ estabelece a operacao validada e transacional usada pelas telas.
 - CSV de blocos possui previa e importacao transacional, sem gravacao parcial;
 - pesquisa de provas tambem localiza area, codigo e nome dos componentes.
 
-### 3B2. Resultados e congelamento (proximo checkpoint)
+### 3B2. Resultados e congelamento (concluido)
 
-- apresentacao por componente curricular;
-- estados explicitos para pendente, ausente, inconsistente, em revisao e zero;
-- congelamento do detalhamento junto da revisao da correcao.
+- toda aplicacao nova fotografa a estrutura exata da prova no momento em que
+  a chamada e congelada, inclusive quando a prova usa o bloco unico legado;
+- toda nova revisao de correcao grava novamente essa estrutura junto do
+  vinculo com o historico OMR;
+- o resultado por componente e reproduzido pela combinacao imutavel entre a
+  estrutura congelada na revisao e o resultado completo guardado no historico;
+- alteracoes ou publicacoes posteriores de blocos nao recalculam silenciosamente
+  aplicacoes e correcoes ja realizadas;
+- os payloads binarios de aplicacao e tentativa passaram para o formato v2,
+  mantendo leitura integral dos payloads v1 sem exigir alteracao no esquema
+  SQLite nem reinstalacao do aplicativo;
+- registros v1, que nao possuem fotografia curricular, continuam usando um
+  unico bloco `Resultado geral`, com a quantidade historica de questoes;
+- a tela preserva a nota geral existente e acrescenta, para cada componente,
+  area e codigo opcionais, acertos, quantidade de itens, nota calculada, nota
+  maxima e indicacao de resultado provisorio ou zero;
+- a busca dos resultados tambem encontra area, codigo e nome do componente;
+- os estados operacionais sao distintos: `PENDING` (ainda nao corrigido),
+  `ABSENT` (a tentativa referencia um historico que nao foi localizado),
+  `INCONSISTENT` (identidade ou estrutura incompativel), `IN_REVIEW`
+  (correcao ainda provisoria), `ZERO` (nota zero real) e `FINAL`;
+- ausencia de historico, inconsistencia e nota zero nunca sao convertidas uma
+  na outra; a tela informa o caso exato e o resumo contabiliza os problemas de
+  integridade separadamente dos pendentes;
+- falha de estrutura fecha apenas o detalhamento por bloco: quando o historico
+  geral e valido, sua nota total continua visivel para diagnostico e nao e
+  descartada.
 
 ### 4. Exportacoes e SIGE
 
@@ -112,10 +136,12 @@ estabelece a operacao validada e transacional usada pelas telas.
 - campo opcional de nota para o SIGE, preservando a nota calculada;
 - politica de nota identificada em toda exportacao auditavel.
 
-## Fora dos checkpoints 1, 2, 3A e 3B1
+## Fora dos checkpoints 1, 2, 3A, 3B1 e 3B2
 
-Estes checkpoints ainda nao mudam exportacoes, cartao-resposta,
-reconhecimento OMR ou resultados historicos. O CSV de blocos e adicional e
-nao altera a interpretacao do CSV de provas nem de arquivos antigos. A versao
-6 do banco apenas acrescenta as novas tabelas e preserva os registros
-historicos existentes.
+Estes checkpoints ainda nao mudam as colunas das exportacoes, o
+cartao-resposta nem o reconhecimento OMR. O CSV de blocos e adicional e nao
+altera a interpretacao do CSV de provas nem de arquivos antigos. A versao 6
+do banco apenas acrescenta as tabelas de estruturas; o checkpoint 3B2 evolui
+os payloads das linhas existentes, sem subir outra vez a versao do banco. CSV,
+XLSX e PDF por componente, bem como a futura nota opcional de lancamento no
+SIGE, permanecem reservados ao checkpoint 4.

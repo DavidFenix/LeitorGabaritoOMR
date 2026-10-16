@@ -4,6 +4,7 @@ import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentAttempt;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
 import com.example.leitorgabaritoomr.domain.history.OmrGradingHistoryRecord;
 import com.example.leitorgabaritoomr.domain.student.OmrStudentIdentity;
 
@@ -26,6 +27,48 @@ public final class OmrAssessmentAttemptFactory {
             OmrAssessmentParticipant participant,
             OmrGradingHistoryRecord historyRecord,
             List<OmrAssessmentAttempt> existingAttempts
+    ) {
+        if (application == null || historyRecord == null) {
+            return create(
+                    attemptId,
+                    application,
+                    assessment,
+                    participant,
+                    historyRecord,
+                    existingAttempts,
+                    null
+            );
+        }
+
+        OmrAssessmentStructure effectiveStructure = application
+                .getFrozenStructureOrNull();
+        if (effectiveStructure == null) {
+            effectiveStructure = OmrAssessmentStructure.legacySingleBlock(
+                    application.getAssessmentId(),
+                    application.getAssessmentVersion(),
+                    historyRecord.getGradingResult().getQuestionCount()
+            );
+        }
+
+        return create(
+                attemptId,
+                application,
+                assessment,
+                participant,
+                historyRecord,
+                existingAttempts,
+                effectiveStructure
+        );
+    }
+
+    public OmrAssessmentAttempt create(
+            String attemptId,
+            OmrAssessmentApplication application,
+            OmrAssessmentDefinition assessment,
+            OmrAssessmentParticipant participant,
+            OmrGradingHistoryRecord historyRecord,
+            List<OmrAssessmentAttempt> existingAttempts,
+            OmrAssessmentStructure frozenStructure
     ) {
         String normalizedAttemptId = requireText(
                 "attemptId",
@@ -62,6 +105,12 @@ public final class OmrAssessmentAttemptFactory {
             );
         }
 
+        if (frozenStructure == null) {
+            throw new IllegalArgumentException(
+                    "A estrutura usada na correção é obrigatória."
+            );
+        }
+
         validateAssessmentApplication(
                 assessment,
                 application
@@ -75,6 +124,11 @@ public final class OmrAssessmentAttemptFactory {
                 historyRecord
         );
         validateAnswerKey(
+                assessment,
+                historyRecord
+        );
+        validateStructure(
+                frozenStructure,
                 assessment,
                 historyRecord
         );
@@ -92,8 +146,31 @@ public final class OmrAssessmentAttemptFactory {
                 participant.getStudentId(),
                 nextRevision,
                 historyRecord.getHistoryRecordId(),
-                historyRecord.getStoredAtEpochMillis()
+                historyRecord.getStoredAtEpochMillis(),
+                frozenStructure
         );
+    }
+
+    private static void validateStructure(
+            OmrAssessmentStructure structure,
+            OmrAssessmentDefinition assessment,
+            OmrGradingHistoryRecord historyRecord
+    ) {
+        if (!structure.hasAssessmentIdentity(
+                assessment.getAssessmentId(),
+                assessment.getVersion()
+        )) {
+            throw new IllegalArgumentException(
+                    "A estrutura não pertence à versão da prova."
+            );
+        }
+
+        if (structure.getQuestionCount()
+                != historyRecord.getGradingResult().getQuestionCount()) {
+            throw new IllegalArgumentException(
+                    "A estrutura não possui a quantidade de questões corrigida."
+            );
+        }
     }
 
     private static String requireText(

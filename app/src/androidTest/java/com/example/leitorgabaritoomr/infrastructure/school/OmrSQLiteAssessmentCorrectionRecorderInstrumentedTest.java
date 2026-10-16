@@ -75,6 +75,12 @@ OmrSQLiteAssessmentCorrectionRecorderInstrumentedTest {
         assertEquals(2, second.getRevision());
         assertEquals("attempt:history-1", first.getAttemptId());
         assertEquals("attempt:history-2", second.getAttemptId());
+        assertTrue(first.hasFrozenStructure());
+        assertEquals(
+                correctionContext().getStructure(),
+                first.getFrozenStructureOrNull()
+        );
+        assertTrue(second.hasFrozenStructure());
 
         List<OmrAssessmentAttempt> stored =
                 attemptRepository.loadForParticipant(

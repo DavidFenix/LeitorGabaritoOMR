@@ -73,7 +73,8 @@ public final class OmrAssessmentCorrectionRecorder {
                 context.getAssessment(),
                 context.getParticipant(),
                 historyRecord,
-                applicationAttempts
+                applicationAttempts,
+                context.getStructure()
         );
 
         try {
@@ -151,6 +152,15 @@ public final class OmrAssessmentCorrectionRecorder {
                 != historyRecord.getStoredAtEpochMillis()) {
             throw new IllegalStateException(
                     "A tentativa existente possui outro instante de registro."
+            );
+        }
+
+        if (existing.hasFrozenStructure()
+                && !existing.getFrozenStructureOrNull().equals(
+                context.getStructure()
+        )) {
+            throw new IllegalStateException(
+                    "A tentativa existente utiliza outra estrutura curricular."
             );
         }
     }

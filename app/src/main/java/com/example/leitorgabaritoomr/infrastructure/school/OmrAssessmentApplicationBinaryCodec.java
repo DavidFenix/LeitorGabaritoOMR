@@ -1,6 +1,7 @@
 package com.example.leitorgabaritoomr.infrastructure.school;
 
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -17,7 +18,8 @@ import java.util.zip.CRC32;
 public final class OmrAssessmentApplicationBinaryCodec {
 
     private static final int MAGIC = 0x4F4D5249;
-    private static final int FORMAT_VERSION = 1;
+    private static final int LEGACY_FORMAT_VERSION = 1;
+    private static final int FORMAT_VERSION = 2;
 
     private static final int HEADER_BYTE_COUNT =
             Integer.BYTES
@@ -93,7 +95,8 @@ public final class OmrAssessmentApplicationBinaryCodec {
 
             int formatVersion = input.readInt();
 
-            if (formatVersion != FORMAT_VERSION) {
+            if (formatVersion != LEGACY_FORMAT_VERSION
+                    && formatVersion != FORMAT_VERSION) {
                 throw new IllegalArgumentException(
                         "Versão de aplicação armazenada não suportada: "
                                 + formatVersion
@@ -125,7 +128,7 @@ public final class OmrAssessmentApplicationBinaryCodec {
                 throw invalidPayload(null);
             }
 
-            return decodeBody(body);
+            return decodeBody(body, formatVersion);
 
         } catch (EOFException exception) {
             throw invalidPayload(exception);
@@ -159,6 +162,16 @@ public final class OmrAssessmentApplicationBinaryCodec {
             output.writeInt(application.getAssessmentVersion());
             writeText(output, application.getClassGroupId());
             output.writeLong(application.getCreatedAtEpochMillis());
+            OmrAssessmentStructure structure = application
+                    .getFrozenStructureOrNull();
+            output.writeByte(structure == null ? 0 : 1);
+            if (structure != null) {
+                writeNestedPayload(
+                        output,
+                        new OmrAssessmentStructureBinaryCodec()
+                                .encode(structure)
+                );
+            }
             output.flush();
 
         } catch (IOException exception) {
@@ -172,20 +185,40 @@ public final class OmrAssessmentApplicationBinaryCodec {
     }
 
     private static OmrAssessmentApplication decodeBody(
-            byte[] body
+            byte[] body,
+            int formatVersion
     ) throws IOException {
         try (DataInputStream input =
                      new DataInputStream(
                              new ByteArrayInputStream(body)
                      )) {
 
+            String applicationId = readText(input);
+            String assessmentId = readText(input);
+            int assessmentVersion = readPositiveInt(input);
+            String classGroupId = readText(input);
+            long createdAtEpochMillis = readPositiveLong(input);
+            OmrAssessmentStructure structure = null;
+
+            if (formatVersion >= FORMAT_VERSION) {
+                int marker = input.readUnsignedByte();
+                if (marker > 1) {
+                    throw invalidPayload(null);
+                }
+                if (marker == 1) {
+                    structure = new OmrAssessmentStructureBinaryCodec()
+                            .decode(readNestedPayload(input));
+                }
+            }
+
             OmrAssessmentApplication application =
                     new OmrAssessmentApplication(
-                            readText(input),
-                            readText(input),
-                            readPositiveInt(input),
-                            readText(input),
-                            readPositiveLong(input)
+                            applicationId,
+                            assessmentId,
+                            assessmentVersion,
+                            classGroupId,
+                            createdAtEpochMillis,
+                            structure
                     );
 
             if (input.read() != -1) {
@@ -194,6 +227,33 @@ public final class OmrAssessmentApplicationBinaryCodec {
 
             return application;
         }
+    }
+
+    private static void writeNestedPayload(
+            DataOutputStream output,
+            byte[] payload
+    ) throws IOException {
+        if (payload == null
+                || payload.length == 0
+                || payload.length > MAX_BODY_BYTES) {
+            throw new IllegalArgumentException(
+                    "A estrutura congelada excede o tamanho permitido."
+            );
+        }
+        output.writeInt(payload.length);
+        output.write(payload);
+    }
+
+    private static byte[] readNestedPayload(
+            DataInputStream input
+    ) throws IOException {
+        int byteCount = input.readInt();
+        if (byteCount <= 0 || byteCount > MAX_BODY_BYTES) {
+            throw invalidPayload(null);
+        }
+        byte[] bytes = new byte[byteCount];
+        input.readFully(bytes);
+        return bytes;
     }
 
     private static void writeText(

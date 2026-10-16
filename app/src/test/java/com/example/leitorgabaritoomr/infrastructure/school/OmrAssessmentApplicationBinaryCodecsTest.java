@@ -8,17 +8,23 @@ import static org.junit.Assert.fail;
 
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
 
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.zip.CRC32;
 
 public final class OmrAssessmentApplicationBinaryCodecsTest {
 
     private static final int APPLICATION_MAGIC = 0x4F4D5249;
     private static final int PARTICIPANT_MAGIC = 0x4F4D5250;
-    private static final int FORMAT_VERSION = 1;
+    private static final int APPLICATION_FORMAT_VERSION = 2;
+    private static final int PARTICIPANT_FORMAT_VERSION = 1;
     private static final int HEADER_BYTE_COUNT = 20;
 
     private final OmrAssessmentApplicationBinaryCodec applicationCodec =
@@ -44,6 +50,38 @@ public final class OmrAssessmentApplicationBinaryCodecsTest {
         assertCompleteApplication(original, restored);
         assertEquals("application-001", restored.getApplicationId());
         assertEquals("class-001", restored.getClassGroupId());
+    }
+
+    @Test
+    public void applicationRoundTripPreservesFrozenStructure() {
+        OmrAssessmentStructure structure =
+                OmrAssessmentStructure.legacySingleBlock(
+                        "assessment-001", 2, 45
+                );
+        OmrAssessmentApplication original =
+                new OmrAssessmentApplication(
+                        "application-001", "assessment-001", 2,
+                        "class-001", 1_800_000_000_000L, structure
+                );
+
+        OmrAssessmentApplication restored = applicationCodec.decode(
+                applicationCodec.encode(original)
+        );
+
+        assertTrue(restored.hasFrozenStructure());
+        assertEquals(structure, restored.getFrozenStructureOrNull());
+    }
+
+    @Test
+    public void applicationCodecReadsLegacyV1WithoutFrozenStructure()
+            throws Exception {
+        OmrAssessmentApplication restored = applicationCodec.decode(
+                legacyApplicationPayload()
+        );
+
+        assertEquals("application-legacy", restored.getApplicationId());
+        assertEquals("assessment-legacy", restored.getAssessmentId());
+        assertFalse(restored.hasFrozenStructure());
     }
 
     @Test
@@ -120,7 +158,8 @@ public final class OmrAssessmentApplicationBinaryCodecsTest {
     public void applicationPayloadContainsEnvelopeAndBody() {
         assertEnvelope(
                 applicationCodec.encode(application()),
-                APPLICATION_MAGIC
+                APPLICATION_MAGIC,
+                APPLICATION_FORMAT_VERSION
         );
     }
 
@@ -128,7 +167,8 @@ public final class OmrAssessmentApplicationBinaryCodecsTest {
     public void participantPayloadContainsEnvelopeAndBody() {
         assertEnvelope(
                 participantCodec.encode(participant()),
-                PARTICIPANT_MAGIC
+                PARTICIPANT_MAGIC,
+                PARTICIPANT_FORMAT_VERSION
         );
     }
 
@@ -304,11 +344,15 @@ public final class OmrAssessmentApplicationBinaryCodecsTest {
         ));
     }
 
-    private void assertEnvelope(byte[] payload, int expectedMagic) {
+    private void assertEnvelope(
+            byte[] payload,
+            int expectedMagic,
+            int expectedVersion
+    ) {
         ByteBuffer buffer = ByteBuffer.wrap(payload);
 
         assertEquals(expectedMagic, buffer.getInt());
-        assertEquals(FORMAT_VERSION, buffer.getInt());
+        assertEquals(expectedVersion, buffer.getInt());
 
         int bodySize = buffer.getInt();
         long checksum = buffer.getLong();
@@ -319,6 +363,38 @@ public final class OmrAssessmentApplicationBinaryCodecsTest {
                 bodySize
         );
         assertTrue(checksum >= 0L);
+    }
+
+    private byte[] legacyApplicationPayload() throws Exception {
+        ByteArrayOutputStream bodyBytes = new ByteArrayOutputStream();
+        try (DataOutputStream body = new DataOutputStream(bodyBytes)) {
+            writeLegacyText(body, "application-legacy");
+            writeLegacyText(body, "assessment-legacy");
+            body.writeInt(4);
+            writeLegacyText(body, "class-legacy");
+            body.writeLong(1_800_000_000_000L);
+        }
+        byte[] bytes = bodyBytes.toByteArray();
+        CRC32 checksum = new CRC32();
+        checksum.update(bytes);
+        ByteArrayOutputStream payloadBytes = new ByteArrayOutputStream();
+        try (DataOutputStream payload = new DataOutputStream(payloadBytes)) {
+            payload.writeInt(APPLICATION_MAGIC);
+            payload.writeInt(1);
+            payload.writeInt(bytes.length);
+            payload.writeLong(checksum.getValue());
+            payload.write(bytes);
+        }
+        return payloadBytes.toByteArray();
+    }
+
+    private static void writeLegacyText(
+            DataOutputStream output,
+            String value
+    ) throws Exception {
+        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+        output.writeInt(bytes.length);
+        output.write(bytes);
     }
 
     private byte[] validApplicationPayload() {
@@ -371,6 +447,10 @@ public final class OmrAssessmentApplicationBinaryCodecsTest {
         assertEquals(
                 expected.getCreatedAtEpochMillis(),
                 actual.getCreatedAtEpochMillis()
+        );
+        assertEquals(
+                expected.getFrozenStructureOrNull(),
+                actual.getFrozenStructureOrNull()
         );
     }
 

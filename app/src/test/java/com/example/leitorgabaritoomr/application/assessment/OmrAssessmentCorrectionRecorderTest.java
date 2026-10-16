@@ -10,6 +10,9 @@ import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentAttempt;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlock;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
+import com.example.leitorgabaritoomr.domain.assessment.OmrProportionalScoringPolicy;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyEntry;
 import com.example.leitorgabaritoomr.domain.grading.OmrGradingResult;
@@ -61,6 +64,11 @@ public final class OmrAssessmentCorrectionRecorderTest {
         assertEquals(1, attempt.getRevision());
         assertEquals("history-1", attempt.getHistoryRecordId());
         assertEquals(2_000L, attempt.getRecordedAtEpochMillis());
+        assertTrue(attempt.hasFrozenStructure());
+        assertEquals(
+                context().getStructure(),
+                attempt.getFrozenStructureOrNull()
+        );
         assertEquals(1, repository.saveCalls);
     }
 
@@ -206,6 +214,53 @@ public final class OmrAssessmentCorrectionRecorderTest {
                         "key-1", 3, 2_000L
                 )
         ));
+    }
+
+    @Test
+    public void rejectsExistingAttemptWithAnotherFrozenStructure() {
+        FakeAttempts repository = new FakeAttempts();
+        OmrAssessmentStructure anotherStructure =
+                new OmrAssessmentStructure(
+                        "assessment-1",
+                        2,
+                        1,
+                        Collections.singletonList(
+                                new OmrAssessmentBlock(
+                                        "custom-block",
+                                        1,
+                                        "Ciências da Natureza",
+                                        "QUI",
+                                        "Química",
+                                        1,
+                                        1,
+                                        OmrProportionalScoringPolicy
+                                                .correctQuestionsToTenV1()
+                                )
+                        )
+                );
+        repository.records.add(new OmrAssessmentAttempt(
+                "attempt:history-1",
+                "application-1",
+                "student-1",
+                1,
+                "history-1",
+                2_000L,
+                anotherStructure
+        ));
+
+        expectIllegalState("outra estrutura", () ->
+                recorder(repository).record(
+                        context(),
+                        history(
+                                "history-1",
+                                "reading-1",
+                                student(),
+                                "key-1",
+                                3,
+                                2_000L
+                        )
+                )
+        );
     }
 
     @Test

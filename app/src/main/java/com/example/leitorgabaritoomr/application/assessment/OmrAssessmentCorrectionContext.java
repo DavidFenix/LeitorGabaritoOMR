@@ -3,6 +3,7 @@ package com.example.leitorgabaritoomr.application.assessment;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.domain.student.OmrStudentIdentity;
 
@@ -24,6 +25,7 @@ public final class OmrAssessmentCorrectionContext
     private final OmrAssessmentDefinition assessment;
     private final OmrAssessmentParticipant participant;
     private final OmrAnswerKeyDefinition answerKey;
+    private final OmrAssessmentStructure structure;
 
     public OmrAssessmentCorrectionContext(
             OmrAssessmentApplication application,
@@ -67,10 +69,32 @@ public final class OmrAssessmentCorrectionContext
             );
         }
 
+        OmrAssessmentStructure effectiveStructure = application
+                .getFrozenStructureOrNull();
+
+        if (effectiveStructure == null) {
+            effectiveStructure = OmrAssessmentStructure.legacySingleBlock(
+                    assessment.getAssessmentId(),
+                    assessment.getVersion(),
+                    answerKey.getQuestionCount()
+            );
+        }
+
+        if (!effectiveStructure.hasAssessmentIdentity(
+                assessment.getAssessmentId(),
+                assessment.getVersion()
+        ) || effectiveStructure.getQuestionCount()
+                != answerKey.getQuestionCount()) {
+            throw new IllegalArgumentException(
+                    "A estrutura congelada não corresponde ao gabarito da prova."
+            );
+        }
+
         this.application = application;
         this.assessment = assessment;
         this.participant = participant;
         this.answerKey = answerKey;
+        this.structure = effectiveStructure;
     }
 
     public OmrAssessmentApplication getApplication() {
@@ -87,6 +111,29 @@ public final class OmrAssessmentCorrectionContext
 
     public OmrAnswerKeyDefinition getAnswerKey() {
         return answerKey;
+    }
+
+    public OmrAssessmentStructure getStructure() {
+        if (structure != null) {
+            return structure;
+        }
+
+        /*
+         * Contextos serializados antes do checkpoint 3B2 não possuíam o
+         * campo structure. O Java os restaura com null; reconstruir aqui o
+         * mesmo bloco legado preserva Intents pendentes e restaurações de
+         * processo sem permitir que uma estrutura publicada depois altere a
+         * correção antiga.
+         */
+        OmrAssessmentStructure applicationStructure = application
+                .getFrozenStructureOrNull();
+        return applicationStructure != null
+                ? applicationStructure
+                : OmrAssessmentStructure.legacySingleBlock(
+                assessment.getAssessmentId(),
+                assessment.getVersion(),
+                answerKey.getQuestionCount()
+        );
     }
 
     public OmrStudentIdentity getStudentIdentity() {

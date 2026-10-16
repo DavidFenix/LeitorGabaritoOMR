@@ -19,6 +19,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.List;
 
@@ -78,6 +79,8 @@ public final class OmrAssessmentCorrectionResolverTest {
         assertSame(fixture.assessment, context.getAssessment());
         assertSame(fixture.participant, context.getParticipant());
         assertSame(fixture.answerKey, context.getAnswerKey());
+        assertTrue(context.getStructure().isLegacySingleBlock());
+        assertEquals(1, context.getStructure().getQuestionCount());
         assertEquals("student-1", context.getStudentIdentity().getStudentId());
         assertTrue(context.belongsTo(" application-1 ", " student-1 "));
     }
@@ -192,6 +195,32 @@ public final class OmrAssessmentCorrectionResolverTest {
                 restored.getParticipant().getStudentId());
         assertEquals("key-1", restored.getAnswerKey().getId());
         assertEquals(3, restored.getAnswerKey().getVersion());
+        assertEquals(
+                original.getStructure(),
+                restored.getStructure()
+        );
+    }
+
+    @Test
+    public void contextRestoredFromLegacySerializationRebuildsStructure()
+            throws Exception {
+        OmrAssessmentCorrectionContext context =
+                new Fixture().resolver().resolve(
+                        "application-1",
+                        "student-1"
+                );
+
+        Field structureField = OmrAssessmentCorrectionContext.class
+                .getDeclaredField("structure");
+        structureField.setAccessible(true);
+        structureField.set(context, null);
+
+        assertNotNull(context.getStructure());
+        assertTrue(context.getStructure().isLegacySingleBlock());
+        assertEquals(1, context.getStructure().getQuestionCount());
+        assertEquals("assessment-1", context.getStructure()
+                .getAssessmentId());
+        assertEquals(2, context.getStructure().getAssessmentVersion());
     }
 
     private static OmrAnswerKeyDefinition answerKey(String id, int version) {

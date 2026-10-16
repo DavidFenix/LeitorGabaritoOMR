@@ -21,6 +21,7 @@ public final class OmrAssessmentApplication
     private final int assessmentVersion;
     private final String classGroupId;
     private final long createdAtEpochMillis;
+    private final OmrAssessmentStructure frozenStructure;
 
     public OmrAssessmentApplication(
             String applicationId,
@@ -28,6 +29,29 @@ public final class OmrAssessmentApplication
             int assessmentVersion,
             String classGroupId,
             long createdAtEpochMillis
+    ) {
+        this(
+                applicationId,
+                assessmentId,
+                assessmentVersion,
+                classGroupId,
+                createdAtEpochMillis,
+                null
+        );
+    }
+
+    /**
+     * Cria uma aplicação preservando a estrutura curricular que existia no
+     * instante da aplicação. O valor nulo só representa registros legados,
+     * gravados antes de o congelamento ter sido introduzido.
+     */
+    public OmrAssessmentApplication(
+            String applicationId,
+            String assessmentId,
+            int assessmentVersion,
+            String classGroupId,
+            long createdAtEpochMillis,
+            OmrAssessmentStructure frozenStructure
     ) {
         this.applicationId = requireText(
                 "applicationId",
@@ -57,6 +81,18 @@ public final class OmrAssessmentApplication
 
         this.assessmentVersion = assessmentVersion;
         this.createdAtEpochMillis = createdAtEpochMillis;
+
+        if (frozenStructure != null
+                && !frozenStructure.hasAssessmentIdentity(
+                this.assessmentId,
+                this.assessmentVersion
+        )) {
+            throw new IllegalArgumentException(
+                    "A estrutura congelada não pertence à versão da prova."
+            );
+        }
+
+        this.frozenStructure = frozenStructure;
     }
 
     private static String requireText(
@@ -90,6 +126,14 @@ public final class OmrAssessmentApplication
 
     public long getCreatedAtEpochMillis() {
         return createdAtEpochMillis;
+    }
+
+    public boolean hasFrozenStructure() {
+        return frozenStructure != null;
+    }
+
+    public OmrAssessmentStructure getFrozenStructureOrNull() {
+        return frozenStructure;
     }
 
     public boolean hasApplicationId(

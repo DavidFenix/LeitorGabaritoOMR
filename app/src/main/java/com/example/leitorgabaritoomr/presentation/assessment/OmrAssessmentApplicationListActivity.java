@@ -1,7 +1,9 @@
 package com.example.leitorgabaritoomr.presentation.assessment;
 
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -32,9 +34,11 @@ import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentAp
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentAttemptRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentParticipantRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentRepository;
+import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentStructureRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteClassEnrollmentRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteClassGroupRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteStudentRepository;
+import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesAnswerKeyRepository;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -77,6 +81,8 @@ public final class OmrAssessmentApplicationListActivity
     private OmrSQLiteAssessmentParticipantRepository participantRepository;
     private OmrSQLiteAssessmentAttemptRepository attemptRepository;
     private OmrSQLiteAssessmentApplicationBatchRepository batchRepository;
+    private OmrSQLiteAssessmentStructureRepository structureRepository;
+    private OmrSharedPreferencesAnswerKeyRepository answerKeyRepository;
     private OmrAssessmentApplicationRegistrationService registrationService;
     private OmrAssessmentApplicationCsvParser csvParser;
     private OmrAssessmentApplicationListViewBinder viewBinder;
@@ -172,6 +178,8 @@ public final class OmrAssessmentApplicationListActivity
                     new OmrSQLiteAssessmentAttemptRepository(this);
             batchRepository =
                     new OmrSQLiteAssessmentApplicationBatchRepository(this);
+            structureRepository =
+                    new OmrSQLiteAssessmentStructureRepository(this);
         } else {
             assessmentRepository = new OmrSQLiteAssessmentRepository(
                     this, databaseName
@@ -202,7 +210,16 @@ public final class OmrAssessmentApplicationListActivity
                     new OmrSQLiteAssessmentApplicationBatchRepository(
                             this, databaseName
                     );
+            structureRepository =
+                    new OmrSQLiteAssessmentStructureRepository(
+                            this, databaseName
+                    );
         }
+
+        answerKeyRepository =
+                new OmrSharedPreferencesAnswerKeyRepository(
+                        createAnswerKeyRepositoryContext()
+                );
 
         registrationService =
                 new OmrAssessmentApplicationRegistrationService(
@@ -212,7 +229,9 @@ public final class OmrAssessmentApplicationListActivity
                         studentRepository,
                         applicationRepository,
                         participantRepository,
-                        batchRepository
+                        batchRepository,
+                        structureRepository,
+                        answerKeyRepository
                 );
         csvParser = new OmrAssessmentApplicationCsvParser();
         backgroundExecutor = Executors.newSingleThreadExecutor();
@@ -774,6 +793,35 @@ public final class OmrAssessmentApplicationListActivity
                 : value.trim();
     }
 
+    private Context createAnswerKeyRepositoryContext() {
+        String namespace = normalizedAnswerKeyNamespace();
+
+        if (namespace == null) {
+            return this;
+        }
+
+        Context baseContext = this;
+        String suffix = "." + namespace;
+
+        return new ContextWrapper(baseContext) {
+            @Override
+            public Context getApplicationContext() {
+                return this;
+            }
+
+            @Override
+            public SharedPreferences getSharedPreferences(
+                    String name,
+                    int mode
+            ) {
+                return baseContext.getSharedPreferences(
+                        name + suffix,
+                        mode
+                );
+            }
+        };
+    }
+
     private void dismissCsvPreviewDialog() {
         if (csvPreviewDialog != null) {
             csvPreviewDialog.dismiss();
@@ -817,6 +865,11 @@ public final class OmrAssessmentApplicationListActivity
     }
 
     private void closeRepositories() {
+        answerKeyRepository = null;
+        if (structureRepository != null) {
+            structureRepository.close();
+            structureRepository = null;
+        }
         if (batchRepository != null) {
             batchRepository.close();
             batchRepository = null;

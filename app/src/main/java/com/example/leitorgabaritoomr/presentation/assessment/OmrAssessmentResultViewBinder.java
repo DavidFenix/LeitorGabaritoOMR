@@ -16,6 +16,8 @@ import androidx.annotation.IdRes;
 
 import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentResultReport;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlock;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlockResult;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.text.DateFormat;
@@ -160,8 +162,8 @@ public final class OmrAssessmentResultViewBinder {
                 ),
                 context.getResources().getQuantityString(
                         R.plurals.omr_assessment_result_issue_summary,
-                        pluralSelector(report.getMissingHistoryCount()),
-                        report.getMissingHistoryCount()
+                        pluralSelector(report.getDataIntegrityIssueCount()),
+                        report.getDataIntegrityIssueCount()
                 )
         ));
         average.setText(context.getString(
@@ -329,6 +331,9 @@ public final class OmrAssessmentResultViewBinder {
             TextView gradeView = requireView(item,
                     R.id.textOmrAssessmentResultItemGrade,
                     TextView.class);
+            TextView blocksView = requireView(item,
+                    R.id.textOmrAssessmentResultItemBlocks,
+                    TextView.class);
             TextView statusView = requireView(item,
                     R.id.textOmrAssessmentResultItemStatus,
                     TextView.class);
@@ -350,30 +355,120 @@ public final class OmrAssessmentResultViewBinder {
                         row.getPossiblePoints(),
                         row.getAwardedPercentage()
                 ));
-                statusView.setText(context.getString(
-                        row.requiresReview()
-                                ? R.string.omr_assessment_result_review
-                                : R.string.omr_assessment_result_corrected,
-                        row.getRevision(),
-                        dateFormat.format(new Date(
-                                row.getRecordedAtEpochMillis()))
-                ));
-                statusView.setTextColor(row.requiresReview()
-                        ? 0xFFB45309 : 0xFF047857);
-            } else if (row.getStatus()
-                    == OmrAssessmentResultReport.Status.MISSING_HISTORY) {
-                gradeView.setText(R.string.omr_assessment_result_no_grade);
-                statusView.setText(context.getString(
-                        R.string.omr_assessment_result_missing_history,
-                        row.getRevision()
-                ));
-                statusView.setTextColor(0xFFB91C1C);
             } else {
                 gradeView.setText(R.string.omr_assessment_result_no_grade);
-                statusView.setText(R.string.omr_assessment_result_pending);
-                statusView.setTextColor(0xFFB45309);
+            }
+
+            if (row.hasBlockBreakdown()) {
+                blocksView.setVisibility(View.VISIBLE);
+                blocksView.setText(formatBlockBreakdown(row));
+            } else {
+                blocksView.setVisibility(View.GONE);
+                blocksView.setText("");
+            }
+
+            String recordedAt = row.getRecordedAtEpochMillis() <= 0L
+                    ? ""
+                    : dateFormat.format(new Date(
+                    row.getRecordedAtEpochMillis()
+            ));
+            switch (row.getDetailStatus()) {
+                case FINAL:
+                    statusView.setText(context.getString(
+                            R.string.omr_assessment_result_corrected,
+                            row.getRevision(),
+                            recordedAt
+                    ));
+                    statusView.setTextColor(0xFF047857);
+                    break;
+                case ZERO:
+                    statusView.setText(context.getString(
+                            R.string.omr_assessment_result_zero,
+                            row.getRevision(),
+                            recordedAt
+                    ));
+                    statusView.setTextColor(0xFF047857);
+                    break;
+                case IN_REVIEW:
+                    statusView.setText(context.getString(
+                            R.string.omr_assessment_result_review,
+                            row.getRevision(),
+                            recordedAt
+                    ));
+                    statusView.setTextColor(0xFFB45309);
+                    break;
+                case ABSENT:
+                    gradeView.setText(R.string.omr_assessment_result_no_grade);
+                    statusView.setText(context.getString(
+                            R.string.omr_assessment_result_missing_history,
+                            row.getRevision()
+                    ));
+                    statusView.setTextColor(0xFFB91C1C);
+                    break;
+                case INCONSISTENT:
+                    statusView.setText(context.getString(
+                            R.string.omr_assessment_result_inconsistent,
+                            row.getRevision()
+                    ));
+                    statusView.setTextColor(0xFFB91C1C);
+                    break;
+                case PENDING:
+                    gradeView.setText(R.string.omr_assessment_result_no_grade);
+                    statusView.setText(
+                            R.string.omr_assessment_result_pending
+                    );
+                    statusView.setTextColor(0xFFB45309);
+                    break;
+                default:
+                    throw new IllegalStateException(
+                            "Situação de resultado desconhecida."
+                    );
             }
             return item;
+        }
+
+        private String formatBlockBreakdown(
+                OmrAssessmentResultReport.Row row
+        ) {
+            StringBuilder text = new StringBuilder();
+            for (OmrAssessmentBlockResult result
+                    : row.getBlockBreakdownOrNull().getBlockResults()) {
+                if (text.length() > 0) {
+                    text.append('\n');
+                }
+                OmrAssessmentBlock block = result.getBlock();
+                if (block.hasAreaName()) {
+                    text.append(block.getAreaName()).append(" • ");
+                }
+                if (block.hasComponentCode()) {
+                    text.append(block.getComponentCode()).append(" — ");
+                }
+                text.append(block.getComponentName())
+                        .append(": ")
+                        .append(result.getCorrectCount())
+                        .append('/')
+                        .append(result.getQuestionCount())
+                        .append(" acertos • nota ")
+                        .append(localizedNumber(
+                                result.getCalculatedScore().toPlainString()
+                        ))
+                        .append('/')
+                        .append(localizedNumber(
+                                result.getMaximumScore().toPlainString()
+                        ));
+                if (result.requiresReview()) {
+                    text.append(" • provisória");
+                } else if (result.getCalculatedScore().signum() == 0) {
+                    text.append(" • zero");
+                }
+            }
+            return text.toString();
+        }
+
+        private String localizedNumber(String value) {
+            return Locale.getDefault().getLanguage().equals("pt")
+                    ? value.replace('.', ',')
+                    : value;
         }
     }
 

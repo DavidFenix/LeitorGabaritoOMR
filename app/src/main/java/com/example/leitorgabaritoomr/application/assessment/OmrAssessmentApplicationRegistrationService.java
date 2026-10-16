@@ -2,12 +2,15 @@ package com.example.leitorgabaritoomr.application.assessment;
 
 import com.example.leitorgabaritoomr.application.classroom.OmrClassEnrollmentRepository;
 import com.example.leitorgabaritoomr.application.classroom.OmrClassGroupRepository;
+import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyRepository;
 import com.example.leitorgabaritoomr.application.student.OmrStudentRepository;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentApplication;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentDefinition;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
 import com.example.leitorgabaritoomr.domain.classroom.OmrClassEnrollment;
 import com.example.leitorgabaritoomr.domain.classroom.OmrClassGroup;
+import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.domain.student.OmrStudentProfile;
 
 import java.text.Normalizer;
@@ -32,6 +35,8 @@ public final class OmrAssessmentApplicationRegistrationService {
     private final OmrAssessmentApplicationRepository applicationRepository;
     private final OmrAssessmentParticipantRepository participantRepository;
     private final OmrAssessmentApplicationBatchRepository batchRepository;
+    private final OmrAssessmentStructureRepository structureRepository;
+    private final OmrAnswerKeyRepository answerKeyRepository;
     private final ApplicationIdGenerator idGenerator;
     private final TimeProvider timeProvider;
     private final OmrAssessmentApplicationFactory applicationFactory;
@@ -54,6 +59,38 @@ public final class OmrAssessmentApplicationRegistrationService {
                 applicationRepository,
                 participantRepository,
                 batchRepository,
+                null,
+                null,
+                () -> "application-" + UUID.randomUUID(),
+                System::currentTimeMillis
+        );
+    }
+
+    /**
+     * Construtor usado pelo aplicativo. Além da chamada, ele fotografa a
+     * estrutura curricular (inclusive o bloco legado) dentro da aplicação.
+     */
+    public OmrAssessmentApplicationRegistrationService(
+            OmrAssessmentRepository assessmentRepository,
+            OmrClassGroupRepository classRepository,
+            OmrClassEnrollmentRepository enrollmentRepository,
+            OmrStudentRepository studentRepository,
+            OmrAssessmentApplicationRepository applicationRepository,
+            OmrAssessmentParticipantRepository participantRepository,
+            OmrAssessmentApplicationBatchRepository batchRepository,
+            OmrAssessmentStructureRepository structureRepository,
+            OmrAnswerKeyRepository answerKeyRepository
+    ) {
+        this(
+                assessmentRepository,
+                classRepository,
+                enrollmentRepository,
+                studentRepository,
+                applicationRepository,
+                participantRepository,
+                batchRepository,
+                structureRepository,
+                answerKeyRepository,
                 () -> "application-" + UUID.randomUUID(),
                 System::currentTimeMillis
         );
@@ -67,6 +104,34 @@ public final class OmrAssessmentApplicationRegistrationService {
             OmrAssessmentApplicationRepository applicationRepository,
             OmrAssessmentParticipantRepository participantRepository,
             OmrAssessmentApplicationBatchRepository batchRepository,
+            ApplicationIdGenerator idGenerator,
+            TimeProvider timeProvider
+    ) {
+        this(
+                assessmentRepository,
+                classRepository,
+                enrollmentRepository,
+                studentRepository,
+                applicationRepository,
+                participantRepository,
+                batchRepository,
+                null,
+                null,
+                idGenerator,
+                timeProvider
+        );
+    }
+
+    OmrAssessmentApplicationRegistrationService(
+            OmrAssessmentRepository assessmentRepository,
+            OmrClassGroupRepository classRepository,
+            OmrClassEnrollmentRepository enrollmentRepository,
+            OmrStudentRepository studentRepository,
+            OmrAssessmentApplicationRepository applicationRepository,
+            OmrAssessmentParticipantRepository participantRepository,
+            OmrAssessmentApplicationBatchRepository batchRepository,
+            OmrAssessmentStructureRepository structureRepository,
+            OmrAnswerKeyRepository answerKeyRepository,
             ApplicationIdGenerator idGenerator,
             TimeProvider timeProvider
     ) {
@@ -86,6 +151,12 @@ public final class OmrAssessmentApplicationRegistrationService {
                     "Os geradores da aplicação são obrigatórios."
             );
         }
+        if ((structureRepository == null)
+                != (answerKeyRepository == null)) {
+            throw new IllegalArgumentException(
+                    "Estruturas e gabaritos devem ser fornecidos juntos."
+            );
+        }
 
         this.assessmentRepository = assessmentRepository;
         this.classRepository = classRepository;
@@ -94,6 +165,8 @@ public final class OmrAssessmentApplicationRegistrationService {
         this.applicationRepository = applicationRepository;
         this.participantRepository = participantRepository;
         this.batchRepository = batchRepository;
+        this.structureRepository = structureRepository;
+        this.answerKeyRepository = answerKeyRepository;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         applicationFactory = new OmrAssessmentApplicationFactory();
@@ -251,11 +324,15 @@ public final class OmrAssessmentApplicationRegistrationService {
             OmrAssessmentDefinition assessment,
             OmrClassGroup classGroup
     ) {
+        OmrAssessmentStructure frozenStructure = freezeStructure(
+                assessment
+        );
         OmrAssessmentApplication application = applicationFactory.create(
                 applicationId,
                 createdAtEpochMillis,
                 assessment,
-                classGroup
+                classGroup,
+                frozenStructure
         );
         List<OmrClassEnrollment> enrollments = enrollmentRepository
                 .loadForClassGroup(classGroup.getClassGroupId());
@@ -280,6 +357,37 @@ public final class OmrAssessmentApplicationRegistrationService {
                 students
         );
         return new PreparedRegistration(application, participants);
+    }
+
+    private OmrAssessmentStructure freezeStructure(
+            OmrAssessmentDefinition assessment
+    ) {
+        if (structureRepository == null) {
+            return null;
+        }
+
+        OmrAnswerKeyDefinition answerKey = answerKeyRepository.findOrNull(
+                assessment.getAnswerKeyId(),
+                assessment.getAnswerKeyVersion()
+        );
+        if (answerKey == null) {
+            throw new IllegalStateException(
+                    "O gabarito exato da prova não está disponível."
+            );
+        }
+
+        OmrAssessmentStructure structure = structureRepository
+                .resolveOrLegacy(
+                        assessment.getAssessmentId(),
+                        assessment.getVersion(),
+                        answerKey.getQuestionCount()
+                );
+        if (structure == null) {
+            throw new IllegalStateException(
+                    "A estrutura curricular da prova está inconsistente."
+            );
+        }
+        return structure;
     }
 
     private OmrAssessmentDefinition requireExactAssessment(
