@@ -12,19 +12,23 @@ final class OmrAssessmentResultExportFormatter {
     }
 
     static String status(OmrAssessmentResultReport.Row row) {
-        switch (row.getStatus()) {
-            case CORRECTED:
-                if (row.requiresReview()) {
-                    return "Corrigido - requer revisão";
-                }
-                return row.isFinal()
-                        ? "Corrigido - final"
-                        : "Corrigido - provisório";
-            case MISSING_HISTORY:
+        switch (row.getDetailStatus()) {
+            case FINAL:
+                return "Corrigido - final";
+            case ZERO:
+                return "Corrigido - nota zero";
+            case IN_REVIEW:
+                return "Corrigido - requer revisão";
+            case ABSENT:
                 return "Correção sem histórico disponível";
             case PENDING:
-            default:
                 return "Pendente";
+            case INCONSISTENT:
+                return "Inconsistência entre correção e estrutura";
+            default:
+                throw new IllegalStateException(
+                        "Situação de exportação desconhecida."
+                );
         }
     }
 

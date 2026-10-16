@@ -18,8 +18,10 @@ import com.example.leitorgabaritoomr.domain.reading.OmrQuestionResult;
 import com.example.leitorgabaritoomr.domain.reading.OmrReadingResult;
 import com.example.leitorgabaritoomr.domain.student.OmrStudentIdentity;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 public final class OmrAssessmentResultTestData {
 
@@ -236,6 +238,16 @@ public final class OmrAssessmentResultTestData {
     }
 
     public static OmrAssessmentResultReport structuredReport() {
+        return structuredReport(true);
+    }
+
+    public static OmrAssessmentResultReport structuredZeroReport() {
+        return structuredReport(false);
+    }
+
+    private static OmrAssessmentResultReport structuredReport(
+            boolean firstAnswerCorrect
+    ) {
         OmrAssessmentApplication application = structuredApplication();
         OmrAssessmentParticipant participant = participant(
                 "student-1", "MAT-001", "Ana Souza", 1
@@ -244,7 +256,7 @@ public final class OmrAssessmentResultTestData {
                 participant,
                 "history-structured",
                 3_000L,
-                true
+                firstAnswerCorrect
         );
         OmrAssessmentAttempt attempt = new OmrAssessmentAttempt(
                 "attempt-structured",
@@ -273,6 +285,51 @@ public final class OmrAssessmentResultTestData {
                                 breakdown
                         )
                 )
+        );
+    }
+
+    public static OmrAssessmentResultReport
+    structuredInconsistentReport() {
+        OmrAssessmentResultReport source = structuredReport();
+        OmrAssessmentResultReport.Row original = source.getRows().get(0);
+        OmrAssessmentResultReport.Row inconsistent =
+                new OmrAssessmentResultReport.Row(
+                        original.getParticipant(),
+                        original.getLatestAttempt(),
+                        original.getHistoryRecord(),
+                        null,
+                        OmrAssessmentResultReport.DetailStatus.INCONSISTENT
+                );
+        return new OmrAssessmentResultReport(
+                source.getApplication(),
+                source.getAssessment(),
+                source.getFrozenClassName(),
+                source.getGeneratedAtEpochMillis(),
+                Collections.singletonList(inconsistent)
+        );
+    }
+
+    public static OmrAssessmentResultReport structuredReportWithPending() {
+        OmrAssessmentResultReport corrected = structuredReport();
+        List<OmrAssessmentResultReport.Row> rows = new ArrayList<>(
+                corrected.getRows()
+        );
+        rows.add(new OmrAssessmentResultReport.Row(
+                participant(
+                        "student-2",
+                        "MAT-002",
+                        "Bruno Lima",
+                        2
+                ),
+                null,
+                null
+        ));
+        return new OmrAssessmentResultReport(
+                corrected.getApplication(),
+                corrected.getAssessment(),
+                corrected.getFrozenClassName(),
+                corrected.getGeneratedAtEpochMillis(),
+                rows
         );
     }
 }

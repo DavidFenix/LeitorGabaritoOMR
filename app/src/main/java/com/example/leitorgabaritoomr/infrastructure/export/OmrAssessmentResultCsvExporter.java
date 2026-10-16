@@ -1,11 +1,16 @@
 package com.example.leitorgabaritoomr.infrastructure.export;
 
 import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentResultReport;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlock;
+import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlockResult;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentParticipant;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /** Exporta um CSV UTF-8 com BOM e separador compatível com Excel em pt-BR. */
 public final class OmrAssessmentResultCsvExporter {
@@ -30,6 +35,8 @@ public final class OmrAssessmentResultCsvExporter {
                     "O relatório é obrigatório."
             );
         }
+        OmrAssessmentResultExportTable table =
+                OmrAssessmentResultExportTable.from(report);
         StringBuilder csv = new StringBuilder(4096);
         append(csv, "Relatório", "Resultados da aplicação");
         append(csv, "Aplicação", report.getApplication().getApplicationId());
@@ -44,21 +51,60 @@ public final class OmrAssessmentResultCsvExporter {
         append(csv, "Participantes", report.getParticipantCount());
         append(csv, "Corrigidos", report.getCorrectedCount());
         append(csv, "Pendentes", report.getPendingCount());
-        append(csv, "Inconsistências", report.getMissingHistoryCount());
+        append(csv, "Inconsistências",
+                report.getDataIntegrityIssueCount());
         append(csv, "Média (%)", OmrAssessmentResultExportFormatter.decimal(
                 report.getAveragePercentage()
         ));
+        if (table.hasBlockColumns()) {
+            append(csv,
+                    "Detalhamento curricular",
+                    "Ordem",
+                    "Área",
+                    "Código",
+                    "Componente",
+                    "Questões",
+                    "Política",
+                    "Nota máxima"
+            );
+            for (OmrAssessmentResultExportTable.BlockColumn column
+                    : table.getBlockColumns()) {
+                OmrAssessmentBlock block = column.getBlock();
+                append(csv,
+                        "Componente",
+                        block.getOrder(),
+                        block.hasAreaName() ? block.getAreaName() : "",
+                        block.hasComponentCode()
+                                ? block.getComponentCode() : "",
+                        block.getComponentName(),
+                        column.getQuestionRange(),
+                        column.getPolicyIdentity(),
+                        OmrAssessmentResultExportFormatter.decimal(
+                                block.getScoringPolicy()
+                                        .getMaximumScore().doubleValue()
+                        )
+                );
+            }
+        }
         csv.append("\r\n");
-        append(csv,
+        List<Object> headers = new ArrayList<>();
+        Collections.addAll(headers,
                 "Posição", "Matrícula", "Aluno", "ID do aluno",
-                "Situação", "Revisão", "Pontos", "Total", "Percentual",
-                "Acertos", "Erros", "Em branco", "Para revisão",
-                "Registrado em"
+                "Situação", "Revisão", "Pontos", "Total",
+                "Percentual", "Acertos", "Erros", "Em branco",
+                "Para revisão", "Registrado em"
         );
+        for (OmrAssessmentResultExportTable.BlockColumn column
+                : table.getBlockColumns()) {
+            headers.add(column.getCorrectHeader());
+            headers.add(column.getScoreHeader());
+        }
+        append(csv, headers.toArray());
 
         for (OmrAssessmentResultReport.Row row : report.getRows()) {
             OmrAssessmentParticipant participant = row.getParticipant();
-            append(csv,
+            List<Object> values = new ArrayList<>();
+            Collections.addAll(values,
                     participant.getRosterPosition(),
                     participant.getRegistration(),
                     participant.getStudentName(),
@@ -81,6 +127,23 @@ public final class OmrAssessmentResultCsvExporter {
                     OmrAssessmentResultExportFormatter.dateTime(
                             row.getRecordedAtEpochMillis())
             );
+            for (OmrAssessmentResultExportTable.BlockColumn column
+                    : table.getBlockColumns()) {
+                OmrAssessmentBlockResult result = table.findResult(
+                        row,
+                        column
+                );
+                if (result == null) {
+                    values.add("");
+                    values.add("");
+                } else {
+                    values.add(result.getCorrectCount());
+                    values.add(OmrAssessmentResultExportFormatter.decimal(
+                            result.getCalculatedScoreAsDouble()
+                    ));
+                }
+            }
+            append(csv, values.toArray());
         }
         return csv.toString();
     }

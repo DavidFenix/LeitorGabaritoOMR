@@ -1,6 +1,7 @@
 package com.example.leitorgabaritoomr.application.assessment;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -55,6 +56,66 @@ public final class OmrAssessmentResultCsvExporterTest {
         assertTrue(csv.contains("Pendente"));
         assertTrue(csv.contains("Correção sem histórico disponível"));
         assertTrue(csv.contains("\"2\";\"1,00\";\"1,00\";\"100,00\""));
+    }
+
+    @Test
+    public void legacyReportKeepsHistoricalColumns() {
+        String csv = new OmrAssessmentResultCsvExporter().build(
+                OmrAssessmentResultTestData.report()
+        );
+        assertFalse(csv.contains("Detalhamento curricular"));
+        assertFalse(csv.contains(" | ACERTOS"));
+        assertTrue(csv.contains(
+                "\"Para revisão\";\"Registrado em\"\r\n"
+        ));
+    }
+
+    @Test
+    public void structuredReportExportsAuditableComponentPairs() {
+        String csv = new OmrAssessmentResultCsvExporter().build(
+                OmrAssessmentResultTestData.structuredReportWithPending()
+        );
+        assertTrue(csv.contains(
+                "\"Detalhamento curricular\";\"Ordem\";\"Área\";"
+                        + "\"Código\";\"Componente\";\"Questões\";"
+                        + "\"Política\";\"Nota máxima\""
+        ));
+        assertTrue(csv.contains(
+                "\"Ciências da Natureza | QUI - Química | ACERTOS\""
+        ));
+        assertTrue(csv.contains(
+                "\"Ciências da Natureza | FIS - Física | NOTA\""
+        ));
+        assertTrue(csv.contains(
+                "\"proportional-correct-questions@v1\""
+        ));
+        assertTrue(csv.contains(
+                ";\"1\";\"10,00\";\"0\";\"0,00\"\r\n"
+        ));
+
+        String pending = lineStartingWith(csv, "\"2\";\"MAT-002\"");
+        assertTrue(pending.endsWith(";\"\";\"\";\"\";\"\""));
+    }
+
+    @Test
+    public void distinguishesZeroFromInconsistentExportRows() {
+        String zero = new OmrAssessmentResultCsvExporter().build(
+                OmrAssessmentResultTestData.structuredZeroReport()
+        );
+        assertTrue(zero.contains("Corrigido - nota zero"));
+
+        String inconsistent = new OmrAssessmentResultCsvExporter().build(
+                OmrAssessmentResultTestData
+                        .structuredInconsistentReport()
+        );
+        assertTrue(inconsistent.contains(
+                "Inconsistência entre correção e estrutura"
+        ));
+        String row = lineStartingWith(
+                inconsistent,
+                "\"1\";\"MAT-001\""
+        );
+        assertTrue(row.endsWith(";\"\";\"\";\"\";\"\""));
     }
 
     @Test
@@ -127,5 +188,15 @@ public final class OmrAssessmentResultCsvExporterTest {
         } catch (IllegalArgumentException expected) {
             assertTrue(expected.getMessage().length() > 0);
         }
+    }
+
+    private static String lineStartingWith(String text, String prefix) {
+        for (String line : text.split("\\r\\n")) {
+            if (line.startsWith(prefix)) {
+                return line;
+            }
+        }
+        fail("Linha não encontrada: " + prefix);
+        return "";
     }
 }

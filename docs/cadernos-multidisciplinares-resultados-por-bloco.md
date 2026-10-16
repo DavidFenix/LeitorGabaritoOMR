@@ -129,19 +129,41 @@ estabelece a operacao validada e transacional usada pelas telas.
   geral e valido, sua nota total continua visivel para diagnostico e nao e
   descartada.
 
-### 4. Exportacoes e SIGE
+### 4A. Exportacoes por componente (concluido)
 
-- planilha com pares `ACERTOS` e `NOTA` por componente;
-- CSV detalhado e PDF de relatorio;
-- campo opcional de nota para o SIGE, preservando a nota calculada;
-- politica de nota identificada em toda exportacao auditavel.
+- CSV e planilha preservam, a esquerda, as colunas gerais historicas e
+  acrescentam um par `ACERTOS` e `NOTA` para cada componente da estrutura
+  congelada;
+- pendencia, historico ausente ou detalhamento inconsistente deixam as celulas
+  do componente vazias, sem converter ausencia de dado em nota zero;
+- o CSV registra area, codigo, faixa de questoes, politica versionada e nota
+  maxima antes da tabela de alunos;
+- a planilha possui a aba `Resultados`, com os pares dinamicos, e a aba
+  `Componentes`, com os metadados necessarios para auditoria;
+- para facilitar a consulta pelo celular, `Resultados` inicia diretamente no
+  cabecalho da tabela e congela somente essa linha; os metadados gerais ficam
+  preservados em tres linhas compactas depois do ultimo participante;
+- o PDF mantem as paginas do resultado geral e acrescenta paginas separadas
+  por componente, com acertos, nota calculada e situacao de cada aluno;
+- estruturas legadas de bloco unico e aplicacoes antigas sem fotografia
+  curricular continuam no formato geral anterior, sem colunas duplicadas;
+- toda exportacao detalhada identifica a politica e sua versao. Os valores
+  exportados sao os calculados e congelados pelo aplicativo, nao formulas
+  dependentes do programa usado para abrir o arquivo.
 
-## Fora dos checkpoints 1, 2, 3A, 3B1 e 3B2
+### 4B. Nota opcional para o SIGE (planejado)
 
-Estes checkpoints ainda nao mudam as colunas das exportacoes, o
-cartao-resposta nem o reconhecimento OMR. O CSV de blocos e adicional e nao
-altera a interpretacao do CSV de provas nem de arquivos antigos. A versao 6
-do banco apenas acrescenta as tabelas de estruturas; o checkpoint 3B2 evolui
-os payloads das linhas existentes, sem subir outra vez a versao do banco. CSV,
-XLSX e PDF por componente, bem como a futura nota opcional de lancamento no
-SIGE, permanecem reservados ao checkpoint 4.
+- campo opcional de nota escolhida para lancamento no SIGE;
+- persistencia separada da nota calculada e de seu historico auditavel;
+- edicao e limpeza explicitas, sem substituir silenciosamente o calculo;
+- inclusao da nota escolhida nas exportacoes quando ela existir.
+
+## Fora dos checkpoints 1, 2, 3A, 3B1, 3B2 e 4A
+
+Os checkpoints multidisciplinares nao mudam o cartao-resposta nem o
+reconhecimento OMR. O CSV de blocos e adicional e nao altera a interpretacao
+do CSV de provas nem de arquivos antigos. A versao 6 do banco apenas
+acrescenta as tabelas de estruturas; os payloads de aplicacao e tentativa
+continuam no formato v2 do checkpoint 3B2. O checkpoint 4A altera somente a
+apresentacao dos arquivos exportados e nao exige migracao. A nota opcional
+para lancamento no SIGE permanece reservada ao checkpoint 4B.
