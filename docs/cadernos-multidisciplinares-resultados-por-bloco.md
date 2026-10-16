@@ -215,3 +215,32 @@ reservadas para a geracao PNG/ZIP. Elas nao alteram o gabarito armazenado. A
 importacao e integral: repeticao identica e ignorada, enquanto uma identidade
 igual com conteudo diferente rejeita todo o lote sem gravacao parcial. O
 gabarito ativo permanece inalterado.
+
+### 6A. Nucleo CSV de gabaritos (concluido)
+
+- parser aceita UTF-8 com ou sem BOM e possui compatibilidade controlada com
+  Windows-1252;
+- modelo, importacao e exportacao usam o mesmo formato canonico;
+- exportacao inclui identidade e layout tecnicos para permitir restauracao
+  exata, sem perder versoes;
+- formula de planilha e neutralizada para impedir interpretacao acidental de
+  celulas como comandos;
+- lote inteiro e validado antes da persistencia e o gabarito ativo nao muda;
+- limite de 5 MB e 1.000 linhas protege o processamento no dispositivo.
+
+### 6B. Operacoes CSV na tela de gabaritos (concluido)
+
+- `Importar CSV` abre o seletor de documentos, processa fora da thread visual
+  e apresenta uma previa antes da confirmacao;
+- a previa lista codigo, nome, versao, quantidade de questoes e alternativas,
+  ou informa as linhas que precisam ser corrigidas;
+- `Exportar CSV` permite marcar um ou varios gabaritos e inicia com todos os
+  registros selecionados para facilitar backups completos;
+- `Modelo CSV` disponibiliza diretamente o mesmo modelo valido mantido pelo
+  exportador, evitando exemplos divergentes da implementacao;
+- a tela bloqueia comandos concorrentes durante leitura, gravacao ou
+  exportacao e volta ao estado anterior ao terminar;
+- importacoes identicas informam os registros preservados e somente novas
+  identidades marcam o repositorio como alterado;
+- nenhum dos tres comandos altera a geometria, a leitura OMR ou o gabarito
+  ativo.

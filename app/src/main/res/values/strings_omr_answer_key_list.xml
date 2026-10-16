@@ -67,6 +67,129 @@
         Cadastrar novo
     </string>
 
+    <string name="omr_answer_key_list_action_import_csv">
+        Importar CSV
+    </string>
+
+    <string name="omr_answer_key_list_action_export_csv">
+        Exportar CSV
+    </string>
+
+    <string name="omr_answer_key_list_action_csv_template">
+        Modelo CSV
+    </string>
+
+    <string name="omr_answer_key_list_progress_description">
+        Processando arquivo CSV
+    </string>
+
+    <string name="omr_answer_key_csv_preview_title">
+        Prévia da importação de gabaritos
+    </string>
+
+    <string name="omr_answer_key_csv_preview_error_title">
+        O CSV precisa de correções
+    </string>
+
+    <plurals name="omr_answer_key_csv_preview_valid_rows">
+        <item quantity="one">%1$d gabarito válido será analisado para importação.</item>
+        <item quantity="other">%1$d gabaritos válidos serão analisados para importação.</item>
+    </plurals>
+
+    <plurals name="omr_answer_key_csv_preview_more_rows">
+        <item quantity="one">… e mais %1$d gabarito.</item>
+        <item quantity="other">… e mais %1$d gabaritos.</item>
+    </plurals>
+
+    <string name="omr_answer_key_csv_preview_import_note">
+        A importação é transacional: gabaritos idênticos serão ignorados, conflitos cancelarão todo o lote e o gabarito ativo será preservado.
+    </string>
+
+    <string name="omr_answer_key_csv_preview_technical">
+        Codificação: %1$s • separador: %2$s
+    </string>
+
+    <plurals name="omr_answer_key_csv_preview_error_summary">
+        <item quantity="one">Foi encontrado %1$d problema. Nenhum gabarito será importado.</item>
+        <item quantity="other">Foram encontrados %1$d problemas. Nenhum gabarito será importado.</item>
+    </plurals>
+
+    <plurals name="omr_answer_key_csv_preview_more_errors">
+        <item quantity="one">… e mais %1$d problema.</item>
+        <item quantity="other">… e mais %1$d problemas.</item>
+    </plurals>
+
+    <string name="omr_answer_key_csv_issue_line">
+        Linha %1$d: %2$s
+    </string>
+
+    <string name="omr_answer_key_csv_action_import">Importar</string>
+    <string name="omr_answer_key_csv_action_close">Fechar</string>
+    <string name="omr_answer_key_csv_action_cancel">Cancelar</string>
+
+    <string name="omr_answer_key_csv_read_error">
+        Não foi possível ler o arquivo CSV.
+    </string>
+
+    <string name="omr_answer_key_csv_too_large">
+        O CSV excede o limite de 5 MB.
+    </string>
+
+    <string name="omr_answer_key_csv_import_error">
+        Não foi possível importar o CSV. Nenhum gabarito foi gravado.
+    </string>
+
+    <string name="omr_answer_key_csv_import_success">
+        Importação concluída: %1$d novos e %2$d já existentes sem alterações.
+    </string>
+
+    <string name="omr_answer_key_csv_export_selection_title">
+        Quais gabaritos deseja exportar?
+    </string>
+
+    <string name="omr_answer_key_csv_export_selection_hint">
+        Marque um ou mais gabaritos.
+    </string>
+
+    <string name="omr_answer_key_csv_export_selection_required">
+        Selecione pelo menos um gabarito.
+    </string>
+
+    <string name="omr_answer_key_csv_export_item_format">
+        %1$s • versão %2$d • %3$d questões
+    </string>
+
+    <string name="omr_answer_key_csv_export_save">Salvar CSV</string>
+    <string name="omr_answer_key_csv_export_cancel">Cancelar</string>
+
+    <string name="omr_answer_key_csv_export_success">
+        Gabaritos exportados com sucesso.
+    </string>
+
+    <string name="omr_answer_key_csv_export_error">
+        Não foi possível exportar os gabaritos.
+    </string>
+
+    <string name="omr_answer_key_csv_export_cancelled">
+        Exportação cancelada.
+    </string>
+
+    <string name="omr_answer_key_csv_export_empty">
+        Não há gabaritos salvos para exportar.
+    </string>
+
+    <string name="omr_answer_key_csv_template_success">
+        Modelo CSV salvo com sucesso.
+    </string>
+
+    <string name="omr_answer_key_csv_template_error">
+        Não foi possível salvar o modelo CSV.
+    </string>
+
+    <string name="omr_answer_key_csv_template_cancelled">
+        Download do modelo cancelado.
+    </string>
+
     <string name="omr_answer_key_list_create_count_title">
         Quantas questões terá a avaliação?
     </string>

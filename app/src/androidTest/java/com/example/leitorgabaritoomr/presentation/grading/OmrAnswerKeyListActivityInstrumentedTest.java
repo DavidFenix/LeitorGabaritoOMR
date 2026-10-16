@@ -2,8 +2,12 @@ package com.example.leitorgabaritoomr.presentation.grading;
 
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
+import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.RootMatchers.isDialog;
+import static androidx.test.espresso.matcher.ViewMatchers.isChecked;
+import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -27,8 +31,10 @@ import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import com.example.leitorgabaritoomr.R;
+import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyCsvParser;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyEntry;
+import com.example.leitorgabaritoomr.infrastructure.export.OmrAnswerKeyCsvExporter;
 import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesAnswerKeyRepository;
 
 import org.junit.After;
@@ -146,6 +152,24 @@ public final class OmrAnswerKeyListActivityInstrumentedTest {
                                 R.id.buttonOmrAnswerKeyListBack,
                                 true
                         );
+
+                        assertButtonEnabled(
+                                activity,
+                                R.id.buttonOmrAnswerKeyListImportCsv,
+                                true
+                        );
+
+                        assertButtonEnabled(
+                                activity,
+                                R.id.buttonOmrAnswerKeyListCsvTemplate,
+                                true
+                        );
+
+                        assertButtonEnabled(
+                                activity,
+                                R.id.buttonOmrAnswerKeyListExportCsv,
+                                false
+                        );
                     }
             );
         }
@@ -214,8 +238,100 @@ public final class OmrAnswerKeyListActivityInstrumentedTest {
                                 listView.getChildCount()
                                         <= adapter.getCount()
                         );
+
+                        assertButtonEnabled(
+                                activity,
+                                R.id.buttonOmrAnswerKeyListExportCsv,
+                                true
+                        );
                     }
             );
+        }
+    }
+
+    @Test
+    public void exportDialogStartsWithEveryAnswerKeySelected() {
+        repository.saveActive(createAnswerKey(
+                "export-active",
+                1,
+                "Gabarito principal",
+                1.0
+        ));
+
+        repository.save(createAnswerKey(
+                "export-second",
+                2,
+                "Gabarito complementar",
+                2.0
+        ));
+
+        try (ActivityScenario<OmrAnswerKeyListActivity>
+                     scenario = ActivityScenario.launch(
+                             createActivityIntent()
+                     )) {
+
+            scenario.onActivity(activity -> clickButton(
+                    activity,
+                    R.id.buttonOmrAnswerKeyListExportCsv
+            ));
+
+            onView(withText(
+                    R.string
+                            .omr_answer_key_csv_export_selection_title
+            ))
+                    .inRoot(isDialog())
+                    .check(matches(isDisplayed()));
+
+            onView(withText(containsString(
+                    "Gabarito principal"
+            )))
+                    .inRoot(isDialog())
+                    .check(matches(isChecked()));
+
+            onView(withText(containsString(
+                    "Gabarito complementar"
+            )))
+                    .inRoot(isDialog())
+                    .check(matches(isChecked()));
+        }
+    }
+
+    @Test
+    public void validCsvPreviewShowsRowsAndImportAction() {
+        OmrAnswerKeyCsvParser.Preview preview =
+                new OmrAnswerKeyCsvParser().parse(
+                        new OmrAnswerKeyCsvExporter()
+                                .buildTemplate()
+                );
+
+        assertTrue(preview.isReadyToImport());
+
+        try (ActivityScenario<OmrAnswerKeyListActivity>
+                     scenario = ActivityScenario.launch(
+                             createActivityIntent()
+                     )) {
+
+            scenario.onActivity(
+                    activity -> activity.showCsvPreview(preview)
+            );
+
+            onView(withText(
+                    R.string.omr_answer_key_csv_preview_title
+            ))
+                    .inRoot(isDialog())
+                    .check(matches(isDisplayed()));
+
+            onView(withText(containsString(
+                    "Matematica - Modelo A"
+            )))
+                    .inRoot(isDialog())
+                    .check(matches(isDisplayed()));
+
+            onView(withText(
+                    R.string.omr_answer_key_csv_action_import
+            ))
+                    .inRoot(isDialog())
+                    .check(matches(isDisplayed()));
         }
     }
 

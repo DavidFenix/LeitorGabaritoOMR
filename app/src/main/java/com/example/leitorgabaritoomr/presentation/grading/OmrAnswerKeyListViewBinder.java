@@ -57,12 +57,18 @@ public final class OmrAnswerKeyListViewBinder {
     private final TextView countTextView;
     private final ListView answerKeyListView;
     private final View emptyContainer;
+    private final View progressView;
     private final Button backButton;
     private final Button createButton;
+    private final Button importCsvButton;
+    private final Button exportCsvButton;
+    private final Button csvTemplateButton;
 
     private final AnswerKeyAdapter answerKeyAdapter;
 
     private OnAnswerKeyActionListener actionListener;
+    private boolean contentEmpty = true;
+    private boolean busy;
     private boolean released;
 
     public OmrAnswerKeyListViewBinder(
@@ -95,6 +101,12 @@ public final class OmrAnswerKeyListViewBinder {
                 View.class
         );
 
+        progressView = requireView(
+                rootView,
+                R.id.progressOmrAnswerKeyList,
+                View.class
+        );
+
         backButton = requireView(
                 rootView,
                 R.id.buttonOmrAnswerKeyListBack,
@@ -107,8 +119,27 @@ public final class OmrAnswerKeyListViewBinder {
                 Button.class
         );
 
+        importCsvButton = requireView(
+                rootView,
+                R.id.buttonOmrAnswerKeyListImportCsv,
+                Button.class
+        );
+
+        exportCsvButton = requireView(
+                rootView,
+                R.id.buttonOmrAnswerKeyListExportCsv,
+                Button.class
+        );
+
+        csvTemplateButton = requireView(
+                rootView,
+                R.id.buttonOmrAnswerKeyListCsvTemplate,
+                Button.class
+        );
+
         answerKeyAdapter = new AnswerKeyAdapter();
         answerKeyListView.setAdapter(answerKeyAdapter);
+        applyInteractiveState();
     }
 
     public void render(
@@ -122,12 +153,14 @@ public final class OmrAnswerKeyListViewBinder {
             );
         }
 
+        contentEmpty = viewState.isEmpty();
         applyCount(viewState);
-        applyContentVisibility(viewState);
 
         answerKeyAdapter.replaceItems(
                 viewState.getAnswerKeyItems()
         );
+
+        applyInteractiveState();
     }
 
     public void setOnAnswerKeyActionListener(
@@ -151,6 +184,33 @@ public final class OmrAnswerKeyListViewBinder {
         createButton.setOnClickListener(listener);
     }
 
+    public void setOnImportCsvClickListener(
+            View.OnClickListener listener
+    ) {
+        ensureNotReleased();
+        importCsvButton.setOnClickListener(listener);
+    }
+
+    public void setOnExportCsvClickListener(
+            View.OnClickListener listener
+    ) {
+        ensureNotReleased();
+        exportCsvButton.setOnClickListener(listener);
+    }
+
+    public void setOnCsvTemplateClickListener(
+            View.OnClickListener listener
+    ) {
+        ensureNotReleased();
+        csvTemplateButton.setOnClickListener(listener);
+    }
+
+    public void setBusy(boolean busy) {
+        ensureNotReleased();
+        this.busy = busy;
+        applyInteractiveState();
+    }
+
     public void release() {
         if (released) {
             return;
@@ -161,6 +221,9 @@ public final class OmrAnswerKeyListViewBinder {
 
         backButton.setOnClickListener(null);
         createButton.setOnClickListener(null);
+        importCsvButton.setOnClickListener(null);
+        exportCsvButton.setOnClickListener(null);
+        csvTemplateButton.setOnClickListener(null);
 
         answerKeyAdapter.clear();
         answerKeyListView.setAdapter(null);
@@ -183,17 +246,28 @@ public final class OmrAnswerKeyListViewBinder {
         );
     }
 
-    private void applyContentVisibility(
-            OmrAnswerKeyListViewState viewState
-    ) {
-        boolean empty = viewState.isEmpty();
-
+    private void applyInteractiveState() {
+        progressView.setVisibility(
+                busy ? View.VISIBLE : View.GONE
+        );
         emptyContainer.setVisibility(
-                empty ? View.VISIBLE : View.GONE
+                !busy && contentEmpty
+                        ? View.VISIBLE
+                        : View.GONE
+        );
+        answerKeyListView.setVisibility(
+                !busy && !contentEmpty
+                        ? View.VISIBLE
+                        : View.GONE
         );
 
-        answerKeyListView.setVisibility(
-                empty ? View.GONE : View.VISIBLE
+        answerKeyListView.setEnabled(!busy);
+        backButton.setEnabled(!busy);
+        createButton.setEnabled(!busy);
+        importCsvButton.setEnabled(!busy);
+        csvTemplateButton.setEnabled(!busy);
+        exportCsvButton.setEnabled(
+                !busy && !contentEmpty
         );
     }
 
