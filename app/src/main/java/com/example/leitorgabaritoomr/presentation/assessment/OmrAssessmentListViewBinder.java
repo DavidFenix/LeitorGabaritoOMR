@@ -34,6 +34,10 @@ public final class OmrAssessmentListViewBinder {
         void onSearchQueryChanged(String query);
     }
 
+    public interface OnIdentifierCopyListener {
+        void onCopyIdentifier(String identifier);
+    }
+
     private final Context context;
     private final LayoutInflater inflater;
     private final TextView countTextView;
@@ -52,6 +56,7 @@ public final class OmrAssessmentListViewBinder {
     private OmrAssessmentListViewState currentState;
     private OnAssessmentActionListener assessmentActionListener;
     private OnSearchQueryChangedListener searchListener;
+    private OnIdentifierCopyListener identifierCopyListener;
     private boolean busy;
     private boolean released;
 
@@ -194,6 +199,13 @@ public final class OmrAssessmentListViewBinder {
         searchListener = listener;
     }
 
+    public void setOnIdentifierCopyListener(
+            OnIdentifierCopyListener listener
+    ) {
+        ensureNotReleased();
+        identifierCopyListener = listener;
+    }
+
     public void setOnBackClickListener(View.OnClickListener listener) {
         ensureNotReleased();
         backButton.setOnClickListener(listener);
@@ -224,6 +236,7 @@ public final class OmrAssessmentListViewBinder {
         released = true;
         assessmentActionListener = null;
         searchListener = null;
+        identifierCopyListener = null;
         searchEditText.removeTextChangedListener(searchWatcher);
         backButton.setOnClickListener(null);
         createButton.setOnClickListener(null);
@@ -261,6 +274,13 @@ public final class OmrAssessmentListViewBinder {
         OnAssessmentActionListener listener = assessmentActionListener;
         if (listener != null && !busy) {
             listener.onManageStructure(item.getAssessmentId());
+        }
+    }
+
+    private void notifyCopyIdentifier(String identifier) {
+        OnIdentifierCopyListener listener = identifierCopyListener;
+        if (listener != null && !busy) {
+            listener.onCopyIdentifier(identifier);
         }
     }
 
@@ -397,6 +417,11 @@ public final class OmrAssessmentListViewBinder {
                     R.id.textOmrAssessmentItemPeriodVersion,
                     TextView.class
             );
+            TextView identity = requireView(
+                    itemView,
+                    R.id.textOmrAssessmentItemIdentity,
+                    TextView.class
+            );
             TextView answerKey = requireView(
                     itemView,
                     R.id.textOmrAssessmentItemAnswerKey,
@@ -430,11 +455,21 @@ public final class OmrAssessmentListViewBinder {
                     item.getAcademicPeriod(),
                     item.getVersion()
             ));
+            identity.setText(context.getString(
+                    R.string.omr_assessment_list_identity,
+                    item.getAssessmentId()
+            ));
             answerKey.setText(context.getString(
                     R.string.omr_assessment_list_answer_key,
                     item.getAnswerKeyId(),
                     item.getAnswerKeyVersion()
             ));
+            identity.setOnClickListener(
+                    view -> notifyCopyIdentifier(item.getAssessmentId())
+            );
+            answerKey.setOnClickListener(
+                    view -> notifyCopyIdentifier(item.getAnswerKeyId())
+            );
             if (item.hasPublishedStructure()) {
                 structure.setText(context.getResources().getQuantityString(
                         R.plurals.omr_assessment_list_structure_summary,

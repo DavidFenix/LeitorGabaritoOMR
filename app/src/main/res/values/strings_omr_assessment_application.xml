@@ -21,7 +21,9 @@
         <item quantity="other">%1$d de %2$d corrigidos • %3$d pendentes</item>
     </plurals>
     <string name="omr_assessment_application_list_progress_complete">%1$d de %2$d corrigidos • chamada concluída</string>
-    <string name="omr_assessment_application_list_identity">ID: %1$s • criada em %2$s</string>
+    <string name="omr_assessment_application_list_identity">ID: %1$s • criada em %2$s • toque para copiar</string>
+    <string name="omr_assessment_application_identifier_copied">ID da aplicação copiado.</string>
+    <string name="omr_assessment_application_identifier_copy_error">Não foi possível copiar o ID da aplicação.</string>
     <string name="omr_assessment_application_list_action_back">Voltar</string>
     <string name="omr_assessment_application_list_action_create">Nova aplicação</string>
     <string name="omr_assessment_application_list_action_import_csv">Importar aplicações CSV</string>

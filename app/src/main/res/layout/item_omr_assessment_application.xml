@@ -62,10 +62,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
+            android:clickable="true"
+            android:focusable="true"
             android:maxLines="2"
-            android:textColor="#FF6B7280"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:textColor="#FF2563EB"
             android:textSize="11sp"
-            tools:text="ID: application-1 • criada em 12/10/2026 09:30" />
+            tools:text="ID: application-1 • criada em 12/10/2026 09:30 • toque para copiar" />
     </LinearLayout>
 
     <LinearLayout

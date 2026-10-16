@@ -11,7 +11,7 @@
     </plurals>
 
     <string name="omr_assessment_list_filtered_count">%1$d de %2$d provas encontradas</string>
-    <string name="omr_assessment_list_search_hint">Pesquisar por título, disciplina, etapa ou ano</string>
+    <string name="omr_assessment_list_search_hint">Pesquisar por título, disciplina, etapa, ano ou ID</string>
     <string name="omr_assessment_list_empty_title">Nenhuma prova cadastrada</string>
     <string name="omr_assessment_list_empty_message">Use “Nova prova” para cadastrar manualmente ou importe um CSV com código e versão explícitos.</string>
     <string name="omr_assessment_list_no_results_title">Nenhuma prova encontrada</string>
@@ -19,7 +19,10 @@
     <string name="omr_assessment_list_load_error">Não foi possível carregar as provas cadastradas.</string>
     <string name="omr_assessment_list_metadata">%1$s • %2$s • %3$d</string>
     <string name="omr_assessment_list_period_version">%1$s • versão %2$d</string>
-    <string name="omr_assessment_list_answer_key">Gabarito: %1$s • versão %2$d</string>
+    <string name="omr_assessment_list_identity">ID da prova: %1$s • toque para copiar</string>
+    <string name="omr_assessment_list_answer_key">Gabarito: %1$s • versão %2$d • toque para copiar o ID</string>
+    <string name="omr_assessment_identifier_copied">ID copiado.</string>
+    <string name="omr_assessment_identifier_copy_error">Não foi possível copiar o ID.</string>
 
     <string name="omr_assessment_list_action_back">Voltar</string>
     <string name="omr_assessment_list_action_create">Nova prova</string>

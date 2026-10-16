@@ -38,6 +38,10 @@ public final class OmrAssessmentApplicationListViewBinder {
         void onSearchQueryChanged(String query);
     }
 
+    public interface OnIdentifierCopyListener {
+        void onCopyIdentifier(String identifier);
+    }
+
     private final Context context;
     private final LayoutInflater inflater;
     private final TextView countTextView;
@@ -57,6 +61,7 @@ public final class OmrAssessmentApplicationListViewBinder {
     private OnApplicationActionListener applicationActionListener;
     private OnResultActionListener resultActionListener;
     private OnSearchQueryChangedListener searchListener;
+    private OnIdentifierCopyListener identifierCopyListener;
     private boolean busy;
     private boolean released;
 
@@ -202,6 +207,13 @@ public final class OmrAssessmentApplicationListViewBinder {
         searchListener = listener;
     }
 
+    public void setOnIdentifierCopyListener(
+            OnIdentifierCopyListener listener
+    ) {
+        ensureNotReleased();
+        identifierCopyListener = listener;
+    }
+
     public void setOnBackClickListener(View.OnClickListener listener) {
         ensureNotReleased();
         backButton.setOnClickListener(listener);
@@ -225,6 +237,7 @@ public final class OmrAssessmentApplicationListViewBinder {
         applicationActionListener = null;
         resultActionListener = null;
         searchListener = null;
+        identifierCopyListener = null;
         searchEditText.removeTextChangedListener(searchWatcher);
         backButton.setOnClickListener(null);
         createButton.setOnClickListener(null);
@@ -257,6 +270,12 @@ public final class OmrAssessmentApplicationListViewBinder {
     ) {
         if (!busy && resultActionListener != null) {
             resultActionListener.onOpenResults(item.getApplicationId());
+        }
+    }
+
+    private void notifyCopyIdentifier(String identifier) {
+        if (!busy && identifierCopyListener != null) {
+            identifierCopyListener.onCopyIdentifier(identifier);
         }
     }
 
@@ -439,6 +458,9 @@ public final class OmrAssessmentApplicationListViewBinder {
                             item.getCreatedAtEpochMillis()
                     ))
             ));
+            identity.setOnClickListener(
+                    view -> notifyCopyIdentifier(item.getApplicationId())
+            );
             roster.setOnClickListener(view -> notifyOpenRoster(item));
             results.setOnClickListener(view -> notifyOpenResults(item));
             itemView.setOnClickListener(view -> notifyOpenRoster(item));

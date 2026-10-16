@@ -59,11 +59,28 @@ public final class OmrAssessmentApplicationListViewBinderInstrumentedTest {
             binder.setOnApplicationActionListener(actions);
             binder.setOnResultActionListener(actions);
             binder.setOnSearchQueryChangedListener(actions);
+            binder.setOnIdentifierCopyListener(actions);
             binder.setOnBackClickListener(view -> actions.backCount++);
             binder.setOnCreateClickListener(view -> actions.createCount++);
             binder.setOnImportCsvClickListener(
                     view -> actions.importCount++
             );
+        });
+    }
+
+    @Test
+    public void applicationIdentifierDispatchesExactIdForCopy() {
+        runOnMain(() -> {
+            binder.render(state(""));
+
+            View first = rowAt(0);
+            first.findViewById(
+                    R.id.textOmrAssessmentApplicationItemIdentity
+            ).performClick();
+
+            assertEquals(1, actions.copyCount);
+            assertEquals("application-1", actions.lastCopiedIdentifier);
+            assertEquals(0, actions.openCount);
         });
     }
 
@@ -379,15 +396,19 @@ public final class OmrAssessmentApplicationListViewBinderInstrumentedTest {
             OmrAssessmentApplicationListViewBinder
                     .OnResultActionListener,
             OmrAssessmentApplicationListViewBinder
-                    .OnSearchQueryChangedListener {
+                    .OnSearchQueryChangedListener,
+            OmrAssessmentApplicationListViewBinder
+                    .OnIdentifierCopyListener {
         private int openCount;
         private int searchCount;
         private int backCount;
         private int createCount;
         private int importCount;
         private int resultCount;
+        private int copyCount;
         private String lastApplicationId;
         private String lastResultApplicationId;
+        private String lastCopiedIdentifier;
         private String lastQuery;
 
         @Override
@@ -406,6 +427,12 @@ public final class OmrAssessmentApplicationListViewBinderInstrumentedTest {
         public void onSearchQueryChanged(String query) {
             searchCount++;
             lastQuery = query;
+        }
+
+        @Override
+        public void onCopyIdentifier(String identifier) {
+            copyCount++;
+            lastCopiedIdentifier = identifier;
         }
     }
 }

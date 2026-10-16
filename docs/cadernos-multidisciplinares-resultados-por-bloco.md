@@ -33,8 +33,10 @@ posicao logica das questoes ja produzida pela correcao OMR.
 - Acertos, erros, brancos, marcacoes multiplas, ambiguidades e itens ainda nao
   prontos permanecem distintos. Uma nota com pendencias pode ser exibida como
   provisoria, mas nao como resultado final.
-- A nota calculada e a futura nota opcional escolhida para lancamento no SIGE
-  serao campos diferentes. Um ajuste manual nunca deve apagar o calculo.
+- A nota calculada pelo aplicativo permanece imutavel como resultado OMR. Se
+  o professor quiser ajustar uma nota antes do lancamento no SIGE, fara isso
+  somente na planilha baixada e sob sua responsabilidade, sem gravacao no
+  aplicativo ou no banco escolar.
 
 ## Checkpoints
 
@@ -151,19 +153,41 @@ estabelece a operacao validada e transacional usada pelas telas.
   exportados sao os calculados e congelados pelo aplicativo, nao formulas
   dependentes do programa usado para abrir o arquivo.
 
-### 4B. Nota opcional para o SIGE (planejado)
+### 4B. Nota opcional para o SIGE (descartado por decisao de produto)
 
-- campo opcional de nota escolhida para lancamento no SIGE;
-- persistencia separada da nota calculada e de seu historico auditavel;
-- edicao e limpeza explicitas, sem substituir silenciosamente o calculo;
-- inclusao da nota escolhida nas exportacoes quando ela existir.
+- o aplicativo nao oferece edicao manual da nota calculada;
+- nenhuma nota ajustada para o SIGE e persistida no aplicativo ou no banco;
+- o professor pode editar localmente a copia da planilha XLSX depois da
+  exportacao, sem alterar o resultado OMR original;
+- CSV, PDF e novas exportacoes continuam refletindo exclusivamente os valores
+  calculados e congelados pelo aplicativo;
+- alteracoes feitas pelo professor na planilha local nao retornam ao
+  aplicativo e podem ser perdidas caso ele substitua o arquivo por uma nova
+  exportacao.
 
-## Fora dos checkpoints 1, 2, 3A, 3B1, 3B2 e 4A
+### 5A. Identificadores visiveis e copiaveis (concluido)
+
+- a lista de provas exibe separadamente o ID exato da prova e permite copia-lo
+  com um toque;
+- a linha do gabarito permite copiar o ID exato do gabarito sem confundi-lo
+  com a versao;
+- a lista de aplicacoes permite copiar o ID exato da aplicacao sem abrir a
+  chamada congelada;
+- uma mensagem confirma a copia e o valor integral e enviado para a area de
+  transferencia do Android;
+- IDs internos, vinculos, payloads, historicos, CSVs e esquema do banco nao
+  foram encurtados nem migrados, preservando toda a compatibilidade anterior;
+- a pesquisa de provas explicita que tambem aceita ID, mantendo a localizacao
+  dos registros sem exigir que o professor memorize identificadores longos.
+
+## Fora dos checkpoints 1, 2, 3A, 3B1, 3B2, 4A e 5A
 
 Os checkpoints multidisciplinares nao mudam o cartao-resposta nem o
 reconhecimento OMR. O CSV de blocos e adicional e nao altera a interpretacao
 do CSV de provas nem de arquivos antigos. A versao 6 do banco apenas
 acrescenta as tabelas de estruturas; os payloads de aplicacao e tentativa
 continuam no formato v2 do checkpoint 3B2. O checkpoint 4A altera somente a
-apresentacao dos arquivos exportados e nao exige migracao. A nota opcional
-para lancamento no SIGE permanece reservada ao checkpoint 4B.
+apresentacao dos arquivos exportados e nao exige migracao. O checkpoint 5A
+altera somente apresentacao e interacao das listas, sem mudar identidades ou
+persistencia. O antigo checkpoint 4B foi descartado: eventuais ajustes para o
+SIGE existem apenas na copia local da planilha editada pelo professor.

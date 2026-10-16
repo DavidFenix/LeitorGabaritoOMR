@@ -48,14 +48,32 @@
             tools:text="2º bimestre • versão 3" />
 
         <TextView
+            android:id="@+id/textOmrAssessmentItemIdentity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:maxLines="2"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:textColor="#FF2563EB"
+            android:textSize="12sp"
+            tools:text="ID da prova: assessment-1234 • toque para copiar" />
+
+        <TextView
             android:id="@+id/textOmrAssessmentItemAnswerKey"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
+            android:clickable="true"
+            android:focusable="true"
             android:maxLines="2"
-            android:textColor="#FF6B7280"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:textColor="#FF2563EB"
             android:textSize="12sp"
-            tools:text="Gabarito: key-math • versão 2" />
+            tools:text="Gabarito: key-math • versão 2 • toque para copiar o ID" />
 
         <TextView
             android:id="@+id/textOmrAssessmentItemStructure"

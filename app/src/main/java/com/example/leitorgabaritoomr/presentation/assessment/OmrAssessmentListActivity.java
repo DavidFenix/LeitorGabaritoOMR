@@ -1,5 +1,7 @@
 package com.example.leitorgabaritoomr.presentation.assessment;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
@@ -236,6 +238,7 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
 
     private void configureBinder() {
         viewBinder.setOnSearchQueryChangedListener(this::renderQuery);
+        viewBinder.setOnIdentifierCopyListener(this::copyIdentifier);
         viewBinder.setOnAssessmentActionListener(
                 new OmrAssessmentListViewBinder
                         .OnAssessmentActionListener() {
@@ -264,6 +267,30 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
         viewBinder.setOnImportBlocksCsvClickListener(
                 view -> blocksCsvDocumentLauncher.launch(CSV_MIME_TYPES)
         );
+    }
+
+    private void copyIdentifier(String identifier) {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(
+                Context.CLIPBOARD_SERVICE
+        );
+        if (clipboard == null) {
+            Toast.makeText(
+                    this,
+                    R.string.omr_assessment_identifier_copy_error,
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+
+        clipboard.setPrimaryClip(ClipData.newPlainText(
+                "ID OMR",
+                identifier
+        ));
+        Toast.makeText(
+                this,
+                R.string.omr_assessment_identifier_copied,
+                Toast.LENGTH_SHORT
+        ).show();
     }
 
     private void reloadRepository() {

@@ -58,6 +58,7 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
             actions = new RecordingActions();
             binder.setOnAssessmentActionListener(actions);
             binder.setOnSearchQueryChangedListener(actions);
+            binder.setOnIdentifierCopyListener(actions);
             binder.setOnBackClickListener(
                     view -> actions.backCount++
             );
@@ -146,14 +147,41 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
             );
             assertRowText(
                     first,
+                    R.id.textOmrAssessmentItemIdentity,
+                    "ID da prova: assessment-math • toque para copiar"
+            );
+            assertRowText(
+                    first,
                     R.id.textOmrAssessmentItemAnswerKey,
-                    "Gabarito: key-math • versão 2"
+                    "Gabarito: key-math • versão 2 • toque para copiar o ID"
             );
             assertRowText(
                     first,
                     R.id.textOmrAssessmentItemStructure,
                     "Blocos curriculares ainda não configurados"
             );
+        });
+    }
+
+    @Test
+    public void identifierLinesDispatchExactAssessmentAndAnswerKeyIds() {
+        runOnMain(() -> {
+            binder.render(state(assessments(), ""));
+
+            View first = rowAt(0);
+            first.findViewById(
+                    R.id.textOmrAssessmentItemIdentity
+            ).performClick();
+
+            assertEquals(1, actions.copyCount);
+            assertEquals("assessment-math", actions.lastCopiedIdentifier);
+
+            first.findViewById(
+                    R.id.textOmrAssessmentItemAnswerKey
+            ).performClick();
+
+            assertEquals(2, actions.copyCount);
+            assertEquals("key-math", actions.lastCopiedIdentifier);
         });
     }
 
@@ -460,7 +488,8 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
     private static final class RecordingActions
             implements OmrAssessmentListViewBinder
             .OnAssessmentActionListener,
-            OmrAssessmentListViewBinder.OnSearchQueryChangedListener {
+            OmrAssessmentListViewBinder.OnSearchQueryChangedListener,
+            OmrAssessmentListViewBinder.OnIdentifierCopyListener {
 
         private int revisionCount;
         private int searchCount;
@@ -469,7 +498,9 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
         private int importCount;
         private int importBlocksCount;
         private int structureCount;
+        private int copyCount;
         private String lastAssessmentId;
+        private String lastCopiedIdentifier;
         private String lastQuery;
 
         @Override
@@ -488,6 +519,12 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
         public void onSearchQueryChanged(String query) {
             searchCount++;
             lastQuery = query;
+        }
+
+        @Override
+        public void onCopyIdentifier(String identifier) {
+            copyCount++;
+            lastCopiedIdentifier = identifier;
         }
     }
 }
