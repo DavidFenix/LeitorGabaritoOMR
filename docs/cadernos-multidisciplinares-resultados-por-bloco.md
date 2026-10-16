@@ -191,3 +191,27 @@ apresentacao dos arquivos exportados e nao exige migracao. O checkpoint 5A
 altera somente apresentacao e interacao das listas, sem mudar identidades ou
 persistencia. O antigo checkpoint 4B foi descartado: eventuais ajustes para o
 SIGE existem apenas na copia local da planilha editada pelo professor.
+# Gabaritos CSV e cartoes em lote
+
+O checkpoint 6A introduz o formato canonico para importar e exportar um ou
+varios gabaritos oficiais. O arquivo
+`docs/exemplo-importacao-gabaritos.csv` e o mesmo modelo que sera oferecido
+para download na interface.
+
+Cada linha descreve uma versao completa de gabarito. As colunas essenciais
+sao `codigo_gabarito`, `versao`, `nome`, `questoes`, `alternativas`,
+`itens_por_coluna` e `respostas`. `pesos` pode ficar vazio (peso 1 para todos),
+conter um unico valor para todas as questoes ou uma sequencia separada por
+`|`. Em `respostas`, `|` separa as questoes e `+` permite mais de uma resposta
+aceita para a mesma questao, por exemplo `A+C|B|D`.
+
+`itens_por_coluna` aceita `automatico` ou um numero de 1 a 30. Novos registros
+sem `layout_id` e `layout_versao` usam o modelo compacto v4. Os campos
+`id_gabarito`, `layout_id` e `layout_versao` sao tecnicos e opcionais na
+criacao; a exportacao os preenche para permitir uma restauracao exata.
+
+Cabecalho, instrucoes, rodape e nome de arquivo sao configuracoes de impressao
+reservadas para a geracao PNG/ZIP. Elas nao alteram o gabarito armazenado. A
+importacao e integral: repeticao identica e ignorada, enquanto uma identidade
+igual com conteudo diferente rejeita todo o lote sem gravacao parcial. O
+gabarito ativo permanece inalterado.

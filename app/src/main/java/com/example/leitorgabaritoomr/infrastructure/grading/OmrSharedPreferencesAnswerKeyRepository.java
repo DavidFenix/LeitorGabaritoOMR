@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.util.Base64;
 import android.util.Log;
 
+import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyBatchRepository;
 import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyRepository;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 
@@ -13,7 +14,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Repositório privado dos gabaritos oficiais disponíveis no dispositivo.
@@ -28,7 +31,8 @@ import java.util.List;
  * do aplicativo sem perder o gabarito que já estava ativo.
  */
 public final class OmrSharedPreferencesAnswerKeyRepository
-        implements OmrAnswerKeyRepository {
+        implements OmrAnswerKeyRepository,
+        OmrAnswerKeyBatchRepository {
 
     static final String PREFERENCES_NAME =
             "omr_answer_key_repository";
@@ -107,6 +111,69 @@ public final class OmrSharedPreferencesAnswerKeyRepository
         }
 
         persist(updated, active);
+    }
+
+    @Override
+    public synchronized int saveAllCompatible(
+            List<OmrAnswerKeyDefinition> answerKeys
+    ) {
+        if (answerKeys == null) {
+            throw new IllegalArgumentException(
+                    "A lista de gabaritos e obrigatoria."
+            );
+        }
+
+        RepositoryState current = loadStateOrEmpty();
+        Set<String> incomingIdentities =
+                new HashSet<>(answerKeys.size());
+        List<OmrAnswerKeyDefinition> newAnswerKeys =
+                new ArrayList<>(answerKeys.size());
+
+        for (OmrAnswerKeyDefinition answerKey : answerKeys) {
+            requireAnswerKey(answerKey);
+            String identity = identityOf(answerKey);
+            if (!incomingIdentities.add(identity)) {
+                throw new IllegalArgumentException(
+                        "O lote possui uma identidade de gabarito repetida: "
+                                + answerKey.getId()
+                                + "@v"
+                                + answerKey.getVersion()
+                                + "."
+                );
+            }
+
+            OmrAnswerKeyDefinition existing = findIn(
+                    current.answerKeys,
+                    answerKey.getId(),
+                    answerKey.getVersion()
+            );
+            if (existing == null) {
+                newAnswerKeys.add(answerKey);
+            } else if (!sameCompleteContent(existing, answerKey)) {
+                throw new IllegalArgumentException(
+                        "O gabarito "
+                                + answerKey.getId()
+                                + "@v"
+                                + answerKey.getVersion()
+                                + " ja existe com outro conteudo."
+                );
+            }
+        }
+
+        if (newAnswerKeys.isEmpty()) {
+            return 0;
+        }
+
+        List<OmrAnswerKeyDefinition> updated =
+                new ArrayList<>(
+                        newAnswerKeys.size()
+                                + current.answerKeys.size()
+                );
+        updated.addAll(newAnswerKeys);
+        updated.addAll(current.answerKeys);
+
+        persist(updated, current.activeAnswerKey);
+        return newAnswerKeys.size();
     }
 
     @Override
@@ -434,6 +501,26 @@ public final class OmrSharedPreferencesAnswerKeyRepository
                 && answerKey.getVersion()
                 == answerKeyVersion
                 && answerKey.getId().equals(answerKeyId);
+    }
+
+    private static String identityOf(
+            OmrAnswerKeyDefinition answerKey
+    ) {
+        return answerKey.getId()
+                + "\u0000"
+                + answerKey.getVersion();
+    }
+
+    private static boolean sameCompleteContent(
+            OmrAnswerKeyDefinition first,
+            OmrAnswerKeyDefinition second
+    ) {
+        return sameIdentity(first, second)
+                && first.getName().equals(second.getName())
+                && first.getLayoutId().equals(second.getLayoutId())
+                && first.getLayoutVersion()
+                == second.getLayoutVersion()
+                && first.getEntries().equals(second.getEntries());
     }
 
     private static void requireAnswerKey(
