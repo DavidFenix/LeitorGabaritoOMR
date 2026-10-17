@@ -160,10 +160,34 @@
         android:paddingEnd="16dp"
         android:paddingBottom="12dp">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/buttonOmrAssessmentApplicationListCsvTemplate"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:minHeight="48dp"
+                android:text="@string/omr_assessment_application_list_action_csv_template" />
+
+            <Button
+                android:id="@+id/buttonOmrAssessmentApplicationListExportCsv"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:minHeight="48dp"
+                android:text="@string/omr_assessment_application_list_action_export_csv" />
+        </LinearLayout>
+
         <Button
             android:id="@+id/buttonOmrAssessmentApplicationListImportCsv"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:minHeight="48dp"
             android:text="@string/omr_assessment_application_list_action_import_csv" />
 

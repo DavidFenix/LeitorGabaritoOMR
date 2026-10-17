@@ -2,6 +2,7 @@ package com.example.leitorgabaritoomr.application.assessment;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -93,6 +94,50 @@ public final class OmrAssessmentApplicationCsvParserTest {
         assertTrue(preview.isReadyToImport());
         assertEquals("class-1", preview.getRows().get(0)
                 .getClassReference());
+    }
+
+    @Test
+    public void parsesOptionalExactInternalApplicationId() {
+        OmrAssessmentApplicationCsvParser.Preview preview = parser.parse(
+                "codigo_aplicacao;prova;versao_prova;turma;"
+                        + "id_interno_aplicacao\n"
+                        + "APP-3;assessment-1;4;class-1;"
+                        + "application-manual-123\n"
+        );
+
+        assertTrue(preview.isReadyToImport());
+        assertEquals(
+                "application-manual-123",
+                preview.getRows().get(0).getApplicationInternalId()
+        );
+    }
+
+    @Test
+    public void blankInternalApplicationIdKeepsLegacyBehavior() {
+        OmrAssessmentApplicationCsvParser.Preview preview = parser.parse(
+                "codigo_aplicacao;prova;versao_prova;turma;"
+                        + "application_id\n"
+                        + "APP-3;assessment-1;4;class-1;\n"
+        );
+
+        assertTrue(preview.isReadyToImport());
+        assertNull(preview.getRows().get(0).getApplicationInternalId());
+    }
+
+    @Test
+    public void rejectsRepeatedInternalApplicationId() {
+        OmrAssessmentApplicationCsvParser.Preview preview = parser.parse(
+                "codigo_aplicacao;prova;versao_prova;turma;"
+                        + "id_interno_aplicacao\n"
+                        + "APP-1;assessment-1;1;class-1;application-x\n"
+                        + "APP-2;assessment-2;1;class-2;application-x\n"
+        );
+
+        assertFalse(preview.isReadyToImport());
+        assertTrue(preview.getRows().isEmpty());
+        assertEquals(2, preview.getIssues().size());
+        assertTrue(preview.getIssues().get(0).getMessage()
+                .contains("ID interno"));
     }
 
     @Test

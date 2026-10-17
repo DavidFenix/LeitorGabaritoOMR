@@ -253,6 +253,29 @@ public final class OmrAssessmentApplicationRegistrationServiceTest {
     }
 
     @Test
+    public void csvPreservesExplicitInternalApplicationId() {
+        Fixture fixture = new Fixture();
+        OmrAssessmentApplicationCsvParser.Preview preview = preview(
+                "codigo_aplicacao;prova;versao_prova;turma;"
+                        + "id_interno_aplicacao\n"
+                        + "APP-VISIVEL;assessment-1;2;class-1;"
+                        + "application-manual-123\n"
+        );
+
+        OmrAssessmentApplicationRegistrationService.ImportSummary summary =
+                fixture.service().importPreview(preview);
+
+        assertEquals(1, summary.getCreatedApplicationCount());
+        assertEquals(
+                "application-manual-123",
+                summary.getCreatedApplications().get(0).getApplicationId()
+        );
+        assertNotNull(fixture.applications.findByIdOrNull(
+                "application-manual-123"
+        ));
+    }
+
+    @Test
     public void csvApplicationFreezesPublishedStructure() {
         Fixture fixture = new Fixture();
         OmrAssessmentStructure structure =

@@ -94,5 +94,14 @@
             android:minHeight="42dp"
             android:text="@string/omr_assessment_application_list_action_results"
             android:textSize="10sp" />
+
+        <Button
+            android:id="@+id/buttonOmrAssessmentApplicationItemDelete"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:minHeight="42dp"
+            android:text="@string/omr_assessment_application_list_action_delete"
+            android:textSize="10sp" />
     </LinearLayout>
 </LinearLayout>

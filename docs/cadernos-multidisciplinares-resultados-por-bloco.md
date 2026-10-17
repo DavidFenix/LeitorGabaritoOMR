@@ -313,3 +313,24 @@ gabarito ativo permanece inalterado.
 - se uma unica aplicacao referenciar qualquer versao, toda a exclusao e
   bloqueada e nenhuma versao ou estrutura e alterada. Aplicacoes, chamadas e
   resultados nunca sao apagados em cascata pela tela de provas.
+
+### 7B. Operacoes CSV e exclusao segura de aplicacoes
+
+- a tela de aplicacoes oferece `Modelo aplicacoes CSV`, `Exportar aplicacoes
+  CSV` e `Excluir`, alem da importacao existente;
+- `docs/exemplo-importacao-aplicacoes.csv` corresponde ao modelo gerado pelo
+  aplicativo e documenta as quatro colunas historicas e a coluna tecnica
+  opcional `id_interno_aplicacao`;
+- arquivos antigos com apenas `codigo_aplicacao`, `prova`, `versao_prova` e
+  `turma` continuam aceitos e conservam o mapeamento historico de codigo;
+- a exportacao registra os IDs exatos da prova, da turma e da aplicacao. Ao
+  reimportar no mesmo conjunto de cadastros, a identidade da aplicacao e sua
+  chamada original sao preservadas;
+- o CSV de aplicacoes nao e uma copia completa da chamada congelada nem dos
+  resultados. Para restaurar em outro banco, provas, turmas e alunos precisam
+  existir e a importacao fotografa a chamada vigente naquele banco;
+- a exclusao pede confirmacao e remove atomicamente apenas a aplicacao ainda
+  sem correcoes e seus participantes congelados. Prova, turma, matriculas e
+  alunos permanecem cadastrados;
+- se houver ao menos uma tentativa de correcao, a exclusao e bloqueada antes
+  de qualquer alteracao, preservando chamada, revisoes e resultados.

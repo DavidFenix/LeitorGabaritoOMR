@@ -181,7 +181,72 @@ public final class OmrAssessmentApplicationListActivityInstrumentedTest {
                 assertTrue(button(activity,
                         R.id.buttonOmrAssessmentApplicationListImportCsv)
                         .isEnabled());
+                assertTrue(button(activity,
+                        R.id.buttonOmrAssessmentApplicationListCsvTemplate)
+                        .isEnabled());
+                assertTrue(button(activity,
+                        R.id.buttonOmrAssessmentApplicationListExportCsv)
+                        .isEnabled());
             });
+        }
+    }
+
+    @Test
+    public void uncorrectedApplicationCanBeDeletedWithFrozenRoster() {
+        seedSchoolData();
+        saveApplicationSnapshot();
+
+        try (ActivityScenario<OmrAssessmentApplicationListActivity>
+                     scenario = ActivityScenario.launch(
+                createActivityIntent())) {
+            scenario.onActivity(activity -> rowAt(activity, 0)
+                    .findViewById(
+                            R.id.buttonOmrAssessmentApplicationItemDelete
+                    ).performClick());
+            onView(withText(
+                    R.string.omr_assessment_application_delete_confirm
+            )).inRoot(isDialog()).perform(click());
+
+            waitUntil(() -> applicationRepository.loadAll().isEmpty());
+            assertTrue(participantRepository.loadForApplication(
+                    "application-1"
+            ).isEmpty());
+            scenario.onActivity(activity -> assertVisibility(
+                    activity,
+                    R.id.containerOmrAssessmentApplicationListEmpty,
+                    View.VISIBLE
+            ));
+        }
+    }
+
+    @Test
+    public void correctedApplicationDeletionIsBlockedWithoutMutation() {
+        seedSchoolData();
+        saveApplicationSnapshot();
+        attemptRepository.save(new OmrAssessmentAttempt(
+                "attempt-protected", "application-1", "student-1", 1,
+                "history-protected", 3_000L
+        ));
+
+        try (ActivityScenario<OmrAssessmentApplicationListActivity>
+                     scenario = ActivityScenario.launch(
+                createActivityIntent())) {
+            scenario.onActivity(activity -> rowAt(activity, 0)
+                    .findViewById(
+                            R.id.buttonOmrAssessmentApplicationItemDelete
+                    ).performClick());
+            onView(withText(
+                    R.string.omr_assessment_application_delete_confirm
+            )).inRoot(isDialog()).perform(click());
+
+            waitUntil(() -> progressIsHidden(scenario));
+            assertEquals(1, applicationRepository.loadAll().size());
+            assertEquals(2, participantRepository.loadForApplication(
+                    "application-1"
+            ).size());
+            assertEquals(1, attemptRepository.loadForApplication(
+                    "application-1"
+            ).size());
         }
     }
 
@@ -521,6 +586,16 @@ public final class OmrAssessmentApplicationListActivityInstrumentedTest {
         }
         assertTrue("A operação assíncrona não terminou.",
                 condition.isSatisfied());
+    }
+
+    private static boolean progressIsHidden(
+            ActivityScenario<OmrAssessmentApplicationListActivity> scenario
+    ) {
+        final boolean[] hidden = {false};
+        scenario.onActivity(activity -> hidden[0] = activity.findViewById(
+                R.id.progressOmrAssessmentApplicationList
+        ).getVisibility() == View.GONE);
+        return hidden[0];
     }
 
     private static void expectIllegalArgument(Runnable action) {

@@ -248,9 +248,14 @@ public final class OmrAssessmentApplicationRegistrationService {
 
         for (OmrAssessmentApplicationCsvParser.Row row
                 : preview.getRows()) {
-            String applicationId = applicationIdForCsvCode(
-                    row.getApplicationCode()
+            String applicationId = normalizeOrNull(
+                    row.getApplicationInternalId()
             );
+            if (applicationId == null) {
+                applicationId = applicationIdForCsvCode(
+                        row.getApplicationCode()
+                );
+            }
             OmrAssessmentDefinition assessment = resolveAssessment(
                     row.getAssessmentReference(),
                     row.getAssessmentVersion()

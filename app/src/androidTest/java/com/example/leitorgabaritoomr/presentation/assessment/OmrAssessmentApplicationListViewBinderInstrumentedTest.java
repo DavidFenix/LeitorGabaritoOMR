@@ -58,12 +58,19 @@ public final class OmrAssessmentApplicationListViewBinderInstrumentedTest {
             actions = new RecordingActions();
             binder.setOnApplicationActionListener(actions);
             binder.setOnResultActionListener(actions);
+            binder.setOnDeleteActionListener(actions);
             binder.setOnSearchQueryChangedListener(actions);
             binder.setOnIdentifierCopyListener(actions);
             binder.setOnBackClickListener(view -> actions.backCount++);
             binder.setOnCreateClickListener(view -> actions.createCount++);
             binder.setOnImportCsvClickListener(
                     view -> actions.importCount++
+            );
+            binder.setOnCsvTemplateClickListener(
+                    view -> actions.templateCount++
+            );
+            binder.setOnExportCsvClickListener(
+                    view -> actions.exportCount++
             );
         });
     }
@@ -205,9 +212,15 @@ public final class OmrAssessmentApplicationListViewBinderInstrumentedTest {
                     .performClick();
             button(R.id.buttonOmrAssessmentApplicationListImportCsv)
                     .performClick();
+            button(R.id.buttonOmrAssessmentApplicationListCsvTemplate)
+                    .performClick();
+            button(R.id.buttonOmrAssessmentApplicationListExportCsv)
+                    .performClick();
             assertEquals(1, actions.backCount);
             assertEquals(1, actions.createCount);
             assertEquals(1, actions.importCount);
+            assertEquals(1, actions.templateCount);
+            assertEquals(1, actions.exportCount);
         });
     }
 
@@ -234,6 +247,22 @@ public final class OmrAssessmentApplicationListViewBinderInstrumentedTest {
     }
 
     @Test
+    public void deleteButtonDispatchesExactIdentityAndTitle() {
+        runOnMain(() -> {
+            binder.render(state(""));
+
+            Button delete = rowAt(0).findViewById(
+                    R.id.buttonOmrAssessmentApplicationItemDelete
+            );
+            delete.performClick();
+
+            assertEquals(1, actions.deleteCount);
+            assertEquals("application-1", actions.lastDeletedApplicationId);
+            assertEquals("Avaliação bimestral", actions.lastDeletedTitle);
+        });
+    }
+
+    @Test
     public void busyAndReleaseLifecycleAreEnforced() {
         runOnMain(() -> {
             binder.render(state(""));
@@ -245,6 +274,12 @@ public final class OmrAssessmentApplicationListViewBinderInstrumentedTest {
             assertFalse(searchEditText().isEnabled());
             assertFalse(button(
                     R.id.buttonOmrAssessmentApplicationListCreate
+            ).isEnabled());
+            assertFalse(button(
+                    R.id.buttonOmrAssessmentApplicationListCsvTemplate
+            ).isEnabled());
+            assertFalse(button(
+                    R.id.buttonOmrAssessmentApplicationListExportCsv
             ).isEnabled());
             binder.setBusy(false);
             assertTrue(searchEditText().isEnabled());
@@ -396,6 +431,8 @@ public final class OmrAssessmentApplicationListViewBinderInstrumentedTest {
             OmrAssessmentApplicationListViewBinder
                     .OnResultActionListener,
             OmrAssessmentApplicationListViewBinder
+                    .OnDeleteActionListener,
+            OmrAssessmentApplicationListViewBinder
                     .OnSearchQueryChangedListener,
             OmrAssessmentApplicationListViewBinder
                     .OnIdentifierCopyListener {
@@ -405,10 +442,15 @@ public final class OmrAssessmentApplicationListViewBinderInstrumentedTest {
         private int createCount;
         private int importCount;
         private int resultCount;
+        private int deleteCount;
+        private int templateCount;
+        private int exportCount;
         private int copyCount;
         private String lastApplicationId;
         private String lastResultApplicationId;
         private String lastCopiedIdentifier;
+        private String lastDeletedApplicationId;
+        private String lastDeletedTitle;
         private String lastQuery;
 
         @Override
@@ -421,6 +463,16 @@ public final class OmrAssessmentApplicationListViewBinderInstrumentedTest {
         public void onOpenResults(String applicationId) {
             resultCount++;
             lastResultApplicationId = applicationId;
+        }
+
+        @Override
+        public void onDeleteApplication(
+                String applicationId,
+                String assessmentTitle
+        ) {
+            deleteCount++;
+            lastDeletedApplicationId = applicationId;
+            lastDeletedTitle = assessmentTitle;
         }
 
         @Override

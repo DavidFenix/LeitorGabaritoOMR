@@ -27,7 +27,10 @@
     <string name="omr_assessment_application_list_action_back">Voltar</string>
     <string name="omr_assessment_application_list_action_create">Nova aplicação</string>
     <string name="omr_assessment_application_list_action_import_csv">Importar aplicações CSV</string>
+    <string name="omr_assessment_application_list_action_csv_template">Modelo aplicações CSV</string>
+    <string name="omr_assessment_application_list_action_export_csv">Exportar aplicações CSV</string>
     <string name="omr_assessment_application_list_action_roster">Chamada</string>
+    <string name="omr_assessment_application_list_action_delete">Excluir</string>
 
     <string name="omr_assessment_application_registration_title">Nova aplicação</string>
     <string name="omr_assessment_application_registration_assessment_label">Prova e versão exata</string>
@@ -70,6 +73,28 @@
     <string name="omr_assessment_application_csv_too_large">O CSV excede o limite de 5 MB.</string>
     <string name="omr_assessment_application_csv_import_error">Não foi possível importar o CSV. Nenhuma aplicação foi gravada.</string>
     <string name="omr_assessment_application_csv_import_success">Importação concluída: %1$d novas, %2$d já existentes e %3$d participantes congelados.</string>
+    <string name="omr_assessment_application_csv_export_empty">Não há aplicações para exportar.</string>
+    <string name="omr_assessment_application_csv_export_success">Aplicações exportadas em CSV.</string>
+    <string name="omr_assessment_application_csv_export_error">Não foi possível exportar as aplicações.</string>
+    <string name="omr_assessment_application_csv_export_cancelled">Exportação cancelada.</string>
+    <string name="omr_assessment_application_csv_template_success">Modelo CSV de aplicações salvo.</string>
+    <string name="omr_assessment_application_csv_template_error">Não foi possível salvar o modelo CSV de aplicações.</string>
+    <string name="omr_assessment_application_csv_template_cancelled">Criação do modelo cancelada.</string>
+
+    <string name="omr_assessment_application_delete_title">Excluir aplicação?</string>
+    <string name="omr_assessment_application_delete_message">A aplicação de “%1$s” e sua chamada congelada serão excluídas. A prova, a turma e os alunos permanecem cadastrados. Aplicações que já possuem correções são protegidas.</string>
+    <string name="omr_assessment_application_delete_cancel">Cancelar</string>
+    <string name="omr_assessment_application_delete_confirm">Excluir aplicação</string>
+    <plurals name="omr_assessment_application_delete_success">
+        <item quantity="one">Aplicação excluída com seu %1$d participante congelado.</item>
+        <item quantity="other">Aplicação excluída com seus %1$d participantes congelados.</item>
+    </plurals>
+    <plurals name="omr_assessment_application_delete_blocked">
+        <item quantity="one">Esta aplicação possui %1$d correção registrada e não pode ser excluída.</item>
+        <item quantity="other">Esta aplicação possui %1$d correções registradas e não pode ser excluída.</item>
+    </plurals>
+    <string name="omr_assessment_application_delete_missing">A aplicação já não está disponível.</string>
+    <string name="omr_assessment_application_delete_error">Não foi possível excluir a aplicação.</string>
 
     <string name="omr_application_roster_assessment">%1$s • prova v%2$d • %3$s</string>
     <string name="omr_application_roster_class">Chamada congelada: %1$s</string>

@@ -18,8 +18,10 @@ import java.util.Map;
  * Pré-visualiza CSVs que vinculam versões exatas de prova a turmas.
  *
  * Colunas obrigatórias: {@code codigo_aplicacao}, {@code prova},
- * {@code versao_prova} e {@code turma}. Vírgula e ponto e vírgula são
- * aceitos, assim como UTF-8 e Windows-1252.
+ * {@code versao_prova} e {@code turma}. A coluna opcional
+ * {@code id_interno_aplicacao} permite reimportar uma exportação sem trocar
+ * a identidade persistida. Vírgula e ponto e vírgula são aceitos, assim
+ * como UTF-8 e Windows-1252.
  */
 public final class OmrAssessmentApplicationCsvParser {
 
@@ -112,6 +114,10 @@ public final class OmrAssessmentApplicationCsvParser {
                     record.fields,
                     indexes.classReference
             ));
+            String applicationInternalId = normalizeWords(fieldAt(
+                    record.fields,
+                    indexes.applicationInternalId
+            ));
             boolean valid = true;
 
             if (applicationCode.isEmpty()) {
@@ -154,7 +160,9 @@ public final class OmrAssessmentApplicationCsvParser {
                         applicationCode,
                         assessmentReference,
                         assessmentVersion,
-                        classReference
+                        classReference,
+                        applicationInternalId.isEmpty()
+                                ? null : applicationInternalId
                 ));
             }
         }
@@ -166,6 +174,20 @@ public final class OmrAssessmentApplicationCsvParser {
             codeCounts.put(key, previous == null ? 1 : previous + 1);
         }
 
+        Map<String, Integer> internalIdCounts = new LinkedHashMap<>();
+        for (CandidateRow candidate : candidates) {
+            if (candidate.applicationInternalId == null) {
+                continue;
+            }
+            Integer previous = internalIdCounts.get(
+                    candidate.applicationInternalId
+            );
+            internalIdCounts.put(
+                    candidate.applicationInternalId,
+                    previous == null ? 1 : previous + 1
+            );
+        }
+
         List<Row> rows = new ArrayList<>();
         for (CandidateRow candidate : candidates) {
             if (codeCounts.get(canonical(
@@ -175,6 +197,17 @@ public final class OmrAssessmentApplicationCsvParser {
                         candidate.lineNumber,
                         "Código de aplicação repetido no CSV: "
                                 + candidate.applicationCode + "."
+                ));
+                continue;
+            }
+            if (candidate.applicationInternalId != null
+                    && internalIdCounts.get(
+                    candidate.applicationInternalId
+            ) > 1) {
+                issues.add(new Issue(
+                        candidate.lineNumber,
+                        "ID interno da aplicação repetido no CSV: "
+                                + candidate.applicationInternalId + "."
                 ));
                 continue;
             }
@@ -242,6 +275,14 @@ public final class OmrAssessmentApplicationCsvParser {
                         "turma",
                         issues
                 );
+            } else if (isApplicationInternalIdHeader(normalized)) {
+                indexes.applicationInternalId = assignHeader(
+                        indexes.applicationInternalId,
+                        index,
+                        header.lineNumber,
+                        "ID interno da aplicação",
+                        issues
+                );
             }
         }
 
@@ -289,6 +330,11 @@ public final class OmrAssessmentApplicationCsvParser {
         return value.equals("turma")
                 || value.equals("codigo_turma")
                 || value.equals("id_turma");
+    }
+
+    private static boolean isApplicationInternalIdHeader(String value) {
+        return value.equals("id_interno_aplicacao")
+                || value.equals("application_id");
     }
 
     private static RecordReadResult readRecords(
@@ -566,19 +612,22 @@ public final class OmrAssessmentApplicationCsvParser {
         private final String assessmentReference;
         private final int assessmentVersion;
         private final String classReference;
+        private final String applicationInternalId;
 
         private Row(
                 int lineNumber,
                 String applicationCode,
                 String assessmentReference,
                 int assessmentVersion,
-                String classReference
+                String classReference,
+                String applicationInternalId
         ) {
             this.lineNumber = lineNumber;
             this.applicationCode = applicationCode;
             this.assessmentReference = assessmentReference;
             this.assessmentVersion = assessmentVersion;
             this.classReference = classReference;
+            this.applicationInternalId = applicationInternalId;
         }
 
         public int getLineNumber() {
@@ -599,6 +648,10 @@ public final class OmrAssessmentApplicationCsvParser {
 
         public String getClassReference() {
             return classReference;
+        }
+
+        public String getApplicationInternalId() {
+            return applicationInternalId;
         }
     }
 
@@ -674,19 +727,22 @@ public final class OmrAssessmentApplicationCsvParser {
         private final String assessmentReference;
         private final int assessmentVersion;
         private final String classReference;
+        private final String applicationInternalId;
 
         private CandidateRow(
                 int lineNumber,
                 String applicationCode,
                 String assessmentReference,
                 int assessmentVersion,
-                String classReference
+                String classReference,
+                String applicationInternalId
         ) {
             this.lineNumber = lineNumber;
             this.applicationCode = applicationCode;
             this.assessmentReference = assessmentReference;
             this.assessmentVersion = assessmentVersion;
             this.classReference = classReference;
+            this.applicationInternalId = applicationInternalId;
         }
 
         private Row toRow() {
@@ -695,7 +751,8 @@ public final class OmrAssessmentApplicationCsvParser {
                     applicationCode,
                     assessmentReference,
                     assessmentVersion,
-                    classReference
+                    classReference,
+                    applicationInternalId
             );
         }
     }
@@ -728,6 +785,7 @@ public final class OmrAssessmentApplicationCsvParser {
         private int assessmentReference = -1;
         private int assessmentVersion = -1;
         private int classReference = -1;
+        private int applicationInternalId = -1;
 
         private boolean isComplete() {
             return applicationCode >= 0

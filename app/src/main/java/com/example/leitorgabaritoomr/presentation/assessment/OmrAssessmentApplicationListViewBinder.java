@@ -34,6 +34,13 @@ public final class OmrAssessmentApplicationListViewBinder {
         void onOpenResults(String applicationId);
     }
 
+    public interface OnDeleteActionListener {
+        void onDeleteApplication(
+                String applicationId,
+                String assessmentTitle
+        );
+    }
+
     public interface OnSearchQueryChangedListener {
         void onSearchQueryChanged(String query);
     }
@@ -53,6 +60,8 @@ public final class OmrAssessmentApplicationListViewBinder {
     private final Button backButton;
     private final Button createButton;
     private final Button importCsvButton;
+    private final Button csvTemplateButton;
+    private final Button exportCsvButton;
     private final ApplicationAdapter adapter;
     private final TextWatcher searchWatcher;
     private final DateFormat dateFormat;
@@ -60,6 +69,7 @@ public final class OmrAssessmentApplicationListViewBinder {
     private OmrAssessmentApplicationListViewState currentState;
     private OnApplicationActionListener applicationActionListener;
     private OnResultActionListener resultActionListener;
+    private OnDeleteActionListener deleteActionListener;
     private OnSearchQueryChangedListener searchListener;
     private OnIdentifierCopyListener identifierCopyListener;
     private boolean busy;
@@ -117,6 +127,16 @@ public final class OmrAssessmentApplicationListViewBinder {
         importCsvButton = requireView(
                 rootView,
                 R.id.buttonOmrAssessmentApplicationListImportCsv,
+                Button.class
+        );
+        csvTemplateButton = requireView(
+                rootView,
+                R.id.buttonOmrAssessmentApplicationListCsvTemplate,
+                Button.class
+        );
+        exportCsvButton = requireView(
+                rootView,
+                R.id.buttonOmrAssessmentApplicationListExportCsv,
                 Button.class
         );
 
@@ -183,6 +203,8 @@ public final class OmrAssessmentApplicationListViewBinder {
         backButton.setEnabled(!busy);
         createButton.setEnabled(!busy);
         importCsvButton.setEnabled(!busy);
+        csvTemplateButton.setEnabled(!busy);
+        exportCsvButton.setEnabled(!busy);
         applyVisibility();
     }
 
@@ -198,6 +220,13 @@ public final class OmrAssessmentApplicationListViewBinder {
     ) {
         ensureNotReleased();
         resultActionListener = listener;
+    }
+
+    public void setOnDeleteActionListener(
+            OnDeleteActionListener listener
+    ) {
+        ensureNotReleased();
+        deleteActionListener = listener;
     }
 
     public void setOnSearchQueryChangedListener(
@@ -229,6 +258,20 @@ public final class OmrAssessmentApplicationListViewBinder {
         importCsvButton.setOnClickListener(listener);
     }
 
+    public void setOnCsvTemplateClickListener(
+            View.OnClickListener listener
+    ) {
+        ensureNotReleased();
+        csvTemplateButton.setOnClickListener(listener);
+    }
+
+    public void setOnExportCsvClickListener(
+            View.OnClickListener listener
+    ) {
+        ensureNotReleased();
+        exportCsvButton.setOnClickListener(listener);
+    }
+
     public void release() {
         if (released) {
             return;
@@ -236,12 +279,15 @@ public final class OmrAssessmentApplicationListViewBinder {
         released = true;
         applicationActionListener = null;
         resultActionListener = null;
+        deleteActionListener = null;
         searchListener = null;
         identifierCopyListener = null;
         searchEditText.removeTextChangedListener(searchWatcher);
         backButton.setOnClickListener(null);
         createButton.setOnClickListener(null);
         importCsvButton.setOnClickListener(null);
+        csvTemplateButton.setOnClickListener(null);
+        exportCsvButton.setOnClickListener(null);
         adapter.clear();
         applicationListView.setAdapter(null);
     }
@@ -270,6 +316,17 @@ public final class OmrAssessmentApplicationListViewBinder {
     ) {
         if (!busy && resultActionListener != null) {
             resultActionListener.onOpenResults(item.getApplicationId());
+        }
+    }
+
+    private void notifyDelete(
+            OmrAssessmentApplicationListViewState.ApplicationItem item
+    ) {
+        if (!busy && deleteActionListener != null) {
+            deleteActionListener.onDeleteApplication(
+                    item.getApplicationId(),
+                    item.getAssessmentTitle()
+            );
         }
     }
 
@@ -423,6 +480,11 @@ public final class OmrAssessmentApplicationListViewBinder {
                     R.id.buttonOmrAssessmentApplicationItemResults,
                     Button.class
             );
+            Button delete = requireView(
+                    itemView,
+                    R.id.buttonOmrAssessmentApplicationItemDelete,
+                    Button.class
+            );
 
             title.setText(item.getAssessmentTitle());
             assessment.setText(context.getString(
@@ -463,6 +525,7 @@ public final class OmrAssessmentApplicationListViewBinder {
             );
             roster.setOnClickListener(view -> notifyOpenRoster(item));
             results.setOnClickListener(view -> notifyOpenResults(item));
+            delete.setOnClickListener(view -> notifyDelete(item));
             itemView.setOnClickListener(view -> notifyOpenRoster(item));
             return itemView;
         }
