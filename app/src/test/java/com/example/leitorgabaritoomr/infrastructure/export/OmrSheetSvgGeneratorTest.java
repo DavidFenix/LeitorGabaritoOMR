@@ -40,6 +40,16 @@ public final class OmrSheetSvgGeneratorTest {
         assertEquals("omr-compact-ad-q010", document.getTemplateId());
         assertEquals(1, document.getTemplateVersion());
         assertEquals(10, document.getQuestionCount());
+        assertTrue(document.getViewWidth() > 0.0);
+        assertTrue(document.getViewHeight() > 0.0);
+        assertTrue(document.getOutputWidthMillimeters() > 0.0);
+        assertTrue(document.getOutputHeightMillimeters() > 0.0);
+        assertEquals(
+                document.getViewWidth() / document.getViewHeight(),
+                document.getOutputWidthMillimeters()
+                        / document.getOutputHeightMillimeters(),
+                DELTA
+        );
 
         assertTrue(
                 document.getContent().startsWith(

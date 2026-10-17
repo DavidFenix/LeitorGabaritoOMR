@@ -131,7 +131,11 @@ public final class OmrSheetSvgGenerator {
                 svg.toString(),
                 spec.getTemplateId(),
                 spec.getTemplateVersion(),
-                spec.getQuestionCount()
+                spec.getQuestionCount(),
+                viewWidth,
+                viewHeight,
+                outputWidthMillimeters,
+                outputHeightMillimeters
         );
     }
 

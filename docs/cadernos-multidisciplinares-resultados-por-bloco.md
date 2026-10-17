@@ -244,3 +244,26 @@ gabarito ativo permanece inalterado.
   identidades marcam o repositorio como alterado;
 - nenhum dos tres comandos altera a geometria, a leitura OMR ou o gabarito
   ativo.
+
+### 6C. Renderizacao PNG segura e reutilizavel (concluido)
+
+- o SVG validado continua sendo a fonte unica da geometria: o PNG apenas
+  rasteriza seus mesmos marcadores, bolhas, rotulos e textos;
+- a saida usa fundo branco opaco, proporcao original e resolucao de 300 dpi,
+  adequada para impressao sem reduzir a nitidez dos elementos OMR;
+- o bloco `pHYs` do PNG registra a densidade fisica, evitando que editores
+  compativeis precisem adivinhar o tamanho de impressao;
+- a rasterizacao tem limite explicito de pixels e libera o bitmap ao final,
+  inclusive quando ocorre erro, protegendo a memoria durante o futuro lote;
+- o fluxo grava em um `OutputStream` fornecido pelo chamador e nao o fecha,
+  permitindo reutilizar o mesmo componente dentro de uma entrada ZIP;
+- transformacoes SVG desconhecidas sao rejeitadas em vez de produzir um
+  cartao visualmente plausivel com geometria silenciosamente diferente;
+- testes instrumentados decodificam PNGs representativos de 1 a 90 questoes,
+  confirmam os quatro marcadores, o fundo branco, dimensoes, metadados fisicos
+  e personalizacoes de texto.
+
+O checkpoint 6C ainda nao acrescenta um novo botao ao aplicativo. Ele isola e
+valida a base de imagem que sera usada pelo checkpoint seguinte para ler o
+CSV, gerar varios cartoes sequencialmente e entrega-los em um unico ZIP, sem
+manter todos os bitmaps simultaneamente na memoria.

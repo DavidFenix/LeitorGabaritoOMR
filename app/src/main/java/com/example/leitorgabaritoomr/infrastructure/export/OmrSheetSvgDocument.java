@@ -14,13 +14,21 @@ public final class OmrSheetSvgDocument {
     private final String templateId;
     private final int templateVersion;
     private final int questionCount;
+    private final double viewWidth;
+    private final double viewHeight;
+    private final double outputWidthMillimeters;
+    private final double outputHeightMillimeters;
 
     OmrSheetSvgDocument(
             String suggestedFileName,
             String content,
             String templateId,
             int templateVersion,
-            int questionCount
+            int questionCount,
+            double viewWidth,
+            double viewHeight,
+            double outputWidthMillimeters,
+            double outputHeightMillimeters
     ) {
         this.suggestedFileName =
                 requireText(
@@ -52,8 +60,23 @@ public final class OmrSheetSvgDocument {
             );
         }
 
+        validatePositiveFinite("viewWidth", viewWidth);
+        validatePositiveFinite("viewHeight", viewHeight);
+        validatePositiveFinite(
+                "outputWidthMillimeters",
+                outputWidthMillimeters
+        );
+        validatePositiveFinite(
+                "outputHeightMillimeters",
+                outputHeightMillimeters
+        );
+
         this.templateVersion = templateVersion;
         this.questionCount = questionCount;
+        this.viewWidth = viewWidth;
+        this.viewHeight = viewHeight;
+        this.outputWidthMillimeters = outputWidthMillimeters;
+        this.outputHeightMillimeters = outputHeightMillimeters;
     }
 
     private String requireText(
@@ -67,6 +90,17 @@ public final class OmrSheetSvgDocument {
         }
 
         return value;
+    }
+
+    private void validatePositiveFinite(
+            String fieldName,
+            double value
+    ) {
+        if (!Double.isFinite(value) || value <= 0.0) {
+            throw new IllegalArgumentException(
+                    fieldName + " deve ser positivo e finito."
+            );
+        }
     }
 
     public String getSuggestedFileName() {
@@ -95,5 +129,21 @@ public final class OmrSheetSvgDocument {
 
     public int getQuestionCount() {
         return questionCount;
+    }
+
+    public double getViewWidth() {
+        return viewWidth;
+    }
+
+    public double getViewHeight() {
+        return viewHeight;
+    }
+
+    public double getOutputWidthMillimeters() {
+        return outputWidthMillimeters;
+    }
+
+    public double getOutputHeightMillimeters() {
+        return outputHeightMillimeters;
     }
 }
