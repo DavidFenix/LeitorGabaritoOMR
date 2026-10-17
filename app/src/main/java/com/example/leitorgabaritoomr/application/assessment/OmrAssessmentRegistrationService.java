@@ -206,9 +206,12 @@ public final class OmrAssessmentRegistrationService {
         Set<String> batchIdentities = new HashSet<>();
 
         for (OmrAssessmentCsvParser.Row row : preview.getRows()) {
-            String assessmentId = assessmentIdForCsvCode(
-                    row.getAssessmentCode()
-            );
+            String assessmentId = row.getAssessmentInternalId() == null
+                    ? assessmentIdForCsvCode(row.getAssessmentCode())
+                    : requireText(
+                            row.getAssessmentInternalId(),
+                            "O ID interno da prova é inválido."
+                    );
 
             OmrAnswerKeyDefinition answerKey = resolveAnswerKey(
                     row.getAnswerKeyReference(),

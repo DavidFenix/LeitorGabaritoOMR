@@ -111,6 +111,16 @@
             android:text="@string/omr_assessment_list_action_new_version"
             android:textSize="10sp" />
 
+        <Button
+            android:id="@+id/buttonOmrAssessmentItemDelete"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:minHeight="44dp"
+            android:text="@string/omr_assessment_list_action_delete"
+            android:textColor="#FFB91C1C"
+            android:textSize="10sp" />
+
     </LinearLayout>
 
 </LinearLayout>

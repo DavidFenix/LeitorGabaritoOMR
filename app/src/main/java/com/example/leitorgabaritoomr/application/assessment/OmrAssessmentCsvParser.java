@@ -19,7 +19,8 @@ import java.util.Map;
  *
  * O formato canônico usa: {@code codigo_prova}, {@code versao_prova},
  * {@code titulo}, {@code disciplina}, {@code etapa}, {@code periodo},
- * {@code ano_letivo}, {@code gabarito} e {@code versao_gabarito}.
+ * {@code ano_letivo}, {@code gabarito} e {@code versao_gabarito}. A coluna
+ * opcional {@code id_interno_prova} preserva a identidade exata em backups.
  */
 public final class OmrAssessmentCsvParser {
 
@@ -102,6 +103,9 @@ public final class OmrAssessmentCsvParser {
 
             String assessmentCode = normalizeCode(
                     fieldAt(record.fields, indexes.assessmentCode)
+            );
+            String assessmentInternalId = normalizeText(
+                    fieldAt(record.fields, indexes.assessmentInternalId)
             );
             Integer assessmentVersion = parsePositiveInteger(
                     fieldAt(record.fields, indexes.assessmentVersion)
@@ -206,6 +210,7 @@ public final class OmrAssessmentCsvParser {
                 candidates.add(new CandidateRow(
                         record.lineNumber,
                         assessmentCode,
+                        assessmentInternalId,
                         assessmentVersion,
                         title,
                         subject,
@@ -222,7 +227,7 @@ public final class OmrAssessmentCsvParser {
                 new LinkedHashMap<>();
 
         for (CandidateRow candidate : candidates) {
-            String identity = candidate.assessmentCode
+            String identity = candidate.identityReference()
                     + "\u0000"
                     + candidate.assessmentVersion;
 
@@ -236,7 +241,7 @@ public final class OmrAssessmentCsvParser {
         List<Row> rows = new ArrayList<>();
 
         for (CandidateRow candidate : candidates) {
-            String identity = candidate.assessmentCode
+            String identity = candidate.identityReference()
                     + "\u0000"
                     + candidate.assessmentVersion;
 
@@ -297,6 +302,14 @@ public final class OmrAssessmentCsvParser {
                         index,
                         header.lineNumber,
                         "código da prova",
+                        issues
+                );
+            } else if (isAssessmentInternalIdHeader(normalized)) {
+                indexes.assessmentInternalId = assignHeader(
+                        indexes.assessmentInternalId,
+                        index,
+                        header.lineNumber,
+                        "ID interno da prova",
                         issues
                 );
             } else if (isAssessmentVersionHeader(normalized)) {
@@ -785,6 +798,11 @@ public final class OmrAssessmentCsvParser {
                 || "assessment_version".equals(value);
     }
 
+    private static boolean isAssessmentInternalIdHeader(String value) {
+        return "id_interno_prova".equals(value)
+                || "assessment_id".equals(value);
+    }
+
     private static boolean isTitleHeader(String value) {
         return "titulo".equals(value)
                 || "nome_prova".equals(value)
@@ -837,6 +855,7 @@ public final class OmrAssessmentCsvParser {
     public static final class Row {
         private final int lineNumber;
         private final String assessmentCode;
+        private final String assessmentInternalId;
         private final int assessmentVersion;
         private final String title;
         private final String subject;
@@ -849,6 +868,7 @@ public final class OmrAssessmentCsvParser {
         private Row(
                 int lineNumber,
                 String assessmentCode,
+                String assessmentInternalId,
                 int assessmentVersion,
                 String title,
                 String subject,
@@ -860,6 +880,8 @@ public final class OmrAssessmentCsvParser {
         ) {
             this.lineNumber = lineNumber;
             this.assessmentCode = assessmentCode;
+            this.assessmentInternalId = assessmentInternalId.isEmpty()
+                    ? null : assessmentInternalId;
             this.assessmentVersion = assessmentVersion;
             this.title = title;
             this.subject = subject;
@@ -876,6 +898,10 @@ public final class OmrAssessmentCsvParser {
 
         public String getAssessmentCode() {
             return assessmentCode;
+        }
+
+        public String getAssessmentInternalId() {
+            return assessmentInternalId;
         }
 
         public int getAssessmentVersion() {
@@ -980,6 +1006,7 @@ public final class OmrAssessmentCsvParser {
     private static final class CandidateRow {
         private final int lineNumber;
         private final String assessmentCode;
+        private final String assessmentInternalId;
         private final int assessmentVersion;
         private final String title;
         private final String subject;
@@ -992,6 +1019,7 @@ public final class OmrAssessmentCsvParser {
         private CandidateRow(
                 int lineNumber,
                 String assessmentCode,
+                String assessmentInternalId,
                 int assessmentVersion,
                 String title,
                 String subject,
@@ -1003,6 +1031,7 @@ public final class OmrAssessmentCsvParser {
         ) {
             this.lineNumber = lineNumber;
             this.assessmentCode = assessmentCode;
+            this.assessmentInternalId = assessmentInternalId;
             this.assessmentVersion = assessmentVersion;
             this.title = title;
             this.subject = subject;
@@ -1017,6 +1046,7 @@ public final class OmrAssessmentCsvParser {
             return new Row(
                     lineNumber,
                     assessmentCode,
+                    assessmentInternalId,
                     assessmentVersion,
                     title,
                     subject,
@@ -1026,6 +1056,12 @@ public final class OmrAssessmentCsvParser {
                     answerKeyReference,
                     answerKeyVersion
             );
+        }
+
+        private String identityReference() {
+            return assessmentInternalId.isEmpty()
+                    ? assessmentCode
+                    : assessmentInternalId;
         }
     }
 
@@ -1057,6 +1093,7 @@ public final class OmrAssessmentCsvParser {
 
     private static final class HeaderIndexes {
         private int assessmentCode = -1;
+        private int assessmentInternalId = -1;
         private int assessmentVersion = -1;
         private int title = -1;
         private int subject = -1;

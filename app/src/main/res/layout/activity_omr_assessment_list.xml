@@ -166,20 +166,91 @@
         android:paddingEnd="16dp"
         android:paddingBottom="12dp">
 
-        <Button
-            android:id="@+id/buttonOmrAssessmentListImportCsv"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minHeight="48dp"
-            android:text="@string/omr_assessment_list_action_import_csv" />
+            android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/buttonOmrAssessmentListImportBlocksCsv"
+            <Button
+                android:id="@+id/buttonOmrAssessmentListImportCsv"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:maxLines="2"
+                android:minHeight="48dp"
+                android:text="@string/omr_assessment_list_action_import_csv"
+                android:textSize="11sp" />
+
+            <Button
+                android:id="@+id/buttonOmrAssessmentListImportBlocksCsv"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:maxLines="2"
+                android:minHeight="48dp"
+                android:text="@string/omr_assessment_list_action_import_blocks_csv"
+                android:textSize="11sp" />
+
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:minHeight="48dp"
-            android:text="@string/omr_assessment_list_action_import_blocks_csv" />
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/buttonOmrAssessmentListCsvTemplate"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:maxLines="2"
+                android:minHeight="48dp"
+                android:text="@string/omr_assessment_list_action_csv_template"
+                android:textSize="11sp" />
+
+            <Button
+                android:id="@+id/buttonOmrAssessmentListBlocksCsvTemplate"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:maxLines="2"
+                android:minHeight="48dp"
+                android:text="@string/omr_assessment_list_action_blocks_csv_template"
+                android:textSize="11sp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/buttonOmrAssessmentListExportCsv"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:maxLines="2"
+                android:minHeight="48dp"
+                android:text="@string/omr_assessment_list_action_export_csv"
+                android:textSize="11sp" />
+
+            <Button
+                android:id="@+id/buttonOmrAssessmentListExportBlocksCsv"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:maxLines="2"
+                android:minHeight="48dp"
+                android:text="@string/omr_assessment_list_action_export_blocks_csv"
+                android:textSize="11sp" />
+
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"

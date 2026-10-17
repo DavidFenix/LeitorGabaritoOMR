@@ -71,6 +71,18 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
             binder.setOnImportBlocksCsvClickListener(
                     view -> actions.importBlocksCount++
             );
+            binder.setOnAssessmentCsvTemplateClickListener(
+                    view -> actions.assessmentTemplateCount++
+            );
+            binder.setOnBlocksCsvTemplateClickListener(
+                    view -> actions.blocksTemplateCount++
+            );
+            binder.setOnExportAssessmentsCsvClickListener(
+                    view -> actions.exportAssessmentsCount++
+            );
+            binder.setOnExportBlocksCsvClickListener(
+                    view -> actions.exportBlocksCount++
+            );
         });
     }
 
@@ -235,11 +247,27 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
             button(
                     R.id.buttonOmrAssessmentListImportBlocksCsv
             ).performClick();
+            button(
+                    R.id.buttonOmrAssessmentListCsvTemplate
+            ).performClick();
+            button(
+                    R.id.buttonOmrAssessmentListBlocksCsvTemplate
+            ).performClick();
+            button(
+                    R.id.buttonOmrAssessmentListExportCsv
+            ).performClick();
+            button(
+                    R.id.buttonOmrAssessmentListExportBlocksCsv
+            ).performClick();
 
             assertEquals(1, actions.backCount);
             assertEquals(1, actions.createCount);
             assertEquals(1, actions.importCount);
             assertEquals(1, actions.importBlocksCount);
+            assertEquals(1, actions.assessmentTemplateCount);
+            assertEquals(1, actions.blocksTemplateCount);
+            assertEquals(1, actions.exportAssessmentsCount);
+            assertEquals(1, actions.exportBlocksCount);
         });
     }
 
@@ -262,6 +290,14 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
             blocks.performClick();
             assertEquals(1, actions.structureCount);
             assertEquals("assessment-math", actions.lastAssessmentId);
+
+            Button delete = rowAt(1).findViewById(
+                    R.id.buttonOmrAssessmentItemDelete
+            );
+            delete.performClick();
+            assertEquals(1, actions.deleteCount);
+            assertEquals("assessment-science", actions.lastAssessmentId);
+            assertEquals("Diagnóstico", actions.lastAssessmentTitle);
         });
     }
 
@@ -308,6 +344,18 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
             ).isEnabled());
             assertFalse(button(
                     R.id.buttonOmrAssessmentListImportBlocksCsv
+            ).isEnabled());
+            assertFalse(button(
+                    R.id.buttonOmrAssessmentListCsvTemplate
+            ).isEnabled());
+            assertFalse(button(
+                    R.id.buttonOmrAssessmentListBlocksCsvTemplate
+            ).isEnabled());
+            assertFalse(button(
+                    R.id.buttonOmrAssessmentListExportCsv
+            ).isEnabled());
+            assertFalse(button(
+                    R.id.buttonOmrAssessmentListExportBlocksCsv
             ).isEnabled());
 
             binder.setBusy(false);
@@ -497,9 +545,15 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
         private int createCount;
         private int importCount;
         private int importBlocksCount;
+        private int assessmentTemplateCount;
+        private int blocksTemplateCount;
+        private int exportAssessmentsCount;
+        private int exportBlocksCount;
         private int structureCount;
+        private int deleteCount;
         private int copyCount;
         private String lastAssessmentId;
+        private String lastAssessmentTitle;
         private String lastCopiedIdentifier;
         private String lastQuery;
 
@@ -513,6 +567,16 @@ public final class OmrAssessmentListViewBinderInstrumentedTest {
         public void onManageStructure(String assessmentId) {
             structureCount++;
             lastAssessmentId = assessmentId;
+        }
+
+        @Override
+        public void onDeleteAssessment(
+                String assessmentId,
+                String assessmentTitle
+        ) {
+            deleteCount++;
+            lastAssessmentId = assessmentId;
+            lastAssessmentTitle = assessmentTitle;
         }
 
         @Override

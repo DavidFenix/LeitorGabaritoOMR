@@ -289,3 +289,27 @@ gabarito ativo permanece inalterado.
   preexistente escolhido pelo usuario;
 - layouts legados continuam reconheciveis em leituras antigas, mas nao sao
   apresentados como se possuissem um modelo de cartao publicado atual.
+
+### 7A. Operacoes CSV e exclusao segura de provas
+
+- a tela de provas oferece separadamente `Modelo provas CSV`, `Modelo blocos
+  CSV`, `Exportar provas CSV` e `Exportar blocos CSV`, sem exigir que o
+  professor procure arquivos de exemplo fora do aplicativo;
+- `docs/exemplo-importacao-provas.csv` corresponde ao modelo de provas
+  produzido pela interface, e `docs/exemplo-importacao-blocos-prova.csv`
+  continua sendo a referencia para blocos;
+- a exportacao de provas inclui todas as versoes e a coluna tecnica opcional
+  `id_interno_prova`; essa coluna conserva a identidade exata de provas
+  criadas manualmente quando o arquivo e usado como backup e restauracao;
+- arquivos antigos sem `id_interno_prova` continuam aceitos e mantem o
+  mapeamento historico de `codigo_prova` para `assessment-csv:CODIGO`;
+- a exportacao de blocos inclui todas as estruturas efetivamente publicadas,
+  uma linha por componente, e usa o ID exato da prova para evitar ambiguidade;
+- os dois formatos usam UTF-8 com BOM, ponto e virgula, quebra de linha CRLF,
+  aspas em todas as celulas e neutralizacao de prefixos interpretaveis como
+  formula por programas de planilha;
+- `Excluir prova` pede confirmacao explicita e exclui, em uma transacao, todas
+  as versoes e todos os blocos da mesma prova;
+- se uma unica aplicacao referenciar qualquer versao, toda a exclusao e
+  bloqueada e nenhuma versao ou estrutura e alterada. Aplicacoes, chamadas e
+  resultados nunca sao apagados em cascata pela tela de provas.

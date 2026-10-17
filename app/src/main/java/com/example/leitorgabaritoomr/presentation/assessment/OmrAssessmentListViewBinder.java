@@ -28,6 +28,11 @@ public final class OmrAssessmentListViewBinder {
         void onCreateNewVersion(String assessmentId);
 
         void onManageStructure(String assessmentId);
+
+        void onDeleteAssessment(
+                String assessmentId,
+                String assessmentTitle
+        );
     }
 
     public interface OnSearchQueryChangedListener {
@@ -50,6 +55,10 @@ public final class OmrAssessmentListViewBinder {
     private final Button createButton;
     private final Button importCsvButton;
     private final Button importBlocksCsvButton;
+    private final Button assessmentCsvTemplateButton;
+    private final Button blocksCsvTemplateButton;
+    private final Button exportAssessmentsCsvButton;
+    private final Button exportBlocksCsvButton;
     private final AssessmentAdapter adapter;
     private final TextWatcher searchWatcher;
 
@@ -119,6 +128,26 @@ public final class OmrAssessmentListViewBinder {
                 R.id.buttonOmrAssessmentListImportBlocksCsv,
                 Button.class
         );
+        assessmentCsvTemplateButton = requireView(
+                rootView,
+                R.id.buttonOmrAssessmentListCsvTemplate,
+                Button.class
+        );
+        blocksCsvTemplateButton = requireView(
+                rootView,
+                R.id.buttonOmrAssessmentListBlocksCsvTemplate,
+                Button.class
+        );
+        exportAssessmentsCsvButton = requireView(
+                rootView,
+                R.id.buttonOmrAssessmentListExportCsv,
+                Button.class
+        );
+        exportBlocksCsvButton = requireView(
+                rootView,
+                R.id.buttonOmrAssessmentListExportBlocksCsv,
+                Button.class
+        );
 
         adapter = new AssessmentAdapter();
         assessmentListView.setAdapter(adapter);
@@ -182,6 +211,10 @@ public final class OmrAssessmentListViewBinder {
         createButton.setEnabled(!busy);
         importCsvButton.setEnabled(!busy);
         importBlocksCsvButton.setEnabled(!busy);
+        assessmentCsvTemplateButton.setEnabled(!busy);
+        blocksCsvTemplateButton.setEnabled(!busy);
+        exportAssessmentsCsvButton.setEnabled(!busy);
+        exportBlocksCsvButton.setEnabled(!busy);
         applyVisibility();
     }
 
@@ -228,6 +261,34 @@ public final class OmrAssessmentListViewBinder {
         importBlocksCsvButton.setOnClickListener(listener);
     }
 
+    public void setOnAssessmentCsvTemplateClickListener(
+            View.OnClickListener listener
+    ) {
+        ensureNotReleased();
+        assessmentCsvTemplateButton.setOnClickListener(listener);
+    }
+
+    public void setOnBlocksCsvTemplateClickListener(
+            View.OnClickListener listener
+    ) {
+        ensureNotReleased();
+        blocksCsvTemplateButton.setOnClickListener(listener);
+    }
+
+    public void setOnExportAssessmentsCsvClickListener(
+            View.OnClickListener listener
+    ) {
+        ensureNotReleased();
+        exportAssessmentsCsvButton.setOnClickListener(listener);
+    }
+
+    public void setOnExportBlocksCsvClickListener(
+            View.OnClickListener listener
+    ) {
+        ensureNotReleased();
+        exportBlocksCsvButton.setOnClickListener(listener);
+    }
+
     public void release() {
         if (released) {
             return;
@@ -242,6 +303,10 @@ public final class OmrAssessmentListViewBinder {
         createButton.setOnClickListener(null);
         importCsvButton.setOnClickListener(null);
         importBlocksCsvButton.setOnClickListener(null);
+        assessmentCsvTemplateButton.setOnClickListener(null);
+        blocksCsvTemplateButton.setOnClickListener(null);
+        exportAssessmentsCsvButton.setOnClickListener(null);
+        exportBlocksCsvButton.setOnClickListener(null);
         adapter.clear();
         assessmentListView.setAdapter(null);
     }
@@ -274,6 +339,18 @@ public final class OmrAssessmentListViewBinder {
         OnAssessmentActionListener listener = assessmentActionListener;
         if (listener != null && !busy) {
             listener.onManageStructure(item.getAssessmentId());
+        }
+    }
+
+    private void notifyDeleteAssessment(
+            OmrAssessmentListViewState.AssessmentItem item
+    ) {
+        OnAssessmentActionListener listener = assessmentActionListener;
+        if (listener != null && !busy) {
+            listener.onDeleteAssessment(
+                    item.getAssessmentId(),
+                    item.getTitle()
+            );
         }
     }
 
@@ -442,6 +519,11 @@ public final class OmrAssessmentListViewBinder {
                     R.id.buttonOmrAssessmentItemStructure,
                     Button.class
             );
+            Button deleteAssessment = requireView(
+                    itemView,
+                    R.id.buttonOmrAssessmentItemDelete,
+                    Button.class
+            );
 
             title.setText(item.getTitle());
             metadata.setText(context.getString(
@@ -495,6 +577,9 @@ public final class OmrAssessmentListViewBinder {
             );
             manageStructure.setOnClickListener(
                     view -> notifyManageStructure(item)
+            );
+            deleteAssessment.setOnClickListener(
+                    view -> notifyDeleteAssessment(item)
             );
 
             return itemView;

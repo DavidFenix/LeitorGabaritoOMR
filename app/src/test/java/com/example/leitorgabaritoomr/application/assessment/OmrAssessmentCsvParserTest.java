@@ -74,6 +74,36 @@ public final class OmrAssessmentCsvParserTest {
     }
 
     @Test
+    public void acceptsOptionalInternalAssessmentIdForBackupRestore() {
+        String csv = header() + ",id_interno_prova\n"
+                + row("CODIGO VISIVEL", 2, "Prova", "key-1", 1)
+                + ",assessment-manual-123";
+
+        OmrAssessmentCsvParser.Preview preview = parser.parse(csv);
+
+        assertTrue(preview.isReadyToImport());
+        assertEquals(
+                "assessment-manual-123",
+                preview.getRows().get(0).getAssessmentInternalId()
+        );
+    }
+
+    @Test
+    public void internalIdParticipatesInDuplicateIdentity() {
+        String csv = header() + ",assessment_id\n"
+                + row("CODIGO A", 1, "Primeira", "key-1", 1)
+                + ",assessment-shared\n"
+                + row("CODIGO B", 1, "Segunda", "key-1", 1)
+                + ",assessment-shared";
+
+        OmrAssessmentCsvParser.Preview preview = parser.parse(csv);
+
+        assertFalse(preview.isReadyToImport());
+        assertTrue(preview.getRows().isEmpty());
+        assertIssue(preview, "repetidos");
+    }
+
+    @Test
     public void parsesQuotedDelimiterQuotesAndLineBreak() {
         String csv = header() + "\n"
                 + "P1,1,\"Prova, diagnóstica\",Matemática,9º ano,"

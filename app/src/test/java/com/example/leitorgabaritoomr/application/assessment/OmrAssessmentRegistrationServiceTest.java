@@ -209,6 +209,38 @@ public final class OmrAssessmentRegistrationServiceTest {
     }
 
     @Test
+    public void csvBackupRestoresExactInternalAssessmentId() {
+        String csv = "codigo_prova,versao_prova,titulo,disciplina,etapa,"
+                + "periodo,ano_letivo,gabarito,versao_gabarito,"
+                + "id_interno_prova\n"
+                + csvRow(
+                "CODIGO VISIVEL",
+                1,
+                "Prova restaurada",
+                "key-1",
+                2
+        ) + ",assessment-manual-backup";
+
+        OmrAssessmentRegistrationService.ImportSummary summary =
+                service.importPreview(
+                        new OmrAssessmentCsvParser().parse(csv)
+                );
+
+        assertEquals(1, summary.getCreatedVersionCount());
+        OmrAssessmentDefinition stored = assessments.findOrNull(
+                "assessment-manual-backup",
+                1
+        );
+        assertNotNull(stored);
+        assertEquals("Prova restaurada", stored.getTitle());
+        assertEquals(2, stored.getAnswerKeyVersion());
+        assertTrue(assessments.findOrNull(
+                "assessment-csv:CODIGO VISIVEL",
+                1
+        ) == null);
+    }
+
+    @Test
     public void csvCodeProducesStableCaseInsensitiveAssessmentId() {
         assertEquals(
                 "assessment-csv:PROVA 01",

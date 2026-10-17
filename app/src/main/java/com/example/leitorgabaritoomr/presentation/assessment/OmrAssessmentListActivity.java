@@ -29,6 +29,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentCsvParser;
+import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentDeletionRepository;
 import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentRegistrationService;
 import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentStructureCsvParser;
 import com.example.leitorgabaritoomr.application.assessment.OmrAssessmentStructureRegistrationService;
@@ -38,7 +39,10 @@ import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentBlock;
 import com.example.leitorgabaritoomr.domain.assessment.OmrAssessmentStructure;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesAnswerKeyRepository;
+import com.example.leitorgabaritoomr.infrastructure.export.OmrAssessmentCsvExporter;
+import com.example.leitorgabaritoomr.infrastructure.export.OmrAssessmentStructureCsvExporter;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentBatchRepository;
+import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentDeletionRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentRepository;
 import com.example.leitorgabaritoomr.infrastructure.school.OmrSQLiteAssessmentStructureRepository;
 import com.google.android.material.textfield.TextInputEditText;
@@ -47,6 +51,7 @@ import com.google.android.material.textfield.TextInputLayout;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -76,20 +81,37 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
             "application/vnd.ms-excel"
     };
 
+    private static final String CSV_MIME_TYPE = "text/csv";
+    private static final String ASSESSMENT_EXPORT_FILE_NAME =
+            "provas-omr.csv";
+    private static final String ASSESSMENT_TEMPLATE_FILE_NAME =
+            "modelo-importacao-provas.csv";
+    private static final String BLOCKS_EXPORT_FILE_NAME =
+            "blocos-provas-omr.csv";
+    private static final String BLOCKS_TEMPLATE_FILE_NAME =
+            "modelo-importacao-blocos-prova.csv";
+
     private OmrSQLiteAssessmentRepository assessmentRepository;
     private OmrSQLiteAssessmentBatchRepository batchRepository;
     private OmrSQLiteAssessmentStructureRepository structureRepository;
+    private OmrSQLiteAssessmentDeletionRepository deletionRepository;
     private OmrAnswerKeyRepository answerKeyRepository;
     private OmrAssessmentRegistrationService registrationService;
     private OmrAssessmentCsvParser csvParser;
     private OmrAssessmentStructureCsvParser structureCsvParser;
     private OmrAssessmentStructureRegistrationService
             structureRegistrationService;
+    private OmrAssessmentCsvExporter assessmentCsvExporter;
+    private OmrAssessmentStructureCsvExporter structureCsvExporter;
     private OmrAssessmentListViewBinder viewBinder;
     private ExecutorService backgroundExecutor;
     private List<OmrAssessmentDefinition> assessmentCatalog =
             Collections.emptyList();
     private List<OmrAssessmentStructure> structureCatalog =
+            Collections.emptyList();
+    private List<OmrAssessmentDefinition> pendingAssessmentExport =
+            Collections.emptyList();
+    private List<OmrAssessmentStructure> pendingStructureExport =
             Collections.emptyList();
 
     private AlertDialog registrationDialog;
@@ -97,6 +119,7 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
     private AlertDialog csvPreviewDialog;
     private AlertDialog structureCsvPreviewDialog;
     private AlertDialog structureDialog;
+    private AlertDialog deletionDialog;
     private volatile boolean released;
 
     private final ActivityResultLauncher<String[]> csvDocumentLauncher =
@@ -109,6 +132,30 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
             registerForActivityResult(
                     new ActivityResultContracts.OpenDocument(),
                     this::handleBlocksCsvDocument
+            );
+
+    private final ActivityResultLauncher<String> assessmentExportLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.CreateDocument(CSV_MIME_TYPE),
+                    this::handleAssessmentExportDestination
+            );
+
+    private final ActivityResultLauncher<String> assessmentTemplateLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.CreateDocument(CSV_MIME_TYPE),
+                    this::handleAssessmentTemplateDestination
+            );
+
+    private final ActivityResultLauncher<String> blocksExportLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.CreateDocument(CSV_MIME_TYPE),
+                    this::handleBlocksExportDestination
+            );
+
+    private final ActivityResultLauncher<String> blocksTemplateLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.CreateDocument(CSV_MIME_TYPE),
+                    this::handleBlocksTemplateDestination
             );
 
     public static Intent createIntent(Context context) {
@@ -162,6 +209,8 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
                     new OmrSQLiteAssessmentBatchRepository(this);
             structureRepository =
                     new OmrSQLiteAssessmentStructureRepository(this);
+            deletionRepository =
+                    new OmrSQLiteAssessmentDeletionRepository(this);
         } else {
             assessmentRepository = new OmrSQLiteAssessmentRepository(
                     this,
@@ -173,6 +222,11 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
             );
             structureRepository =
                     new OmrSQLiteAssessmentStructureRepository(
+                            this,
+                            databaseName.trim()
+                    );
+            deletionRepository =
+                    new OmrSQLiteAssessmentDeletionRepository(
                             this,
                             databaseName.trim()
                     );
@@ -196,6 +250,8 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
                 );
         csvParser = new OmrAssessmentCsvParser();
         structureCsvParser = new OmrAssessmentStructureCsvParser();
+        assessmentCsvExporter = new OmrAssessmentCsvExporter();
+        structureCsvExporter = new OmrAssessmentStructureCsvExporter();
         backgroundExecutor = Executors.newSingleThreadExecutor();
         viewBinder = new OmrAssessmentListViewBinder(
                 findViewById(android.R.id.content)
@@ -255,6 +311,17 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
                     ) {
                         showStructureDialog(assessmentId);
                     }
+
+                    @Override
+                    public void onDeleteAssessment(
+                            String assessmentId,
+                            String assessmentTitle
+                    ) {
+                        confirmDeleteAssessment(
+                                assessmentId,
+                                assessmentTitle
+                        );
+                    }
                 }
         );
         viewBinder.setOnBackClickListener(view -> finish());
@@ -266,6 +333,22 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
         );
         viewBinder.setOnImportBlocksCsvClickListener(
                 view -> blocksCsvDocumentLauncher.launch(CSV_MIME_TYPES)
+        );
+        viewBinder.setOnAssessmentCsvTemplateClickListener(
+                view -> assessmentTemplateLauncher.launch(
+                        ASSESSMENT_TEMPLATE_FILE_NAME
+                )
+        );
+        viewBinder.setOnBlocksCsvTemplateClickListener(
+                view -> blocksTemplateLauncher.launch(
+                        BLOCKS_TEMPLATE_FILE_NAME
+                )
+        );
+        viewBinder.setOnExportAssessmentsCsvClickListener(
+                view -> prepareAssessmentExport()
+        );
+        viewBinder.setOnExportBlocksCsvClickListener(
+                view -> prepareBlocksExport()
         );
     }
 
@@ -1007,6 +1090,347 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
         }
     }
 
+    private void prepareAssessmentExport() {
+        if (assessmentCatalog.isEmpty()) {
+            Toast.makeText(
+                    this,
+                    R.string.omr_assessment_csv_export_empty,
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+
+        viewBinder.setBusy(true);
+        backgroundExecutor.execute(() -> {
+            try {
+                List<OmrAssessmentDefinition> assessments =
+                        new ArrayList<>(assessmentRepository.loadAll());
+                postToUi(() -> {
+                    viewBinder.setBusy(false);
+                    if (assessments.isEmpty()) {
+                        Toast.makeText(
+                                this,
+                                R.string.omr_assessment_csv_export_empty,
+                                Toast.LENGTH_SHORT
+                        ).show();
+                        return;
+                    }
+                    pendingAssessmentExport =
+                            Collections.unmodifiableList(assessments);
+                    assessmentExportLauncher.launch(
+                            ASSESSMENT_EXPORT_FILE_NAME
+                    );
+                });
+            } catch (RuntimeException exception) {
+                Log.e(TAG, "Falha ao preparar exportacao de provas.", exception);
+                postToUi(() -> showBackgroundError(
+                        R.string.omr_assessment_csv_export_error
+                ));
+            }
+        });
+    }
+
+    private void prepareBlocksExport() {
+        viewBinder.setBusy(true);
+        backgroundExecutor.execute(() -> {
+            try {
+                List<OmrAssessmentStructure> structures =
+                        collectStoredStructures();
+                postToUi(() -> {
+                    viewBinder.setBusy(false);
+                    if (structures.isEmpty()) {
+                        Toast.makeText(
+                                this,
+                                R.string.omr_assessment_blocks_csv_export_empty,
+                                Toast.LENGTH_SHORT
+                        ).show();
+                        return;
+                    }
+                    pendingStructureExport =
+                            Collections.unmodifiableList(structures);
+                    blocksExportLauncher.launch(BLOCKS_EXPORT_FILE_NAME);
+                });
+            } catch (RuntimeException exception) {
+                Log.e(TAG, "Falha ao preparar exportacao de blocos.", exception);
+                postToUi(() -> showBackgroundError(
+                        R.string.omr_assessment_blocks_csv_export_error
+                ));
+            }
+        });
+    }
+
+    private List<OmrAssessmentStructure> collectStoredStructures() {
+        List<OmrAssessmentStructure> structures = new ArrayList<>();
+        for (OmrAssessmentDefinition assessment
+                : assessmentRepository.loadAll()) {
+            OmrAssessmentStructure structure = structureRepository
+                    .findStoredOrNull(
+                            assessment.getAssessmentId(),
+                            assessment.getVersion()
+                    );
+            if (structure != null) {
+                structures.add(structure);
+            }
+        }
+        return structures;
+    }
+
+    private void handleAssessmentExportDestination(
+            @Nullable Uri destinationUri
+    ) {
+        List<OmrAssessmentDefinition> assessments =
+                new ArrayList<>(pendingAssessmentExport);
+        pendingAssessmentExport = Collections.emptyList();
+
+        if (destinationUri == null) {
+            Toast.makeText(
+                    this,
+                    R.string.omr_assessment_csv_export_cancelled,
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+        if (assessments.isEmpty() || backgroundExecutor == null) {
+            Toast.makeText(
+                    this,
+                    R.string.omr_assessment_csv_export_error,
+                    Toast.LENGTH_LONG
+            ).show();
+            return;
+        }
+
+        viewBinder.setBusy(true);
+        backgroundExecutor.execute(() -> {
+            try (OutputStream output = getContentResolver()
+                    .openOutputStream(destinationUri, "w")) {
+                if (output == null) {
+                    throw new IOException("O destino nao pode ser aberto.");
+                }
+                assessmentCsvExporter.write(assessments, output);
+                postToUi(() -> finishCsvWrite(
+                        R.string.omr_assessment_csv_export_success
+                ));
+            } catch (IOException | RuntimeException exception) {
+                Log.e(TAG, "Falha ao exportar provas.", exception);
+                postToUi(() -> showBackgroundError(
+                        R.string.omr_assessment_csv_export_error
+                ));
+            }
+        });
+    }
+
+    private void handleBlocksExportDestination(
+            @Nullable Uri destinationUri
+    ) {
+        List<OmrAssessmentStructure> structures =
+                new ArrayList<>(pendingStructureExport);
+        pendingStructureExport = Collections.emptyList();
+
+        if (destinationUri == null) {
+            Toast.makeText(
+                    this,
+                    R.string.omr_assessment_blocks_csv_export_cancelled,
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+        if (structures.isEmpty() || backgroundExecutor == null) {
+            Toast.makeText(
+                    this,
+                    R.string.omr_assessment_blocks_csv_export_error,
+                    Toast.LENGTH_LONG
+            ).show();
+            return;
+        }
+
+        viewBinder.setBusy(true);
+        backgroundExecutor.execute(() -> {
+            try (OutputStream output = getContentResolver()
+                    .openOutputStream(destinationUri, "w")) {
+                if (output == null) {
+                    throw new IOException("O destino nao pode ser aberto.");
+                }
+                structureCsvExporter.write(structures, output);
+                postToUi(() -> finishCsvWrite(
+                        R.string.omr_assessment_blocks_csv_export_success
+                ));
+            } catch (IOException | RuntimeException exception) {
+                Log.e(TAG, "Falha ao exportar blocos.", exception);
+                postToUi(() -> showBackgroundError(
+                        R.string.omr_assessment_blocks_csv_export_error
+                ));
+            }
+        });
+    }
+
+    private void handleAssessmentTemplateDestination(
+            @Nullable Uri destinationUri
+    ) {
+        if (destinationUri == null) {
+            Toast.makeText(
+                    this,
+                    R.string.omr_assessment_csv_template_cancelled,
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+        writeAssessmentTemplate(destinationUri);
+    }
+
+    private void handleBlocksTemplateDestination(
+            @Nullable Uri destinationUri
+    ) {
+        if (destinationUri == null) {
+            Toast.makeText(
+                    this,
+                    R.string.omr_assessment_blocks_csv_template_cancelled,
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+        writeBlocksTemplate(destinationUri);
+    }
+
+    private void writeAssessmentTemplate(Uri destinationUri) {
+        viewBinder.setBusy(true);
+        backgroundExecutor.execute(() -> {
+            try (OutputStream output = getContentResolver()
+                    .openOutputStream(destinationUri, "w")) {
+                if (output == null) {
+                    throw new IOException("O destino nao pode ser aberto.");
+                }
+                assessmentCsvExporter.writeTemplate(output);
+                postToUi(() -> finishCsvWrite(
+                        R.string.omr_assessment_csv_template_success
+                ));
+            } catch (IOException | RuntimeException exception) {
+                Log.e(TAG, "Falha ao salvar modelo de provas.", exception);
+                postToUi(() -> showBackgroundError(
+                        R.string.omr_assessment_csv_template_error
+                ));
+            }
+        });
+    }
+
+    private void writeBlocksTemplate(Uri destinationUri) {
+        viewBinder.setBusy(true);
+        backgroundExecutor.execute(() -> {
+            try (OutputStream output = getContentResolver()
+                    .openOutputStream(destinationUri, "w")) {
+                if (output == null) {
+                    throw new IOException("O destino nao pode ser aberto.");
+                }
+                structureCsvExporter.writeTemplate(output);
+                postToUi(() -> finishCsvWrite(
+                        R.string.omr_assessment_blocks_csv_template_success
+                ));
+            } catch (IOException | RuntimeException exception) {
+                Log.e(TAG, "Falha ao salvar modelo de blocos.", exception);
+                postToUi(() -> showBackgroundError(
+                        R.string.omr_assessment_blocks_csv_template_error
+                ));
+            }
+        });
+    }
+
+    private void finishCsvWrite(int successMessage) {
+        viewBinder.setBusy(false);
+        Toast.makeText(this, successMessage, Toast.LENGTH_LONG).show();
+    }
+
+    private void confirmDeleteAssessment(
+            String assessmentId,
+            String assessmentTitle
+    ) {
+        if (deletionDialog != null && deletionDialog.isShowing()) {
+            return;
+        }
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.omr_assessment_delete_title)
+                .setMessage(getString(
+                        R.string.omr_assessment_delete_message,
+                        assessmentTitle
+                ))
+                .setNegativeButton(
+                        R.string.omr_assessment_delete_cancel,
+                        null
+                )
+                .setPositiveButton(
+                        R.string.omr_assessment_delete_confirm,
+                        (ignored, which) -> deleteAssessment(assessmentId)
+                )
+                .create();
+        deletionDialog = dialog;
+        dialog.setOnDismissListener(ignored -> {
+            if (deletionDialog == dialog) {
+                deletionDialog = null;
+            }
+        });
+        dialog.show();
+    }
+
+    private void deleteAssessment(String assessmentId) {
+        viewBinder.setBusy(true);
+        backgroundExecutor.execute(() -> {
+            try {
+                OmrAssessmentDeletionRepository.DeletionResult result =
+                        deletionRepository.deleteAllVersionsIfUnused(
+                                assessmentId
+                        );
+                postToUi(() -> handleAssessmentDeletionResult(result));
+            } catch (RuntimeException exception) {
+                Log.e(TAG, "Falha ao excluir prova.", exception);
+                postToUi(() -> showBackgroundError(
+                        R.string.omr_assessment_delete_error
+                ));
+            }
+        });
+    }
+
+    private void handleAssessmentDeletionResult(
+            OmrAssessmentDeletionRepository.DeletionResult result
+    ) {
+        viewBinder.setBusy(false);
+        if (result.isDeleted()) {
+            reloadRepository();
+            int count = result.getDeletedVersionCount();
+            Toast.makeText(
+                    this,
+                    getResources().getQuantityString(
+                            R.plurals.omr_assessment_delete_success,
+                            count,
+                            count
+                    ),
+                    Toast.LENGTH_LONG
+            ).show();
+            return;
+        }
+
+        if (result.getStatus()
+                == OmrAssessmentDeletionRepository.DeletionResult.Status
+                .BLOCKED_BY_APPLICATIONS) {
+            int count = result.getBlockingApplicationCount();
+            Toast.makeText(
+                    this,
+                    getResources().getQuantityString(
+                            R.plurals.omr_assessment_delete_blocked,
+                            count,
+                            count
+                    ),
+                    Toast.LENGTH_LONG
+            ).show();
+            return;
+        }
+
+        reloadRepository();
+        Toast.makeText(
+                this,
+                R.string.omr_assessment_delete_missing,
+                Toast.LENGTH_LONG
+        ).show();
+    }
+
     private void handleBlocksCsvDocument(@Nullable Uri documentUri) {
         if (documentUri == null || released) {
             return;
@@ -1446,6 +1870,10 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
             structureDialog.dismiss();
             structureDialog = null;
         }
+        if (deletionDialog != null) {
+            deletionDialog.dismiss();
+            deletionDialog = null;
+        }
 
         if (viewBinder != null) {
             viewBinder.release();
@@ -1467,14 +1895,22 @@ public final class OmrAssessmentListActivity extends AppCompatActivity {
             structureRepository.close();
             structureRepository = null;
         }
+        if (deletionRepository != null) {
+            deletionRepository.close();
+            deletionRepository = null;
+        }
 
         registrationService = null;
         structureRegistrationService = null;
         answerKeyRepository = null;
         csvParser = null;
         structureCsvParser = null;
+        assessmentCsvExporter = null;
+        structureCsvExporter = null;
         assessmentCatalog = Collections.emptyList();
         structureCatalog = Collections.emptyList();
+        pendingAssessmentExport = Collections.emptyList();
+        pendingStructureExport = Collections.emptyList();
         super.onDestroy();
     }
 

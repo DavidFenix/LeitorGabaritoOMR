@@ -12,6 +12,7 @@ import static androidx.test.espresso.matcher.ViewMatchers.withText;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -158,7 +159,64 @@ public final class OmrAssessmentListActivityInstrumentedTest {
                         activity,
                         R.id.buttonOmrAssessmentListImportBlocksCsv
                 ).isEnabled());
+                assertTrue(button(
+                        activity,
+                        R.id.buttonOmrAssessmentListCsvTemplate
+                ).isEnabled());
+                assertTrue(button(
+                        activity,
+                        R.id.buttonOmrAssessmentListBlocksCsvTemplate
+                ).isEnabled());
+                assertTrue(button(
+                        activity,
+                        R.id.buttonOmrAssessmentListExportCsv
+                ).isEnabled());
+                assertTrue(button(
+                        activity,
+                        R.id.buttonOmrAssessmentListExportBlocksCsv
+                ).isEnabled());
             });
+        }
+    }
+
+    @Test
+    public void confirmedDeletionRemovesEveryVersionAndPublishedBlocks() {
+        assessmentRepository.save(assessment(
+                "assessment-delete", 1, "Prova para excluir", "key-1", 1
+        ));
+        assessmentRepository.save(assessment(
+                "assessment-delete", 2, "Prova para excluir", "key-1", 1
+        ));
+        structureRepository.save(OmrAssessmentStructure.legacySingleBlock(
+                "assessment-delete",
+                1,
+                2
+        ));
+
+        try (ActivityScenario<OmrAssessmentListActivity> scenario =
+                     ActivityScenario.launch(createActivityIntent())) {
+            scenario.onActivity(activity -> button(
+                    rowAt(activity, 0),
+                    R.id.buttonOmrAssessmentItemDelete
+            ).performClick());
+
+            onView(withText(containsString(
+                    "todas as suas versões e blocos publicados"
+            ))).inRoot(isDialog()).check(matches(isDisplayed()));
+            onView(withText(
+                    R.string.omr_assessment_delete_confirm
+            )).inRoot(isDialog()).perform(click());
+
+            waitForAssessmentCount(0);
+            assertNull(structureRepository.findStoredOrNull(
+                    "assessment-delete",
+                    1
+            ));
+            scenario.onActivity(activity -> assertVisibility(
+                    activity,
+                    R.id.containerOmrAssessmentListEmpty,
+                    View.VISIBLE
+            ));
         }
     }
 
