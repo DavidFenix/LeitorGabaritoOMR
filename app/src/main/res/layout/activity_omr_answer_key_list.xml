@@ -152,6 +152,14 @@
 
         </LinearLayout>
 
+        <Button
+            android:id="@+id/buttonOmrAnswerKeyListPngZip"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:minHeight="48dp"
+            android:text="@string/omr_answer_key_list_action_png_zip" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

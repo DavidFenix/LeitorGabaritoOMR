@@ -1,6 +1,7 @@
 package com.example.leitorgabaritoomr.application.layout;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyDefinitionFactory;
@@ -10,6 +11,7 @@ import com.example.leitorgabaritoomr.vision.layout.OmrOptionDefinition;
 import com.example.leitorgabaritoomr.vision.layout.factory.AvalieCeDevelopmentLayoutFactory;
 import com.example.leitorgabaritoomr.vision.layout.factory.OmrDynamicLayoutFactory;
 import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateCatalog;
+import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateSpec;
 
 import org.junit.Test;
 
@@ -22,6 +24,61 @@ public final class OmrPublishedLayoutResolverTest {
 
     private final OmrPublishedLayoutResolver resolver =
             new OmrPublishedLayoutResolver();
+
+    @Test
+    public void resolvesExactTemplateForEveryPublishedGeneration() {
+        OmrSheetTemplateSpec[] expected = {
+                OmrSheetTemplateCatalog.publishedFourOptions(10),
+                OmrSheetTemplateCatalog.standardFiveOptionsV2(45),
+                OmrSheetTemplateCatalog.flexibleOptionsV3(45, 5, 9),
+                OmrSheetTemplateCatalog.flexibleOptionsV4(90, 4, 18)
+        };
+
+        for (OmrSheetTemplateSpec spec : expected) {
+            OmrSheetTemplateSpec resolved = resolver.resolveTemplate(
+                    spec.getTemplateId(),
+                    spec.getTemplateVersion(),
+                    spec.getQuestionCount()
+            );
+
+            assertEquals(spec.getTemplateId(), resolved.getTemplateId());
+            assertEquals(
+                    spec.getTemplateVersion(),
+                    resolved.getTemplateVersion()
+            );
+            assertEquals(
+                    spec.getQuestionsPerBlock(),
+                    resolved.getQuestionsPerBlock()
+            );
+            assertEquals(spec.getOptionCount(), resolved.getOptionCount());
+        }
+    }
+
+    @Test
+    public void legacyLayoutRemainsReadableButHasNoPublishedTemplate() {
+        OmrLayoutDefinition legacy =
+                AvalieCeDevelopmentLayoutFactory.create();
+
+        assertEquals(
+                legacy.getId(),
+                resolver.resolve(
+                        legacy.getId(),
+                        legacy.getVersion(),
+                        legacy.getQuestionCount()
+                ).getId()
+        );
+
+        try {
+            resolver.resolveTemplate(
+                    legacy.getId(),
+                    legacy.getVersion(),
+                    legacy.getQuestionCount()
+            );
+            fail("Era esperada IllegalArgumentException.");
+        } catch (IllegalArgumentException expected) {
+            assertTrue(expected.getMessage().length() > 0);
+        }
+    }
 
     @Test
     public void resolvesEveryCompactLayoutFromOneToTen() {

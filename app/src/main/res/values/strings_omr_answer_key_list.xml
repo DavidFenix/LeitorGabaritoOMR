@@ -79,8 +79,12 @@
         Modelo CSV
     </string>
 
+    <string name="omr_answer_key_list_action_png_zip">
+        Gerar cartões PNG em ZIP
+    </string>
+
     <string name="omr_answer_key_list_progress_description">
-        Processando arquivo CSV
+        Processando CSV ou cartões PNG
     </string>
 
     <string name="omr_answer_key_csv_preview_title">
@@ -188,6 +192,58 @@
 
     <string name="omr_answer_key_csv_template_cancelled">
         Download do modelo cancelado.
+    </string>
+
+    <string name="omr_answer_key_png_zip_preview_title">
+        Prévia dos cartões PNG
+    </string>
+
+    <string name="omr_answer_key_png_zip_preview_error_title">
+        O lote de cartões precisa de correções
+    </string>
+
+    <plurals name="omr_answer_key_png_zip_preview_valid">
+        <item quantity="one">%1$d cartão PNG será incluído no ZIP.</item>
+        <item quantity="other">%1$d cartões PNG serão incluídos no ZIP.</item>
+    </plurals>
+
+    <plurals name="omr_answer_key_png_zip_preview_more">
+        <item quantity="one">… e mais %1$d cartão.</item>
+        <item quantity="other">… e mais %1$d cartões.</item>
+    </plurals>
+
+    <plurals name="omr_answer_key_png_zip_preview_issues">
+        <item quantity="one">Foi encontrado %1$d problema. Nenhum ZIP será gerado.</item>
+        <item quantity="other">Foram encontrados %1$d problemas. Nenhum ZIP será gerado.</item>
+    </plurals>
+
+    <string name="omr_answer_key_png_zip_preview_note">
+        Os cartões serão gerados a %1$d dpi, um por vez, sem alterar os gabaritos salvos. No CSV, célula de texto vazia usa o padrão e [vazio] omite o texto.
+    </string>
+
+    <string name="omr_answer_key_png_zip_action_generate">
+        Gerar ZIP
+    </string>
+
+    <string name="omr_answer_key_png_zip_action_cancel">
+        Cancelar
+    </string>
+
+    <string name="omr_answer_key_png_zip_csv_read_error">
+        Não foi possível preparar os cartões a partir do CSV.
+    </string>
+
+    <string name="omr_answer_key_png_zip_cancelled">
+        Geração dos cartões cancelada.
+    </string>
+
+    <plurals name="omr_answer_key_png_zip_success">
+        <item quantity="one">ZIP gerado com %1$d cartão PNG.</item>
+        <item quantity="other">ZIP gerado com %1$d cartões PNG.</item>
+    </plurals>
+
+    <string name="omr_answer_key_png_zip_error">
+        Não foi possível gerar o ZIP de cartões. O arquivo parcial foi descartado quando permitido pelo provedor.
     </string>
 
     <string name="omr_answer_key_list_create_count_title">

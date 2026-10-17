@@ -40,6 +40,7 @@ public final class OmrAnswerKeyCsvParser {
 
     public static final int MAX_CSV_BYTE_COUNT = 5 * 1024 * 1024;
     public static final int MAX_ROW_COUNT = 1_000;
+    public static final String TEXT_OMISSION_MARKER = "[vazio]";
 
     private static final int MAX_CODE_LENGTH = 80;
     private static final int MAX_ID_LENGTH = 240;
@@ -239,16 +240,16 @@ public final class OmrAnswerKeyCsvParser {
                 ));
             }
 
-            String headerText = checkedOptionalMultiline(
+            String headerText = checkedOptionalTextOverride(
                     record, indexes.headerText, MAX_HEADER_LENGTH,
                     "O cabecalho", issues
             );
-            String instructionsText = checkedOptionalMultiline(
+            String instructionsText = checkedOptionalTextOverride(
                     record, indexes.instructionsText,
                     MAX_INSTRUCTIONS_LENGTH,
                     "As instrucoes", issues
             );
-            String footerText = checkedOptionalMultiline(
+            String footerText = checkedOptionalTextOverride(
                     record, indexes.footerText, MAX_FOOTER_LENGTH,
                     "O rodape", issues
             );
@@ -780,7 +781,11 @@ public final class OmrAnswerKeyCsvParser {
         return value;
     }
 
-    private static String checkedOptionalMultiline(
+    /**
+     * Célula vazia mantém o texto padrão. O marcador [vazio] representa uma
+     * substituição explicitamente vazia e permite omitir o texto no cartão.
+     */
+    private static String checkedOptionalTextOverride(
             RawRecord record,
             int index,
             int maximumLength,
@@ -793,6 +798,9 @@ public final class OmrAnswerKeyCsvParser {
         String value = normalizeMultiline(unprotectSpreadsheetValue(
                 fieldAt(record.fields, index)
         ));
+        if (TEXT_OMISSION_MARKER.equalsIgnoreCase(value)) {
+            return "";
+        }
         if (value.isEmpty()) {
             return null;
         }

@@ -32,6 +32,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyCsvParser;
+import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyPngZipPlan;
+import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyPngZipPlanner;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyEntry;
 import com.example.leitorgabaritoomr.infrastructure.export.OmrAnswerKeyCsvExporter;
@@ -162,6 +164,12 @@ public final class OmrAnswerKeyListActivityInstrumentedTest {
                         assertButtonEnabled(
                                 activity,
                                 R.id.buttonOmrAnswerKeyListCsvTemplate,
+                                true
+                        );
+
+                        assertButtonEnabled(
+                                activity,
+                                R.id.buttonOmrAnswerKeyListPngZip,
                                 true
                         );
 
@@ -329,6 +337,47 @@ public final class OmrAnswerKeyListActivityInstrumentedTest {
 
             onView(withText(
                     R.string.omr_answer_key_csv_action_import
+            ))
+                    .inRoot(isDialog())
+                    .check(matches(isDisplayed()));
+        }
+    }
+
+    @Test
+    public void validPngZipPreviewShowsFileNamesAndGenerateAction() {
+        OmrAnswerKeyCsvParser.Preview preview =
+                new OmrAnswerKeyCsvParser().parse(
+                        new OmrAnswerKeyCsvExporter()
+                                .buildTemplate()
+                );
+        OmrAnswerKeyPngZipPlan plan =
+                new OmrAnswerKeyPngZipPlanner().plan(preview);
+
+        assertTrue(plan.isReadyToExport());
+
+        try (ActivityScenario<OmrAnswerKeyListActivity>
+                     scenario = ActivityScenario.launch(
+                             createActivityIntent()
+                     )) {
+
+            scenario.onActivity(
+                    activity -> activity.showPngZipPreview(plan)
+            );
+
+            onView(withText(
+                    R.string.omr_answer_key_png_zip_preview_title
+            ))
+                    .inRoot(isDialog())
+                    .check(matches(isDisplayed()));
+
+            onView(withText(containsString(
+                    "mat-a-v1.png"
+            )))
+                    .inRoot(isDialog())
+                    .check(matches(isDisplayed()));
+
+            onView(withText(
+                    R.string.omr_answer_key_png_zip_action_generate
             ))
                     .inRoot(isDialog())
                     .check(matches(isDisplayed()));

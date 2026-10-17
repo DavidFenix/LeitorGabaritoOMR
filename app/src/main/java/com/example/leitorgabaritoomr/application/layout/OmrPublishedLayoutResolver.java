@@ -44,6 +44,58 @@ public final class OmrPublishedLayoutResolver {
         );
     }
 
+    /**
+     * Reconstrói a especificação publicável usada para gerar cartões.
+     *
+     * O layout de desenvolvimento legado continua aceito pela leitura, mas
+     * não possui um contrato de cartão publicado e, por isso, não é devolvido
+     * por este método.
+     */
+    public OmrSheetTemplateSpec resolveTemplateForAnswerKey(
+            OmrAnswerKeyDefinition answerKeyDefinition
+    ) {
+        if (answerKeyDefinition == null) {
+            throw new IllegalArgumentException(
+                    "O gabarito oficial é obrigatório."
+            );
+        }
+
+        return resolveTemplate(
+                answerKeyDefinition.getLayoutId(),
+                answerKeyDefinition.getLayoutVersion(),
+                answerKeyDefinition.getQuestionCount()
+        );
+    }
+
+    public OmrSheetTemplateSpec resolveTemplate(
+            String layoutId,
+            int layoutVersion,
+            int questionCount
+    ) {
+        String normalizedLayoutId = requireText(layoutId);
+        validateIdentity(layoutVersion, questionCount);
+
+        OmrSheetTemplateSpec spec = resolveTemplateOrNull(
+                normalizedLayoutId,
+                layoutVersion,
+                questionCount
+        );
+
+        if (spec == null) {
+            throw new IllegalArgumentException(
+                    "Nenhum modelo de cartão publicado corresponde a "
+                            + normalizedLayoutId
+                            + "@v"
+                            + layoutVersion
+                            + " com "
+                            + questionCount
+                            + " questões."
+            );
+        }
+
+        return spec;
+    }
+
     public OmrLayoutDefinition resolve(
             String layoutId,
             int layoutVersion,
@@ -51,91 +103,16 @@ public final class OmrPublishedLayoutResolver {
     ) {
         String normalizedLayoutId =
                 requireText(layoutId);
+        validateIdentity(layoutVersion, questionCount);
 
-        if (layoutVersion <= 0) {
-            throw new IllegalArgumentException(
-                    "A versão do layout deve ser positiva."
-            );
-        }
-
-        if (questionCount <= 0) {
-            throw new IllegalArgumentException(
-                    "A quantidade de questões deve ser positiva."
-            );
-        }
-
-        OmrLayoutDefinition flexibleV4 =
-                createFlexibleCandidateOrNull(
-                        normalizedLayoutId,
-                        layoutVersion,
-                        questionCount,
-                        FLEXIBLE_V4_LAYOUT_VERSION
-                );
-
-        if (hasIdentity(
-                flexibleV4,
+        OmrSheetTemplateSpec publishedSpec = resolveTemplateOrNull(
                 normalizedLayoutId,
                 layoutVersion,
                 questionCount
-        )) {
-            return flexibleV4;
-        }
+        );
 
-        OmrLayoutDefinition flexibleV3 =
-                createFlexibleCandidateOrNull(
-                        normalizedLayoutId,
-                        layoutVersion,
-                        questionCount,
-                        FLEXIBLE_V3_LAYOUT_VERSION
-                );
-
-        if (hasIdentity(
-                flexibleV3,
-                normalizedLayoutId,
-                layoutVersion,
-                questionCount
-        )) {
-            return flexibleV3;
-        }
-
-        OmrLayoutDefinition standardFourOptionsV2 =
-                createStandardFourOptionsV2CandidateOrNull(
-                        questionCount
-                );
-
-        if (hasIdentity(
-                standardFourOptionsV2,
-                normalizedLayoutId,
-                layoutVersion,
-                questionCount
-        )) {
-            return standardFourOptionsV2;
-        }
-
-        OmrLayoutDefinition standardFiveOptionsV2 =
-                createStandardFiveOptionsV2CandidateOrNull(
-                        questionCount
-                );
-
-        if (hasIdentity(
-                standardFiveOptionsV2,
-                normalizedLayoutId,
-                layoutVersion,
-                questionCount
-        )) {
-            return standardFiveOptionsV2;
-        }
-
-        OmrLayoutDefinition publishedV1Layout =
-                createPublishedV1CandidateOrNull(questionCount);
-
-        if (hasIdentity(
-                publishedV1Layout,
-                normalizedLayoutId,
-                layoutVersion,
-                questionCount
-        )) {
-            return publishedV1Layout;
+        if (publishedSpec != null) {
+            return createLayout(publishedSpec);
         }
 
         OmrLayoutDefinition legacyLayout =
@@ -161,7 +138,85 @@ public final class OmrPublishedLayoutResolver {
         );
     }
 
-    private OmrLayoutDefinition
+    private OmrSheetTemplateSpec resolveTemplateOrNull(
+            String layoutId,
+            int layoutVersion,
+            int questionCount
+    ) {
+        OmrSheetTemplateSpec flexibleV4 =
+                createFlexibleCandidateOrNull(
+                        layoutId,
+                        layoutVersion,
+                        questionCount,
+                        FLEXIBLE_V4_LAYOUT_VERSION
+                );
+
+        if (hasIdentity(
+                flexibleV4,
+                layoutId,
+                layoutVersion,
+                questionCount
+        )) {
+            return flexibleV4;
+        }
+
+        OmrSheetTemplateSpec flexibleV3 =
+                createFlexibleCandidateOrNull(
+                        layoutId,
+                        layoutVersion,
+                        questionCount,
+                        FLEXIBLE_V3_LAYOUT_VERSION
+                );
+
+        if (hasIdentity(
+                flexibleV3,
+                layoutId,
+                layoutVersion,
+                questionCount
+        )) {
+            return flexibleV3;
+        }
+
+        OmrSheetTemplateSpec standardFourOptionsV2 =
+                createStandardFourOptionsV2CandidateOrNull(
+                        questionCount
+                );
+
+        if (hasIdentity(
+                standardFourOptionsV2,
+                layoutId,
+                layoutVersion,
+                questionCount
+        )) {
+            return standardFourOptionsV2;
+        }
+
+        OmrSheetTemplateSpec standardFiveOptionsV2 =
+                createStandardFiveOptionsV2CandidateOrNull(
+                        questionCount
+                );
+
+        if (hasIdentity(
+                standardFiveOptionsV2,
+                layoutId,
+                layoutVersion,
+                questionCount
+        )) {
+            return standardFiveOptionsV2;
+        }
+
+        OmrSheetTemplateSpec publishedV1 =
+                createPublishedV1CandidateOrNull(questionCount);
+
+        return hasIdentity(
+                publishedV1,
+                layoutId,
+                layoutVersion,
+                questionCount
+        ) ? publishedV1 : null;
+    }
+
+    private OmrSheetTemplateSpec
     createFlexibleCandidateOrNull(
             String layoutId,
             int layoutVersion,
@@ -210,14 +265,14 @@ public final class OmrPublishedLayoutResolver {
                     questionsPerColumn
             );
 
-            return createLayout(spec);
+            return spec;
 
         } catch (IllegalArgumentException invalidGeometry) {
             return null;
         }
     }
 
-    private OmrLayoutDefinition
+    private OmrSheetTemplateSpec
     createStandardFourOptionsV2CandidateOrNull(
             int questionCount
     ) {
@@ -225,13 +280,11 @@ public final class OmrPublishedLayoutResolver {
             return null;
         }
 
-        return createLayout(
-                OmrSheetTemplateCatalog
-                        .standardFourOptionsV2(questionCount)
-        );
+        return OmrSheetTemplateCatalog
+                .standardFourOptionsV2(questionCount);
     }
 
-    private OmrLayoutDefinition
+    private OmrSheetTemplateSpec
     createStandardFiveOptionsV2CandidateOrNull(
             int questionCount
     ) {
@@ -239,23 +292,19 @@ public final class OmrPublishedLayoutResolver {
             return null;
         }
 
-        return createLayout(
-                OmrSheetTemplateCatalog
-                        .standardFiveOptionsV2(questionCount)
-        );
+        return OmrSheetTemplateCatalog
+                .standardFiveOptionsV2(questionCount);
     }
 
-    private OmrLayoutDefinition createPublishedV1CandidateOrNull(
+    private OmrSheetTemplateSpec createPublishedV1CandidateOrNull(
             int questionCount
     ) {
         if (!isPublishedQuestionCount(questionCount)) {
             return null;
         }
 
-        return createLayout(
-                OmrSheetTemplateCatalog
-                        .publishedFourOptions(questionCount)
-        );
+        return OmrSheetTemplateCatalog
+                .publishedFourOptions(questionCount);
     }
 
     private OmrLayoutDefinition createLayout(
@@ -284,6 +333,35 @@ public final class OmrPublishedLayoutResolver {
                 && candidate.getVersion() == layoutVersion
                 && candidate.getQuestionCount()
                 == questionCount;
+    }
+
+    private boolean hasIdentity(
+            OmrSheetTemplateSpec candidate,
+            String layoutId,
+            int layoutVersion,
+            int questionCount
+    ) {
+        return candidate != null
+                && candidate.getTemplateId().equals(layoutId)
+                && candidate.getTemplateVersion() == layoutVersion
+                && candidate.getQuestionCount() == questionCount;
+    }
+
+    private void validateIdentity(
+            int layoutVersion,
+            int questionCount
+    ) {
+        if (layoutVersion <= 0) {
+            throw new IllegalArgumentException(
+                    "A versão do layout deve ser positiva."
+            );
+        }
+
+        if (questionCount <= 0) {
+            throw new IllegalArgumentException(
+                    "A quantidade de questões deve ser positiva."
+            );
+        }
     }
 
     private String requireText(

@@ -1,6 +1,7 @@
 package com.example.leitorgabaritoomr.infrastructure.export;
 
 import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyLayoutValidator;
+import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyCsvParser;
 import com.example.leitorgabaritoomr.application.layout.OmrPublishedLayoutResolver;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyEntry;
@@ -167,7 +168,7 @@ public final class OmrAnswerKeyCsvExporter {
                 "1|1|2|1|1|1|1|2|1|1",
                 "NATUREZA - MODELO B",
                 "Preencha completamente a bolha escolhida.",
-                "",
+                OmrAnswerKeyCsvParser.TEXT_OMISSION_MARKER,
                 "nat-b-v1",
                 "",
                 "",

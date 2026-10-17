@@ -69,6 +69,9 @@ public final class OmrAnswerKeyListViewBinderInstrumentedTest {
             binder.setOnCsvTemplateClickListener(
                     view -> actions.templateCount++
             );
+            binder.setOnPngZipClickListener(
+                    view -> actions.pngZipCount++
+            );
         });
     }
 
@@ -99,6 +102,10 @@ public final class OmrAnswerKeyListViewBinderInstrumentedTest {
 
             assertTrue(button(
                     R.id.buttonOmrAnswerKeyListCsvTemplate
+            ).isEnabled());
+
+            assertTrue(button(
+                    R.id.buttonOmrAnswerKeyListPngZip
             ).isEnabled());
 
             assertFalse(button(
@@ -136,12 +143,14 @@ public final class OmrAnswerKeyListViewBinderInstrumentedTest {
             button(R.id.buttonOmrAnswerKeyListImportCsv).performClick();
             button(R.id.buttonOmrAnswerKeyListExportCsv).performClick();
             button(R.id.buttonOmrAnswerKeyListCsvTemplate).performClick();
+            button(R.id.buttonOmrAnswerKeyListPngZip).performClick();
 
             assertEquals(1, actions.backCount);
             assertEquals(1, actions.createCount);
             assertEquals(1, actions.importCount);
             assertEquals(1, actions.exportCount);
             assertEquals(1, actions.templateCount);
+            assertEquals(1, actions.pngZipCount);
         });
     }
 
@@ -177,6 +186,9 @@ public final class OmrAnswerKeyListViewBinderInstrumentedTest {
             ).isEnabled());
             assertFalse(button(
                     R.id.buttonOmrAnswerKeyListCsvTemplate
+            ).isEnabled());
+            assertFalse(button(
+                    R.id.buttonOmrAnswerKeyListPngZip
             ).isEnabled());
 
             binder.setBusy(false);
@@ -267,6 +279,7 @@ public final class OmrAnswerKeyListViewBinderInstrumentedTest {
         private int importCount;
         private int exportCount;
         private int templateCount;
+        private int pngZipCount;
 
         @Override
         public void onSelectAnswerKey(

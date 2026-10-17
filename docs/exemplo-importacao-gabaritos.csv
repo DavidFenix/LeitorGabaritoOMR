@@ -1,3 +1,3 @@
 codigo_gabarito;versao;nome;questoes;alternativas;itens_por_coluna;respostas;pesos;cabecalho;instrucoes;rodape;nome_arquivo;id_gabarito;layout_id;layout_versao
 MAT-A;1;Matematica - Modelo A;10;4;automatico;A|B|C|D|A|B|C|D|A|B;1;MATEMATICA - MODELO A;Marque apenas uma alternativa por questao.;Turma: __________;mat-a-v1;;;
-NAT-B;1;Natureza - Modelo B;10;5;5;A+C|B|C|D|E|A|B|C|D|E;1|1|2|1|1|1|1|2|1|1;NATUREZA - MODELO B;Preencha completamente a bolha escolhida.;;nat-b-v1;;;
+NAT-B;1;Natureza - Modelo B;10;5;5;A+C|B|C|D|E|A|B|C|D|E;1|1|2|1|1|1|1|2|1|1;NATUREZA - MODELO B;Preencha completamente a bolha escolhida.;[vazio];nat-b-v1;;;

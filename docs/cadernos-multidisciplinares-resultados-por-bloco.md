@@ -263,7 +263,29 @@ gabarito ativo permanece inalterado.
   confirmam os quatro marcadores, o fundo branco, dimensoes, metadados fisicos
   e personalizacoes de texto.
 
-O checkpoint 6C ainda nao acrescenta um novo botao ao aplicativo. Ele isola e
-valida a base de imagem que sera usada pelo checkpoint seguinte para ler o
-CSV, gerar varios cartoes sequencialmente e entrega-los em um unico ZIP, sem
-manter todos os bitmaps simultaneamente na memoria.
+### 6D. Cartoes PNG em lote a partir do CSV (concluido)
+
+- a tela de gabaritos oferece `Gerar cartoes PNG em ZIP` e reutiliza o mesmo
+  arquivo disponibilizado por `Modelo CSV`, evitando dois formatos de entrada
+  concorrentes;
+- o fluxo valida e apresenta uma previa antes de pedir o destino do ZIP, mas
+  nao importa, substitui nem seleciona gabaritos no repositorio;
+- cada linha usa a identidade exata do modelo publicado nela registrada, de
+  modo que o cartao gerado preserva versao, alternativas, distribuicao de
+  itens e geometria esperada pela leitura;
+- uma celula vazia de `cabecalho`, `instrucoes` ou `rodape` conserva o texto
+  padrao; o marcador literal `[vazio]`, sem diferenca entre maiusculas e
+  minusculas, omite explicitamente aquele texto;
+- `nome_arquivo` e opcional. Quando ausente, o aplicativo cria um nome
+  deterministico pelo codigo e versao; caminhos, nomes reservados e repeticoes
+  sem diferenca entre maiusculas e minusculas sao rejeitados;
+- o lote aceita ate 200 cartoes por ZIP e orienta dividir arquivos maiores,
+  protegendo tempo de execucao, armazenamento temporario e memoria do aparelho;
+- os PNGs sao rasterizados a 300 dpi e gravados no ZIP um por vez, sem manter
+  todos os bitmaps simultaneamente na memoria;
+- o ZIP e concluido primeiro no cache privado e so depois copiado ao destino.
+  Se a copia falhar depois de abrir o novo destino, o arquivo parcial e
+  removido quando o provedor permitir; falhas anteriores nao apagam um arquivo
+  preexistente escolhido pelo usuario;
+- layouts legados continuam reconheciveis em leituras antigas, mas nao sao
+  apresentados como se possuissem um modelo de cartao publicado atual.

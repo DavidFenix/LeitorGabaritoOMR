@@ -2,6 +2,7 @@ package com.example.leitorgabaritoomr.application.grading;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -54,6 +55,21 @@ public final class OmrAnswerKeyCsvWorkflowTest {
                 .get(2).getWeight(), 0.000001);
         assertEquals(5, row.getQuestionsPerColumn());
         assertEquals("NATUREZA - MODELO B", row.getHeaderText());
+        assertEquals("", row.getFooterText());
+    }
+
+    @Test
+    public void textOmissionMarkerIsDifferentFromBlankCell() {
+        String csv = header()
+                + "\r\nTXT;1;Textos;4;4;auto;A|B|C|D;1;"
+                + ";[vazio];;texto;;;;";
+
+        OmrAnswerKeyCsvParser.Row row = parser.parse(csv)
+                .getRows().get(0);
+
+        assertNull(row.getHeaderText());
+        assertEquals("", row.getInstructionsText());
+        assertNull(row.getFooterText());
     }
 
     @Test

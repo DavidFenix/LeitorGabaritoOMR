@@ -21,15 +21,26 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.leitorgabaritoomr.R;
 import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyCsvParser;
 import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyCsvRegistrationService;
+import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyPngZipPlan;
+import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyPngZipPlanner;
 import com.example.leitorgabaritoomr.application.grading.OmrAnswerKeyRepository;
 import com.example.leitorgabaritoomr.domain.grading.OmrAnswerKeyDefinition;
 import com.example.leitorgabaritoomr.infrastructure.export.OmrAnswerKeyCsvExporter;
+import com.example.leitorgabaritoomr.infrastructure.export.OmrAnswerKeyPngZipExporter;
+import com.example.leitorgabaritoomr.infrastructure.export.OmrSheetPngRenderer;
 import com.example.leitorgabaritoomr.infrastructure.grading.OmrSharedPreferencesAnswerKeyRepository;
 import com.example.leitorgabaritoomr.vision.layout.template.OmrSheetTemplateCatalog;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -63,6 +74,18 @@ public final class OmrAnswerKeyListActivity
     private static final String STATE_PENDING_EXPORT =
             "omr.answer_key_list.pending_export";
 
+    private static final String STATE_PENDING_PNG_ZIP_PLAN_FILE =
+            "omr.answer_key_list.pending_png_zip_plan_file";
+
+    private static final String PNG_ZIP_PLAN_FILE_PREFIX =
+            "omr-png-zip-plan-";
+
+    private static final String PNG_ZIP_PLAN_FILE_SUFFIX =
+            ".bin";
+
+    private static final long PNG_ZIP_PLAN_MAXIMUM_AGE_MILLIS =
+            24L * 60L * 60L * 1_000L;
+
     private static final String EXTRA_STORAGE_NAMESPACE =
             "com.example.leitorgabaritoomr.extra."
                     + "ANSWER_KEY_STORAGE_NAMESPACE";
@@ -93,15 +116,19 @@ public final class OmrAnswerKeyListActivity
     private OmrAnswerKeyCsvRegistrationService registrationService;
     private OmrAnswerKeyCsvParser csvParser;
     private OmrAnswerKeyCsvExporter csvExporter;
+    private OmrAnswerKeyPngZipPlanner pngZipPlanner;
+    private OmrAnswerKeyPngZipExporter pngZipExporter;
     private OmrAnswerKeyListViewBinder viewBinder;
     private ExecutorService backgroundExecutor;
     private AlertDialog questionCountDialog;
     private AlertDialog optionCountDialog;
     private AlertDialog questionsPerColumnDialog;
     private AlertDialog csvPreviewDialog;
+    private AlertDialog pngZipPreviewDialog;
     private AlertDialog exportSelectionDialog;
     private List<OmrAnswerKeyDefinition> pendingExportAnswerKeys =
             Collections.emptyList();
+    private String pendingPngZipPlanFileName;
     private boolean repositoryChanged;
     private volatile boolean released;
 
@@ -133,6 +160,20 @@ public final class OmrAnswerKeyListActivity
                             CSV_MIME_TYPE
                     ),
                     this::handleCsvTemplateDestination
+            );
+
+    private final ActivityResultLauncher<String[]> pngZipCsvLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.OpenDocument(),
+                    this::handlePngZipCsvDocument
+            );
+
+    private final ActivityResultLauncher<String> pngZipDestinationLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.CreateDocument(
+                            OmrAnswerKeyPngZipExporter.MIME_TYPE
+                    ),
+                    this::handlePngZipDestination
             );
 
     public static Intent createIntent(
@@ -227,6 +268,8 @@ public final class OmrAnswerKeyListActivity
                 );
         csvParser = new OmrAnswerKeyCsvParser();
         csvExporter = new OmrAnswerKeyCsvExporter();
+        pngZipPlanner = new OmrAnswerKeyPngZipPlanner();
+        pngZipExporter = new OmrAnswerKeyPngZipExporter();
         backgroundExecutor = Executors.newSingleThreadExecutor();
 
         View rootView = findViewById(
@@ -246,6 +289,13 @@ public final class OmrAnswerKeyListActivity
 
         pendingExportAnswerKeys = restorePendingExport(
                 savedInstanceState
+        );
+
+        pendingPngZipPlanFileName = restorePendingPngZipPlanFileName(
+                savedInstanceState
+        );
+        removeExpiredPngZipPlanFiles(
+                pendingPngZipPlanFileName
         );
 
         configureBinder();
@@ -343,6 +393,12 @@ public final class OmrAnswerKeyListActivity
         viewBinder.setOnCsvTemplateClickListener(
                 view -> csvTemplateLauncher.launch(
                         CSV_TEMPLATE_FILE_NAME
+                )
+        );
+
+        viewBinder.setOnPngZipClickListener(
+                view -> pngZipCsvLauncher.launch(
+                        CSV_MIME_TYPES
                 )
         );
 
@@ -1195,6 +1251,513 @@ public final class OmrAnswerKeyListActivity
         showMessage(success ? successMessage : errorMessage);
     }
 
+    private void handlePngZipCsvDocument(
+            @Nullable Uri documentUri
+    ) {
+        OmrAnswerKeyCsvParser parser = csvParser;
+        OmrAnswerKeyPngZipPlanner planner = pngZipPlanner;
+
+        if (documentUri == null
+                || released
+                || backgroundExecutor == null
+                || parser == null
+                || planner == null) {
+            return;
+        }
+
+        viewBinder.setBusy(true);
+
+        backgroundExecutor.execute(() -> {
+            try {
+                byte[] bytes = readCsvBytes(documentUri);
+                OmrAnswerKeyPngZipPlan plan = planner.plan(
+                        parser.parse(bytes)
+                );
+
+                postToUi(() -> showPngZipPreview(plan));
+
+            } catch (CsvTooLargeException exception) {
+                Log.w(TAG, "CSV de cartões acima do limite.", exception);
+                postToUi(() -> showBackgroundError(
+                        R.string.omr_answer_key_csv_too_large
+                ));
+
+            } catch (IOException | RuntimeException exception) {
+                Log.e(TAG, "Falha ao preparar cartões pelo CSV.", exception);
+                postToUi(() -> showBackgroundError(
+                        R.string.omr_answer_key_png_zip_csv_read_error
+                ));
+            }
+        });
+    }
+
+    void showPngZipPreview(
+            OmrAnswerKeyPngZipPlan plan
+    ) {
+        if (plan == null) {
+            throw new IllegalArgumentException(
+                    "O plano dos cartões PNG é obrigatório."
+            );
+        }
+
+        viewBinder.setBusy(false);
+        dismissPngZipPreviewDialog();
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle(
+                        plan.isReadyToExport()
+                                ? R.string
+                                .omr_answer_key_png_zip_preview_title
+                                : R.string
+                                .omr_answer_key_png_zip_preview_error_title
+                )
+                .setMessage(formatPngZipPreview(plan));
+
+        if (plan.isReadyToExport()) {
+            builder.setNegativeButton(
+                    R.string.omr_answer_key_png_zip_action_cancel,
+                    null
+            );
+            builder.setPositiveButton(
+                    R.string.omr_answer_key_png_zip_action_generate,
+                    (dialog, which) ->
+                            preparePngZipDestination(plan)
+            );
+        } else {
+            builder.setPositiveButton(
+                    R.string.omr_answer_key_csv_action_close,
+                    null
+            );
+        }
+
+        AlertDialog dialog = builder.create();
+        pngZipPreviewDialog = dialog;
+        dialog.setOnDismissListener(ignored -> {
+            if (pngZipPreviewDialog == dialog) {
+                pngZipPreviewDialog = null;
+            }
+        });
+        dialog.show();
+    }
+
+    private String formatPngZipPreview(
+            OmrAnswerKeyPngZipPlan plan
+    ) {
+        if (plan.isReadyToExport()) {
+            int cardCount = plan.getCardCount();
+            StringBuilder message = new StringBuilder(
+                    getResources().getQuantityString(
+                            R.plurals
+                                    .omr_answer_key_png_zip_preview_valid,
+                            cardCount,
+                            cardCount
+                    )
+            );
+
+            int visibleCount = Math.min(
+                    cardCount,
+                    MAX_PREVIEW_ROWS
+            );
+
+            for (int index = 0; index < visibleCount; index++) {
+                OmrAnswerKeyPngZipPlan.Card card =
+                        plan.getCards().get(index);
+                OmrAnswerKeyDefinition definition =
+                        card.getAnswerKeyDefinition();
+
+                message.append("\n\n• ")
+                        .append(card.getCode())
+                        .append(" → ")
+                        .append(card.getOutputFileName())
+                        .append(" • ")
+                        .append(definition.getQuestionCount())
+                        .append(" questões");
+            }
+
+            int hiddenCount = cardCount - visibleCount;
+            if (hiddenCount > 0) {
+                message.append("\n\n")
+                        .append(getResources().getQuantityString(
+                                R.plurals
+                                        .omr_answer_key_png_zip_preview_more,
+                                hiddenCount,
+                                hiddenCount
+                        ));
+            }
+
+            message.append("\n\n")
+                    .append(getString(
+                            R.string.omr_answer_key_png_zip_preview_note,
+                            OmrSheetPngRenderer.DEFAULT_DOTS_PER_INCH
+                    ));
+
+            return message.toString();
+        }
+
+        List<OmrAnswerKeyPngZipPlan.Issue> issues = plan.getIssues();
+        StringBuilder message = new StringBuilder(
+                getResources().getQuantityString(
+                        R.plurals.omr_answer_key_png_zip_preview_issues,
+                        issues.size(),
+                        issues.size()
+                )
+        );
+
+        int visibleCount = Math.min(
+                issues.size(),
+                MAX_PREVIEW_ISSUES
+        );
+
+        for (int index = 0; index < visibleCount; index++) {
+            OmrAnswerKeyPngZipPlan.Issue issue = issues.get(index);
+            message.append("\n\n• ")
+                    .append(getString(
+                            R.string.omr_answer_key_csv_issue_line,
+                            issue.getLineNumber(),
+                            issue.getMessage()
+                    ));
+        }
+
+        int hiddenCount = issues.size() - visibleCount;
+        if (hiddenCount > 0) {
+            message.append("\n\n")
+                    .append(getResources().getQuantityString(
+                            R.plurals
+                                    .omr_answer_key_csv_preview_more_errors,
+                            hiddenCount,
+                            hiddenCount
+                    ));
+        }
+
+        return message.toString();
+    }
+
+    private void preparePngZipDestination(
+            OmrAnswerKeyPngZipPlan plan
+    ) {
+        if (backgroundExecutor == null || released) {
+            showMessage(R.string.omr_answer_key_png_zip_error);
+            return;
+        }
+
+        viewBinder.setBusy(true);
+
+        backgroundExecutor.execute(() -> {
+            try {
+                String fileName = writePendingPngZipPlan(plan);
+                runOnUiThread(() -> finishPngZipPlanPreparation(
+                        fileName
+                ));
+
+            } catch (IOException | RuntimeException exception) {
+                Log.e(
+                        TAG,
+                        "Falha ao preservar o plano do ZIP.",
+                        exception
+                );
+                postToUi(() -> showBackgroundError(
+                        R.string.omr_answer_key_png_zip_error
+                ));
+            }
+        });
+    }
+
+    private String writePendingPngZipPlan(
+            OmrAnswerKeyPngZipPlan plan
+    ) throws IOException {
+        File planFile = File.createTempFile(
+                PNG_ZIP_PLAN_FILE_PREFIX,
+                PNG_ZIP_PLAN_FILE_SUFFIX,
+                getCacheDir()
+        );
+        boolean written = false;
+
+        try (ObjectOutputStream output = new ObjectOutputStream(
+                new BufferedOutputStream(
+                        new FileOutputStream(planFile)
+                )
+        )) {
+            output.writeObject(plan);
+            output.flush();
+            written = true;
+            return planFile.getName();
+
+        } finally {
+            if (!written && planFile.exists() && !planFile.delete()) {
+                Log.w(TAG, "Não foi possível remover o plano incompleto.");
+            }
+        }
+    }
+
+    private void finishPngZipPlanPreparation(
+            String fileName
+    ) {
+        if (released || viewBinder == null) {
+            deletePngZipPlanFileQuietly(fileName);
+            return;
+        }
+
+        deletePngZipPlanFileQuietly(
+                pendingPngZipPlanFileName
+        );
+        pendingPngZipPlanFileName = fileName;
+        viewBinder.setBusy(false);
+
+        try {
+            pngZipDestinationLauncher.launch(
+                    OmrAnswerKeyPngZipExporter
+                            .DEFAULT_ARCHIVE_FILE_NAME
+            );
+        } catch (RuntimeException exception) {
+            Log.e(TAG, "Falha ao abrir o destino do ZIP.", exception);
+            deletePngZipPlanFileQuietly(fileName);
+            pendingPngZipPlanFileName = null;
+            showMessage(R.string.omr_answer_key_png_zip_error);
+        }
+    }
+
+    private void handlePngZipDestination(
+            @Nullable Uri destinationUri
+    ) {
+        String planFileName = pendingPngZipPlanFileName;
+        pendingPngZipPlanFileName = null;
+
+        if (destinationUri == null) {
+            deletePngZipPlanFileQuietly(planFileName);
+            showMessage(R.string.omr_answer_key_png_zip_cancelled);
+            return;
+        }
+
+        OmrAnswerKeyPngZipExporter exporter = pngZipExporter;
+        if (planFileName == null
+                || exporter == null
+                || backgroundExecutor == null) {
+            deletePngZipPlanFileQuietly(planFileName);
+            showMessage(R.string.omr_answer_key_png_zip_error);
+            return;
+        }
+
+        viewBinder.setBusy(true);
+
+        backgroundExecutor.execute(() -> loadAndWritePngZip(
+                planFileName,
+                destinationUri,
+                exporter
+        ));
+    }
+
+    private void loadAndWritePngZip(
+            String planFileName,
+            Uri destinationUri,
+            OmrAnswerKeyPngZipExporter exporter
+    ) {
+        OmrAnswerKeyPngZipPlan plan;
+
+        try {
+            plan = readPendingPngZipPlan(planFileName);
+        } catch (IOException | ClassNotFoundException
+                 | RuntimeException exception) {
+            Log.e(TAG, "Falha ao recuperar o plano do ZIP.", exception);
+            postToUi(() -> finishPngZipWrite(false, 0));
+            return;
+        } finally {
+            deletePngZipPlanFileQuietly(planFileName);
+        }
+
+        if (!plan.isReadyToExport()) {
+            postToUi(() -> finishPngZipWrite(false, 0));
+            return;
+        }
+
+        writePngZip(plan, destinationUri, exporter);
+    }
+
+    private OmrAnswerKeyPngZipPlan readPendingPngZipPlan(
+            String fileName
+    ) throws IOException, ClassNotFoundException {
+        File planFile = resolvePngZipPlanFile(fileName);
+        if (planFile == null || !planFile.isFile()) {
+            throw new IOException(
+                    "O plano temporário do ZIP não foi localizado."
+            );
+        }
+
+        try (ObjectInputStream input = new ObjectInputStream(
+                new BufferedInputStream(
+                        new FileInputStream(planFile)
+                )
+        )) {
+            Object value = input.readObject();
+            if (!(value instanceof OmrAnswerKeyPngZipPlan)) {
+                throw new IOException(
+                        "O arquivo temporário não contém um plano válido."
+                );
+            }
+            return (OmrAnswerKeyPngZipPlan) value;
+        }
+    }
+
+    private void writePngZip(
+            OmrAnswerKeyPngZipPlan plan,
+            Uri destinationUri,
+            OmrAnswerKeyPngZipExporter exporter
+    ) {
+        File temporaryFile = null;
+        boolean completed = false;
+        boolean destinationOpened = false;
+
+        try {
+            temporaryFile = File.createTempFile(
+                    "omr-cartoes-",
+                    ".zip",
+                    getCacheDir()
+            );
+
+            OmrAnswerKeyPngZipExporter.ExportSummary summary;
+            try (OutputStream temporaryOutput =
+                         new FileOutputStream(temporaryFile)) {
+                summary = exporter.write(plan, temporaryOutput);
+            }
+
+            try (InputStream input = new FileInputStream(temporaryFile)) {
+                OutputStream destinationOutput = getContentResolver()
+                        .openOutputStream(destinationUri, "w");
+
+                if (destinationOutput == null) {
+                    throw new IOException(
+                            "O destino do ZIP não pôde ser aberto."
+                    );
+                }
+
+                destinationOpened = true;
+                try (OutputStream output = destinationOutput) {
+                    copyCheckingInterruption(input, output);
+                    output.flush();
+                }
+            }
+
+            completed = true;
+            int exportedCount = summary.getExportedCount();
+            postToUi(() -> finishPngZipWrite(
+                    true,
+                    exportedCount
+            ));
+
+        } catch (IOException | RuntimeException exception) {
+            Log.e(TAG, "Falha ao gerar ZIP de cartões PNG.", exception);
+            postToUi(() -> finishPngZipWrite(false, 0));
+
+        } finally {
+            if (!completed && destinationOpened) {
+                deleteDestinationQuietly(destinationUri);
+            }
+            if (temporaryFile != null
+                    && temporaryFile.exists()
+                    && !temporaryFile.delete()) {
+                Log.w(TAG, "Não foi possível remover o ZIP temporário.");
+            }
+        }
+    }
+
+    private static void copyCheckingInterruption(
+            InputStream input,
+            OutputStream output
+    ) throws IOException {
+        byte[] buffer = new byte[16 * 1024];
+        int read;
+        while ((read = input.read(buffer)) != -1) {
+            if (Thread.currentThread().isInterrupted()) {
+                throw new IOException(
+                        "A cópia do ZIP foi interrompida."
+                );
+            }
+            output.write(buffer, 0, read);
+        }
+    }
+
+    private void finishPngZipWrite(
+            boolean success,
+            int exportedCount
+    ) {
+        viewBinder.setBusy(false);
+        if (success) {
+            Toast.makeText(
+                    this,
+                    getResources().getQuantityString(
+                            R.plurals.omr_answer_key_png_zip_success,
+                            exportedCount,
+                            exportedCount
+                    ),
+                    Toast.LENGTH_LONG
+            ).show();
+        } else {
+            showMessage(R.string.omr_answer_key_png_zip_error);
+        }
+    }
+
+    private void deleteDestinationQuietly(Uri destinationUri) {
+        try {
+            getContentResolver().delete(
+                    destinationUri,
+                    null,
+                    null
+            );
+        } catch (RuntimeException exception) {
+            Log.w(TAG, "O destino parcial do ZIP não pôde ser removido.",
+                    exception);
+        }
+    }
+
+    @Nullable
+    private File resolvePngZipPlanFile(
+            @Nullable String fileName
+    ) {
+        if (fileName == null
+                || !fileName.startsWith(PNG_ZIP_PLAN_FILE_PREFIX)
+                || !fileName.endsWith(PNG_ZIP_PLAN_FILE_SUFFIX)
+                || fileName.contains("/")
+                || fileName.contains("\\")) {
+            return null;
+        }
+        return new File(getCacheDir(), fileName);
+    }
+
+    private void deletePngZipPlanFileQuietly(
+            @Nullable String fileName
+    ) {
+        File planFile = resolvePngZipPlanFile(fileName);
+        if (planFile != null
+                && planFile.exists()
+                && !planFile.delete()) {
+            Log.w(TAG, "Não foi possível remover o plano temporário.");
+        }
+    }
+
+    private void removeExpiredPngZipPlanFiles(
+            @Nullable String preservedFileName
+    ) {
+        File[] files = getCacheDir().listFiles(
+                (directory, name) -> name.startsWith(
+                        PNG_ZIP_PLAN_FILE_PREFIX
+                ) && name.endsWith(PNG_ZIP_PLAN_FILE_SUFFIX)
+        );
+        if (files == null) {
+            return;
+        }
+
+        long expirationThreshold = System.currentTimeMillis()
+                - PNG_ZIP_PLAN_MAXIMUM_AGE_MILLIS;
+        for (File file : files) {
+            if (file.getName().equals(preservedFileName)
+                    || file.lastModified() >= expirationThreshold) {
+                continue;
+            }
+            if (!file.delete()) {
+                Log.w(TAG, "Não foi possível remover um plano expirado.");
+            }
+        }
+    }
+
     private void showBackgroundError(int messageResource) {
         viewBinder.setBusy(false);
         showMessage(messageResource);
@@ -1487,9 +2050,36 @@ public final class OmrAnswerKeyListActivity
         return Collections.unmodifiableList(restored);
     }
 
+    @Nullable
+    private String restorePendingPngZipPlanFileName(
+            @Nullable Bundle savedInstanceState
+    ) {
+        if (savedInstanceState == null) {
+            return null;
+        }
+
+        String fileName = savedInstanceState.getString(
+                STATE_PENDING_PNG_ZIP_PLAN_FILE
+        );
+        File planFile = resolvePngZipPlanFile(fileName);
+        return planFile != null && planFile.isFile()
+                ? fileName
+                : null;
+    }
+
     private void dismissCsvPreviewDialog() {
         AlertDialog dialog = csvPreviewDialog;
         csvPreviewDialog = null;
+
+        if (dialog != null) {
+            dialog.setOnDismissListener(null);
+            dialog.dismiss();
+        }
+    }
+
+    private void dismissPngZipPreviewDialog() {
+        AlertDialog dialog = pngZipPreviewDialog;
+        pngZipPreviewDialog = null;
 
         if (dialog != null) {
             dialog.setOnDismissListener(null);
@@ -1519,6 +2109,11 @@ public final class OmrAnswerKeyListActivity
         outState.putSerializable(
                 STATE_PENDING_EXPORT,
                 new ArrayList<>(pendingExportAnswerKeys)
+        );
+
+        outState.putString(
+                STATE_PENDING_PNG_ZIP_PLAN_FILE,
+                pendingPngZipPlanFileName
         );
 
         super.onSaveInstanceState(outState);
@@ -1554,6 +2149,7 @@ public final class OmrAnswerKeyListActivity
         }
 
         dismissCsvPreviewDialog();
+        dismissPngZipPreviewDialog();
         dismissExportSelectionDialog();
 
         if (backgroundExecutor != null) {
@@ -1570,7 +2166,16 @@ public final class OmrAnswerKeyListActivity
         registrationService = null;
         csvParser = null;
         csvExporter = null;
+        pngZipPlanner = null;
+        pngZipExporter = null;
         pendingExportAnswerKeys = Collections.emptyList();
+
+        if (isFinishing()) {
+            deletePngZipPlanFileQuietly(
+                    pendingPngZipPlanFileName
+            );
+        }
+        pendingPngZipPlanFileName = null;
 
         super.onDestroy();
     }

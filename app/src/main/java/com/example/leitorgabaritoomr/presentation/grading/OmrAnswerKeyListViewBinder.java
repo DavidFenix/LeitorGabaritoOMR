@@ -63,6 +63,7 @@ public final class OmrAnswerKeyListViewBinder {
     private final Button importCsvButton;
     private final Button exportCsvButton;
     private final Button csvTemplateButton;
+    private final Button pngZipButton;
 
     private final AnswerKeyAdapter answerKeyAdapter;
 
@@ -137,6 +138,12 @@ public final class OmrAnswerKeyListViewBinder {
                 Button.class
         );
 
+        pngZipButton = requireView(
+                rootView,
+                R.id.buttonOmrAnswerKeyListPngZip,
+                Button.class
+        );
+
         answerKeyAdapter = new AnswerKeyAdapter();
         answerKeyListView.setAdapter(answerKeyAdapter);
         applyInteractiveState();
@@ -205,6 +212,13 @@ public final class OmrAnswerKeyListViewBinder {
         csvTemplateButton.setOnClickListener(listener);
     }
 
+    public void setOnPngZipClickListener(
+            View.OnClickListener listener
+    ) {
+        ensureNotReleased();
+        pngZipButton.setOnClickListener(listener);
+    }
+
     public void setBusy(boolean busy) {
         ensureNotReleased();
         this.busy = busy;
@@ -224,6 +238,7 @@ public final class OmrAnswerKeyListViewBinder {
         importCsvButton.setOnClickListener(null);
         exportCsvButton.setOnClickListener(null);
         csvTemplateButton.setOnClickListener(null);
+        pngZipButton.setOnClickListener(null);
 
         answerKeyAdapter.clear();
         answerKeyListView.setAdapter(null);
@@ -266,6 +281,7 @@ public final class OmrAnswerKeyListViewBinder {
         createButton.setEnabled(!busy);
         importCsvButton.setEnabled(!busy);
         csvTemplateButton.setEnabled(!busy);
+        pngZipButton.setEnabled(!busy);
         exportCsvButton.setEnabled(
                 !busy && !contentEmpty
         );
